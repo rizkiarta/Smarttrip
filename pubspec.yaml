@@ -1,0 +1,76 @@
+name: Smarttrip
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.3.0
+  flutter_map: ^8.3.1
+  latlong2: ^0.9.1
+  geolocator: ^14.0.3
+  http: ^1.6.0
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # ==========================================================
+  # FLUTTER LAUNCHER ICONS
+  # ==========================================================
+
+  flutter_launcher_icons: ^0.14.4
+
+# ============================================================
+# FLUTTER
+# ============================================================
+
+flutter:
+  uses-material-design: true
+
+  # ==========================================================
+  # ASSETS
+  # ==========================================================
+
+  assets:
+    - assets/images/
+    - assets/icons/
+
+
+# ============================================================
+# FLUTTER LAUNCHER ICONS
+# ============================================================
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+
+  # Logo aplikasi
+  image_path: "assets/images/smarttrip_logo_icon.png"
+
+  # ==========================================================
+  # ANDROID ADAPTIVE ICON
+  # ==========================================================
+
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/smarttrip_logo_icon.png"
+
+  # ==========================================================
+  # WEB ICON
+  # ==========================================================
+
+  web:
+    generate: true
+    image_path: "assets/images/smarttrip_logo_icon.png"
+    background_color: "#FFFFFF"
+    theme_color: "#55B8F4"
