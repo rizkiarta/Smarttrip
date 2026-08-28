@@ -139,7 +139,7 @@ class _MainNavigationScreenState
         top: false,
         child: Container(
           height: 68, // CHANGED: sebelumnya 86 -> diperkecil jadi 68
-          padding: const EdgeInsets.symmetric(horizontal: 25), // CHANGED: tambah padding kanan-kiri 25
+          padding: const EdgeInsets.symmetric(horizontal: 20), 
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [

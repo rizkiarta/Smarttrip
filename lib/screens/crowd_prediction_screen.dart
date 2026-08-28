@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../services/destination_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/smart_image.dart';
+import '../widgets/love_button.dart';
 import 'detail_destination_screen.dart';
 
 class CrowdPredictionScreen extends StatefulWidget {
@@ -235,14 +236,16 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
       statusBg = const Color(0xFFDCFCE7);
     }
 
+    final destList = DestinationService.instance.destinations.value;
+    DestinationModel? matched;
+    try {
+      matched = destList.firstWhere((d) => d.id == item.destinationId);
+    } catch (_) {}
+    final ratingText = matched != null ? matched.rating.toStringAsFixed(1) : '4.5';
+    final reviewsText = matched != null ? '${matched.reviewsCount} ulasan' : '100 ulasan';
+
     return GestureDetector(
       onTap: () {
-        final destList = DestinationService.instance.destinations.value;
-        DestinationModel? matched;
-        try {
-          matched = destList.firstWhere((d) => d.id == item.destinationId);
-        } catch (_) {}
-
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -250,8 +253,8 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
               destinationId: item.destinationId,
               name: item.name,
               location: item.location,
-              rating: matched != null ? matched.rating.toStringAsFixed(1) : '4.5',
-              reviews: matched != null ? '${matched.reviewsCount} ulasan' : '100 ulasan',
+              rating: ratingText,
+              reviews: reviewsText,
               mainImage: item.mainImage ?? 'assets/images/pulau_wayang.jpg',
               galleryImages: matched?.gallery,
               description: matched?.description ?? item.recommendation,
@@ -277,12 +280,25 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
         ),
         child: Row(
           children: [
-            SmartImage(
-              imagePathOrUrl: item.mainImage ?? 'assets/images/pulau_wayang.jpg',
+            SizedBox(
               width: 80,
               height: 80,
-              borderRadius: BorderRadius.circular(12),
-              fit: BoxFit.cover,
+              child: Stack(
+                children: [
+                  SmartImage(
+                    imagePathOrUrl: item.mainImage ?? 'assets/images/pulau_wayang.jpg',
+                    width: 80,
+                    height: 80,
+                    borderRadius: BorderRadius.circular(12),
+                    fit: BoxFit.cover,
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: LoveButton(destinationId: item.destinationId, size: 22),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -346,6 +362,17 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                           fontWeight: FontWeight.w500,
                           color: AppColors.darkText,
                         ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: AppColors.darkBlue, size: 15),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$ratingText ($reviewsText)',
+                        style: const TextStyle(fontSize: 10, color: AppColors.greyText),
                       ),
                     ],
                   ),

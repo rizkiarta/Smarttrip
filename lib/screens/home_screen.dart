@@ -136,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
       child: ValueListenableBuilder<ProfileData>(
         valueListenable: ProfileService.instance.profile,
         builder: (context, profileData, _) {
@@ -253,40 +253,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSearchBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25),
+      padding: const EdgeInsets.symmetric(horizontal: 15),
       child: Container(
-        height: 48,
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: const Color(0xFFEFEFEF)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: TextField(
-          textInputAction: TextInputAction.search,
-          onSubmitted: (value) {
-            final keyword = value.trim();
-            if (keyword.isEmpty) return;
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => SearchScreen(keyword: keyword),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.search_rounded,
+              color: AppColors.greyText,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                textInputAction: TextInputAction.search,
+                onSubmitted: (value) {
+                  final keyword = value.trim();
+                  if (keyword.isEmpty) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SearchScreen(keyword: keyword),
+                    ),
+                  );
+                },
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  hintText: 'Cari destinasi wisata...',
+                  hintStyle: TextStyle(color: Colors.black45, fontSize: 14),
+                ),
+                style: const TextStyle(color: AppColors.darkText, fontSize: 14),
               ),
-            );
-          },
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            hintText: 'Cari destinasi wisata...',
-            hintStyle: TextStyle(color: Colors.black54, fontSize: 14),
-            prefixIcon: Icon(Icons.search, color: Colors.grey, size: 21),
-            contentPadding: EdgeInsets.symmetric(vertical: 8),
-          ),
-          style: const TextStyle(color: Colors.black, fontSize: 14),
+            ),
+          ],
         ),
       ),
     );
@@ -504,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCrowdSection(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25),
+      padding: const EdgeInsets.symmetric(horizontal: 15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -584,6 +597,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ? Colors.red
         : (isSedang ? Colors.orange[800]! : Colors.green[800]!);
 
+    final destList = DestinationService.instance.destinations.value;
+    DestinationModel? matched;
+    try {
+      matched = destList.firstWhere((d) => d.id == item.destinationId);
+    } catch (_) {}
+    final ratingText = matched != null ? matched.rating.toStringAsFixed(1) : '4.8';
+    final reviewsText = matched != null ? '${matched.reviewsCount} ulasan' : '100 ulasan';
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -592,26 +613,26 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context) => DetailDestinationScreen(
               name: item.name,
               location: item.location,
-              rating: '4.8',
-              reviews: '100 ulasan',
+              rating: ratingText,
+              reviews: reviewsText,
               mainImage: item.mainImage ?? 'assets/images/pulau_pahawang.jpg',
-              description: item.recommendation,
+              galleryImages: matched?.gallery,
+              description: matched?.description ?? item.recommendation,
               destinationId: item.destinationId,
             ),
           ),
         );
       },
       child: Container(
-        height: 82,
-        padding: const EdgeInsets.all(7),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 5,
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -620,15 +641,15 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             SizedBox(
               width: 80,
-              height: double.infinity,
+              height: 80,
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(12),
                     child: buildSmartImage(
                       item.mainImage,
                       width: 80,
-                      height: double.infinity,
+                      height: 80,
                     ),
                   ),
                   Positioned(
@@ -639,77 +660,88 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkText,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          item.status,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.location_on,
-                        color: AppColors.primaryBlue,
-                        size: 13,
-                      ),
-                      const SizedBox(width: 2),
+                      const Icon(Icons.location_on, color: AppColors.primaryBlue, size: 14),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           item.location,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 10, color: AppColors.greyText),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.greyText,
+                          ),
                         ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, color: Colors.grey, size: 13),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Jam Ramai: ${item.time}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.darkText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: AppColors.darkBlue, size: 15),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$ratingText ($reviewsText)',
+                        style: const TextStyle(fontSize: 10, color: AppColors.greyText),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.circle, color: statusColor, size: 7),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.status,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  item.time,
-                  style: const TextStyle(fontSize: 10, color: AppColors.greyText),
-                ),
-              ],
             ),
           ],
         ),

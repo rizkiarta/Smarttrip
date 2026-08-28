@@ -361,7 +361,7 @@ const List<Map<String, String>> kDestinationsData = [
     'category': 'Budaya',
     'rating': '4.6',
     'reviews': '530 ulasan',
-    'image': 'assets/images/siger.png',
+    'image': 'assets/images/menara_siger.jpg',
     'description': 'Ikon kebanggaan Lampung berbentuk mahkota Siger emas di atas bukit Bakauheni, titik nol gerbang pulau Sumatra.',
     'price': 'Rp 10.000',
     'time': '06.00 - 20.00',
