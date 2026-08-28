@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 
 // ================================================================
 // LANGUAGE SERVICE
 // ================================================================
 //
-// LanguageService murni in-memory -- pola sama seperti
-// ProfileService -- jadi begitu backend/localization system sudah
-// siap, tinggal method di service ini yang diisi (mis. simpan ke
-// SharedPreferences + ganti locale aplikasi), pemanggil (LanguageScreen
-// di profile_screen.dart) tidak perlu diubah.
-//
-// CATATAN JUJUR: app ini sekarang semua teksnya hardcoded Bahasa
-// Indonesia (belum ada sistem localization/intl beneran), jadi
-// milih 'English' di sini BARU menyimpan preferensi user -- belum
-// benar-benar menerjemahkan seluruh app.
+// LanguageService menyimpan pilihan bahasa pengguna dan menyinkronkannya
+// dengan server Laravel backend (/api/v1/profile).
 //
 // ================================================================
 
@@ -46,7 +39,14 @@ class LanguageService {
         orElse: () => options.first,
       );
 
-  void select(String code) {
+  Future<void> select(String code) async {
     languageCode.value = code;
+    if (ApiService.instance.isAuthenticated) {
+      try {
+        await ApiService.instance.put('profile', body: {'language': code});
+      } catch (e) {
+        debugPrint('Sync language selection error: $e');
+      }
+    }
   }
 }

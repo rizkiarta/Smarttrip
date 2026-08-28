@@ -5,6 +5,9 @@ import 'package:latlong2/latlong.dart';
 import '../theme/app_colors.dart';
 import '../data/destinations_data.dart';
 import '../services/saved_itinerary_service.dart';
+import '../services/destination_service.dart';
+import '../widgets/smart_image.dart';
+
 import 'travel_information_screen.dart';
 import 'route_screen.dart';
 
@@ -97,7 +100,14 @@ class _TripScreenState extends State<TripScreen> {
   //
   // ============================================================
 
+  @override
+  void initState() {
+    super.initState();
+    SavedItineraryService.instance.fetchItineraries();
+  }
+
   int? _selectedDayNumber;
+  int _selectedActiveTripIndex = 0;
 
   void _selectDay(int day) {
     if (day == _selectedDayNumber) return;
@@ -157,40 +167,42 @@ class _TripScreenState extends State<TripScreen> {
   //
   // ============================================================
 
-  List<Map<String, dynamic>>? _findActiveTrip(
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
+  List<List<Map<String, dynamic>>> _findAllActiveTrips(
     List<List<Map<String, dynamic>>> itineraries,
   ) {
+    if (itineraries.isEmpty) return [];
+
     final DateTime today = _dateOnly(DateTime.now());
+    final List<List<Map<String, dynamic>>> activeTrips = [];
 
     for (final itinerary in itineraries) {
       if (itinerary.isEmpty) continue;
 
-      // CATATAN: dulu di sini ada pengecekan flag 'finishedManually'
-      // yang men-skip itinerary ini SELAMANYA begitu satu hari
-      // ditandai selesai -- itu salah untuk itinerary multi-hari,
-      // karena hari ke-2/3/dst jadi ikut hilang dari tab Trip padahal
-      // belum pernah dijalani. Sekarang status "selesai" ditempel per
-      // HARI (lihat SavedItineraryService.markDayCompleted), jadi
-      // itinerary ini TETAP dianggap aktif selama tanggal hari ini
-      // masih di antara startDate & endDate -- terlepas dari hari
-      // mana saja yang sudah ditandai selesai. Badge "Selesai" vs
-      // "Sedang Berjalan" untuk hari yang sedang ditampilkan dihitung
-      // belakangan di _buildActiveTrip lewat isDayCompleted().
+      final DateTime? start = _parseDate(itinerary.first['startDate']);
+      final DateTime? end = _parseDate(itinerary.first['endDate']);
 
-      final dynamic start = itinerary.first['startDate'];
-      final dynamic end = itinerary.first['endDate'];
+      if (start != null && end != null) {
+        final DateTime startDay = _dateOnly(start);
+        final DateTime endDay = _dateOnly(end);
 
-      if (start is! DateTime || end is! DateTime) continue;
-
-      final DateTime startDay = _dateOnly(start);
-      final DateTime endDay = _dateOnly(end);
-
-      if (!today.isBefore(startDay) && !today.isAfter(endDay)) {
-        return itinerary;
+        if (!today.isBefore(startDay) && !today.isAfter(endDay)) {
+          activeTrips.add(itinerary);
+        }
       }
     }
 
-    return null;
+    if (activeTrips.isNotEmpty) return activeTrips;
+
+    return itineraries;
   }
 
   DateTime _dateOnly(DateTime value) {
@@ -199,15 +211,20 @@ class _TripScreenState extends State<TripScreen> {
 
   // Hari ke berapa (1-based) dari itinerary ini HARI INI.
   int _dayNumberToday(List<Map<String, dynamic>> itinerary) {
-    final dynamic start = itinerary.first['startDate'];
+    final DateTime? start = _parseDate(itinerary.first['startDate']);
 
-    if (start is! DateTime) return 1;
+    if (start == null) return 1;
 
     final int diff =
         _dateOnly(DateTime.now()).difference(_dateOnly(start)).inDays;
 
+    if (diff < 0) return 1;
+    final int duration = _totalDaysOf(itinerary);
+    if (diff >= duration) return duration;
+
     return diff + 1;
   }
+
 
   // Total hari itinerary ini. Pakai field 'duration' kalau ada
   // (baru mulai ikut tersimpan -- lihat ai_itinerary_screen.dart),
@@ -254,7 +271,19 @@ class _TripScreenState extends State<TripScreen> {
   }
 
   String _destinationImage(Map<String, dynamic> destination) {
-    return _value(destination, 'image');
+    for (final key in ['image', 'main_image', 'mainImage', 'photo', 'cover_image', 'image_url']) {
+      final val = destination[key]?.toString().trim();
+      if (val != null && val.isNotEmpty && val != 'null') {
+        return val;
+      }
+    }
+    final destId = destination['id']?.toString() ?? '';
+    final destName = destination['name']?.toString() ?? '';
+    final liveDest = findDestinationById(destId) ?? findDestinationByName(destName);
+    if (liveDest != null && liveDest['image'] != null && liveDest['image']!.isNotEmpty) {
+      return liveDest['image']!;
+    }
+    return '';
   }
 
   String _arrivalTime(Map<String, dynamic> destination) {
@@ -333,13 +362,19 @@ class _TripScreenState extends State<TripScreen> {
       return 'Sepi';
     }
 
-    final String name = _destinationName(destination);
-    final int seed =
-        name.codeUnits.fold<int>(0, (sum, code) => sum + code) + index;
+    final String destId = (destination['id'] as String?) ?? (destination['destination_id'] as String? ?? '');
+    final String name = _destinationName(destination).toLowerCase();
+    final predictions = DestinationService.instance.crowdPredictions.value;
 
-    const List<String> dummyStatuses = ['Sepi', 'Ramai', 'Sepi', 'Sedang'];
-    return dummyStatuses[seed % dummyStatuses.length];
+    for (final p in predictions) {
+      if ((destId.isNotEmpty && p.destinationId == destId) || p.name.toLowerCase() == name) {
+        return p.status;
+      }
+    }
+
+    return 'Sepi';
   }
+
 
   Color _crowdColor(String status) {
     switch (status) {
@@ -651,20 +686,25 @@ class _TripScreenState extends State<TripScreen> {
     return ValueListenableBuilder<List<List<Map<String, dynamic>>>>(
       valueListenable: SavedItineraryService.instance.itineraries,
       builder: (context, itineraries, _) {
-        final List<Map<String, dynamic>>? activeTrip =
-            _findActiveTrip(itineraries);
+        final List<List<Map<String, dynamic>>> activeTrips =
+            _findAllActiveTrips(itineraries);
 
-        // _buildEmptyState sekarang membangun Scaffold-nya sendiri
-        // (shell header biru + rounded 42, disamakan dengan
-        // PlanScreen), jadi tidak dibungkus Scaffold lagi di sini
-        // supaya tidak nested Scaffold.
-        if (activeTrip == null) {
+        if (activeTrips.isEmpty) {
           return _buildEmptyState(context);
         }
 
+        final int safeIndex =
+            _selectedActiveTripIndex.clamp(0, activeTrips.length - 1);
+        final List<Map<String, dynamic>> activeTrip = activeTrips[safeIndex];
+
         return Scaffold(
           backgroundColor: Colors.white,
-          body: _buildActiveTrip(context, activeTrip),
+          body: _buildActiveTrip(
+            context,
+            activeTrip,
+            activeTrips: activeTrips,
+            currentIndex: safeIndex,
+          ),
         );
       },
     );
@@ -842,8 +882,10 @@ class _TripScreenState extends State<TripScreen> {
 
   Widget _buildActiveTrip(
     BuildContext context,
-    List<Map<String, dynamic>> itinerary,
-  ) {
+    List<Map<String, dynamic>> itinerary, {
+    List<List<Map<String, dynamic>>> activeTrips = const [],
+    int currentIndex = 0,
+  }) {
     final int totalDays = _totalDaysOf(itinerary);
 
     // Default ke hari ini (sesuai tanggal sistem) kalau user belum
@@ -927,8 +969,7 @@ class _TripScreenState extends State<TripScreen> {
 
     final bool allDestinationsDoneToday =
         destinations.isNotEmpty && nextActivity == null;
-    final bool showFinishDayCard =
-        allDestinationsDoneToday && !dayCompletedPersisted;
+    final bool showFinishDayCard = !dayCompletedPersisted;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -973,6 +1014,9 @@ class _TripScreenState extends State<TripScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (activeTrips.length > 1)
+                        _buildTripSwitcher(context, activeTrips, currentIndex),
+
                       _buildTripInfo(
                         schedule,
                         dayNumber,
@@ -986,7 +1030,12 @@ class _TripScreenState extends State<TripScreen> {
 
                       if (showFinishDayCard) ...[
                         const SizedBox(height: 16),
-                        _buildFinishDayCard(itinerary, dayNumber, isLastDay: dayNumber == totalDays),
+                        _buildFinishDayCard(
+                          itinerary,
+                          dayNumber,
+                          isLastDay: dayNumber == totalDays,
+                          allDone: allDestinationsDoneToday,
+                        ),
                       ],
 
                       const SizedBox(height: 20),
@@ -1068,9 +1117,7 @@ class _TripScreenState extends State<TripScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.smarttrip',
               ),
 
@@ -1272,6 +1319,220 @@ class _TripScreenState extends State<TripScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ============================================================
+  // TRIP SWITCHER (jika ada lebih dari 1 trip aktif)
+  // ============================================================
+
+  Widget _buildTripSwitcher(
+    BuildContext context,
+    List<List<Map<String, dynamic>>> activeTrips,
+    int currentIndex,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F7FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.swap_horiz_rounded, color: AppColors.primaryBlue, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Perjalanan Aktif ${currentIndex + 1} dari ${activeTrips.length}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  activeTrips[currentIndex].isNotEmpty
+                      ? (activeTrips[currentIndex].first['tripName'] ?? 'Trip ${currentIndex + 1}')
+                      : 'Trip ${currentIndex + 1}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkBlue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              _showTripSelectorBottomSheet(context, activeTrips, currentIndex);
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Ganti', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                SizedBox(width: 2),
+                Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTripSelectorBottomSheet(
+    BuildContext context,
+    List<List<Map<String, dynamic>>> activeTrips,
+    int currentIndex,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(25),
+              topRight: Radius.circular(25),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D8D8),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const Text(
+                'Pilih Perjalanan Aktif',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Pilih perjalanan yang ingin kamu lihat rutenya hari ini.',
+                style: TextStyle(fontSize: 12, color: AppColors.greyText),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: activeTrips.length,
+                  itemBuilder: (context, index) {
+                    final trip = activeTrips[index];
+                    final String name = trip.isNotEmpty ? (trip.first['tripName'] ?? 'Trip ${index + 1}') : 'Trip ${index + 1}';
+                    final String destination = trip.isNotEmpty ? (trip.first['destination'] ?? '') : '';
+                    final bool isSelected = index == currentIndex;
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(bottomSheetContext);
+                        setState(() {
+                          _selectedActiveTripIndex = index;
+                          _selectedDayNumber = null;
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.lightBlue : const Color(0xFFF8F8F8),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primaryBlue : const Color(0xFFEEEEEE),
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                              color: isSelected ? AppColors.primaryBlue : AppColors.greyText,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSelected ? AppColors.darkBlue : AppColors.darkText,
+                                    ),
+                                  ),
+                                  if (destination.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      destination,
+                                      style: const TextStyle(fontSize: 12, color: AppColors.greyText),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryBlue,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text(
+                                  'Aktif',
+                                  style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1604,10 +1865,15 @@ class _TripScreenState extends State<TripScreen> {
     List<Map<String, dynamic>> itinerary,
     int dayNumber, {
     required bool isLastDay,
+    bool allDone = false,
   }) {
+    final String title = allDone
+        ? 'Semua destinasi hari ini sudah dikunjungi!'
+        : 'Selesaikan Perjalanan Hari Ke-$dayNumber';
+
     final String subtitle = isLastDay
-        ? 'Ini hari terakhir perjalananmu. Tandai di sini supaya trip ini pindah ke Riwayat.'
-        : 'Tandai hari ini selesai -- trip ini akan ikut muncul di Riwayat, dan otomatis aktif lagi di tab Trip begitu hari berikutnya tiba.';
+        ? 'Tandai selesai di sini supaya trip ini pindah ke tab Riwayat.'
+        : 'Tandai hari ini selesai -- trip ini akan dicatat di Riwayat dan siap untuk hari berikutnya.';
 
     return Container(
       width: double.infinity,
@@ -1620,14 +1886,14 @@ class _TripScreenState extends State<TripScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.celebration_outlined, color: AppColors.darkBlue),
-              SizedBox(width: 8),
+              const Icon(Icons.celebration_outlined, color: AppColors.darkBlue),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Semua destinasi hari ini sudah dikunjungi!',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.darkBlue),
+                  title,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.darkBlue),
                 ),
               ),
             ],
@@ -1649,9 +1915,9 @@ class _TripScreenState extends State<TripScreen> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
               ),
-              child: const Text(
-                'Tandai Hari Ini Selesai',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              child: Text(
+                isLastDay ? 'Tandai Trip Selesai' : 'Tandai Hari Ini Selesai',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -1897,22 +2163,11 @@ class _TripScreenState extends State<TripScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: SizedBox(
+                          child: SmartImage(
+                            imagePathOrUrl: image,
                             width: 62,
                             height: 62,
-                            child: image.isNotEmpty
-                                ? Image.asset(
-                                    image,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => Container(
-                                      color: const Color(0xFFEDEDED),
-                                      child: const Icon(Icons.image_outlined, color: Colors.grey),
-                                    ),
-                                  )
-                                : Container(
-                                    color: const Color(0xFFEDEDED),
-                                    child: const Icon(Icons.image_outlined, color: Colors.grey),
-                                  ),
+                            fit: BoxFit.cover,
                           ),
                         ),
                         const SizedBox(width: 11),

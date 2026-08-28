@@ -217,7 +217,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // SIMPAN
   // ============================================================
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
     final String name = _nameController.text.trim();
     final String username = _usernameController.text.trim();
     final String phone = _phoneController.text.trim();
@@ -233,15 +233,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
 
-    ProfileService.instance.updateProfile(
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Memperbarui profil...'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    await ProfileService.instance.updateProfile(
       name: name,
       username: username,
       birthDate: _birthDate,
       phone: phone,
       email: email,
-      photoPath: _displayPhotoPath,
+      photoPath: _newPhotoPath ?? _displayPhotoPath,
     );
 
+    if (!mounted) return;
     Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -251,6 +260,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -296,10 +306,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             clipBehavior: Clip.antiAlias,
                             child: buildAvatarImage(
-                              _displayPhotoPath ??
-                                  ProfileService.defaultAvatarUrl,
+                              _displayPhotoPath,
                               size: 90,
                             ),
+
                           ),
                           Positioned(
                             right: -2,

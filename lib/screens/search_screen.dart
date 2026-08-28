@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../data/destinations_data.dart';
+import '../services/destination_service.dart';
+import '../widgets/smart_image.dart';
 import 'detail_destination_screen.dart';
 import '../widgets/love_button.dart';
+
 
 // ================================================================
 // PILIHAN URUTKAN
@@ -47,6 +50,16 @@ class _SearchScreenState extends State<SearchScreen> {
   _SortOption _sortOption = _SortOption.relevansi;
 
   @override
+  void initState() {
+    super.initState();
+    if (DestinationService.instance.destinations.value.isEmpty) {
+      DestinationService.instance.fetchDashboardData().then((_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
 
@@ -54,27 +67,26 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   // ============================================================
-  // DATA DESTINASI
+  // DATA DESTINASI (FROM LARAVEL BACKEND DB)
   // ============================================================
 
-  // Sumber datanya sekarang kDestinationsData (sama seperti home,
-  // rekomendasi, dan prediksi kepadatan), bukan daftar lokal terpisah
-  // seperti sebelumnya. Ini penting supaya setiap destinasi punya 'id'
-  // yang konsisten di seluruh layar — dibutuhkan supaya status
-  // "love"/simpan pada sebuah destinasi tetap sama walau dilihat dari
-  // hasil pencarian, home, atau layar lain.
   List<Map<String, String>> get destinations {
     final query = _keyword.toLowerCase().trim();
+    final serverList = DestinationService.instance.destinations.value;
 
-    final filtered = kDestinationsData.where((destination) {
-      final name = destination['name']!.toLowerCase();
-      final location = destination['location']!.toLowerCase();
-      final category = destination['category']!.toLowerCase();
+    final List<Map<String, String>> source =
+        serverList.map((d) => d.toDisplayMap()).toList();
+
+    final filtered = source.where((destination) {
+      final name = (destination['name'] ?? '').toLowerCase();
+      final location = (destination['location'] ?? '').toLowerCase();
+      final category = (destination['category'] ?? '').toLowerCase();
 
       return name.contains(query) ||
           location.contains(query) ||
           category.contains(query);
     }).toList();
+
 
     switch (_sortOption) {
       case _SortOption.ratingTertinggi:
@@ -564,36 +576,14 @@ class _SearchScreenState extends State<SearchScreen> {
 
             child: Stack(
               children: [
-                ClipRRect(
+                SmartImage(
+                  imagePathOrUrl: destination['image'] ?? 'assets/images/pulau_wayang.jpg',
+                  width: 135,
+                  height: 141,
                   borderRadius: BorderRadius.circular(12),
-
-                  child: SizedBox(
-                    width: 135,
-                    height: 141,
-
-                    child: Image.asset(
-                      destination['image']!,
-
-                      fit: BoxFit.cover,
-
-                      errorBuilder: (
-                        context,
-                        error,
-                        stackTrace,
-                      ) {
-                        return Container(
-                          color: const Color(0xFFE8F4FA),
-
-                          child: const Icon(
-                            Icons.image_outlined,
-                            color: AppColors.primaryBlue,
-                            size: 35,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  fit: BoxFit.cover,
                 ),
+
 
                 Positioned(
                   top: 6,

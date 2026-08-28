@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:latlong2/latlong.dart';
+import '../services/destination_service.dart';
+
 
 // Data destinasi bersama, dipakai oleh DestinationSelectionScreen dan
 // AIItineraryScreen supaya keduanya mengacu ke daftar yang sama.
@@ -11,1034 +13,1005 @@ import 'package:latlong2/latlong.dart';
 // baru.
 
 const List<Map<String, String>> kDestinationsData = [
-  // ==============================================================
-  // KULINER
-  // ==============================================================
-
-  {
-    'id': 'resto_2',
-    'latitude': '-5.3971',
-    'longitude': '105.2668',
-    'name': 'RM Pondok Rasa Kedaton',
-    'location': 'Bandar Lampung',
-    'category': 'Kuliner',
-    'rating': '4.5',
-    'reviews': '120 review',
-    'image': 'assets/images/rm_pondok_rasa_kedaton.jpg',
-    'description':
-        'Tempat kuliner yang menyediakan berbagai pilihan makanan dan minuman untuk dinikmati bersama keluarga maupun teman.',
-  },
-
-  {
-    'id': 'resto_1',
-    'latitude': '-5.395',
-    'longitude': '105.263',
-    'name': 'RM Saung Kito Enggal',
-    'location': 'Bandar Lampung',
-    'category': 'Kuliner',
-    'rating': '4.5',
-    'reviews': '150 review',
-    'image': 'assets/images/rm_saung_kito_enggal.jpg',
-    'description':
-        'Salah satu pilihan tempat kuliner di Lampung dengan berbagai menu makanan yang cocok untuk wisatawan.',
-  },
-
-  {
-    'id': 'cafe_2',
-    'latitude': '-5.392',
-    'longitude': '105.26',
-    'name': 'Cafe Rumah Kayu',
-    'location': 'Bandar Lampung',
-    'category': 'Kuliner',
-    'rating': '4.6',
-    'reviews': '180 review',
-    'image': 'assets/images/cafe_rumah_kayu.jpg',
-    'description':
-        'Cafe dengan suasana nyaman yang cocok untuk bersantai dan menikmati berbagai pilihan makanan dan minuman.',
-  },
-
-  {
-    'id': 'cafe_1',
-    'latitude': '-5.39',
-    'longitude': '105.258',
-    'name': 'Kedai Senja Sultan Agung',
-    'location': 'Bandar Lampung',
-    'category': 'Kuliner',
-    'rating': '4.4',
-    'reviews': '95 review',
-    'image': 'assets/images/kedai_senja_sultan_agung.jpg',
-    'description':
-        'Tempat bersantai dengan pilihan makanan dan minuman yang dapat menjadi salah satu tujuan wisata kuliner.',
-  },
-
-  {
-    'id': 'mie_khodon',
-    'latitude': '-5.42',
-    'longitude': '105.25',
-    'name': 'Mie Khodon',
-    'location': 'Bandar Lampung',
-    'category': 'Kuliner',
-    'rating': '4.6',
-    'reviews': '410 review',
-    'image': 'assets/images/mie_khodon.jpg',
-    'description':
-        'Kedai mie legendaris yang sudah berjualan sejak tahun 1960-an, terkenal dengan cita rasa khas dan pelanggan yang rela mengantre.',
-  },
-
-  {
-    'id': 'seruit_khas_lampung',
-    'latitude': '-5.415',
-    'longitude': '105.255',
-    'name': 'Seruit Khas Lampung',
-    'location': 'Bandar Lampung',
-    'category': 'Kuliner',
-    'rating': '4.5',
-    'reviews': '260 review',
-    'image': 'assets/images/seruit_khas_lampung.jpg',
-    'description':
-        'Rumah makan yang menyajikan seruit, hidangan khas Lampung berupa ikan bakar dengan sambal terasi, tempoyak, dan lalapan.',
-  },
-
-  {
-    'id': 'pindang_sehat_gunung_sugih',
-    'latitude': '-4.953',
-    'longitude': '105.217',
-    'name': 'Pindang Sehat Gunung Sugih',
-    'location': 'Lampung Tengah',
-    'category': 'Kuliner',
-    'rating': '4.4',
-    'reviews': '140 review',
-    'image': 'assets/images/pindang_sehat_gunung_sugih.jpg',
-    'description':
-        'Rumah makan khas Lampung Tengah yang menyajikan pindang ikan segar dengan kuah asam pedas yang menyegarkan.',
-  },
-
-  {
-    'id': 'kedai_kopi_robusta_lampung',
-    'latitude': '-5.38',
-    'longitude': '105.27',
-    'name': 'Kedai Kopi Robusta Lampung',
-    'location': 'Bandar Lampung',
-    'category': 'Kuliner',
-    'rating': '4.6',
-    'reviews': '300 review',
-    'image': 'assets/images/kedai_kopi_robusta_lampung.jpg',
-    'description':
-        'Kedai kopi yang menyajikan kopi robusta khas Lampung, salah satu daerah penghasil kopi robusta terbesar di Indonesia.',
-  },
-
-  // ==============================================================
-  // ALAM
-  // ==============================================================
-
-  {
-    'id': 'air_terjun_curup',
-    'latitude': '-4.7',
-    'longitude': '105.2',
-    'name': 'Air Terjun Curup',
-    'location': 'Lampung Tengah',
-    'category': 'Alam',
-    'rating': '4.6',
-    'reviews': '150 review',
-    'image': 'assets/images/air_terjun_curup.jpg',
-    'description':
-        'Air Terjun Curup merupakan destinasi wisata alam dengan suasana sejuk, pemandangan hijau, dan aliran air yang menyegarkan, cocok untuk bersantai bersama keluarga maupun teman.',
-  },
-
-  {
-    'id': 'danau_ranau',
-    'latitude': '-4.8794',
-    'longitude': '103.9313',
-    'name': 'Danau Ranau',
-    'location': 'Lampung Barat',
-    'category': 'Alam',
-    'rating': '4.8',
-    'reviews': '320 review',
-    'image': 'assets/images/danau_ranau.jpg',
-    'description':
-        'Danau Ranau merupakan destinasi wisata alam dengan panorama danau dan pegunungan yang indah.',
-  },
-
-  {
-    'id': 'pantai_gigi_hiu',
-    'latitude': '-5.6667',
-    'longitude': '104.5333',
-    'name': 'Pantai Gigi Hiu',
-    'location': 'Tanggamus',
-    'category': 'Alam',
-    'rating': '4.8',
-    'reviews': '280 review',
-    'image': 'assets/images/pantai_gigi_hiu.jpg',
-    'description':
-        'Pantai dengan formasi batu karang unik yang menjadi salah satu daya tarik wisata alam di Lampung.',
-  },
-
-  {
-    'id': 'pantai_klara',
-    'latitude': '-5.5667',
-    'longitude': '105.1667',
-    'name': 'Pantai Klara',
-    'location': 'Pesawaran',
-    'category': 'Alam',
-    'rating': '4.7',
-    'reviews': '230 review',
-    'image': 'assets/images/pantai_klara.jpg',
-    'description':
-        'Pantai dengan suasana tropis dan pemandangan laut yang cocok untuk menikmati waktu bersama keluarga dan teman.',
-  },
-
-  {
-    'id': 'pantai_mutun',
-    'latitude': '-5.5347',
-    'longitude': '105.2181',
-    'name': 'Pantai Mutun',
-    'location': 'Pesawaran',
-    'category': 'Alam',
-    'rating': '4.7',
-    'reviews': '250 review',
-    'image': 'assets/images/pantai_mutun.jpg',
-    'description':
-        'Pantai populer di Lampung dengan pasir pantai dan pemandangan laut yang menjadi pilihan wisatawan.',
-  },
-
-  {
-    'id': 'pantai_sari_ringgung',
-    'latitude': '-5.53',
-    'longitude': '105.19',
-    'name': 'Pantai Sari Ringgung',
-    'location': 'Pesawaran',
-    'category': 'Alam',
-    'rating': '4.7',
-    'reviews': '260 review',
-    'image': 'assets/images/pantai_sari_ringgung.jpg',
-    'description':
-        'Destinasi wisata pantai dengan panorama laut dan berbagai aktivitas wisata yang dapat dinikmati pengunjung.',
-  },
-
+  // 1. Pesawaran
   {
     'id': 'pulau_pahawang',
-    'latitude': '-5.6167',
-    'longitude': '105.1667',
     'name': 'Pulau Pahawang',
     'location': 'Pesawaran',
     'category': 'Alam',
     'rating': '4.8',
-    'reviews': '350 review',
+    'reviews': '340 ulasan',
     'image': 'assets/images/pulau_pahawang.jpg',
-    'description':
-        'Pulau wisata dengan panorama laut yang indah dan dikenal sebagai salah satu destinasi wisata bahari Lampung.',
+    'description': 'Surga snorkeling terkenal di Lampung dengan terumbu karang indah, ikan nemo, dan keindahan pulau pasir timbul.',
+    'price': 'Rp 150.000 - Rp 300.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.6705',
+    'longitude': '105.2241',
   },
-
-  {
-    'id': 'pulau_wayang',
-    'latitude': '-5.63',
-    'longitude': '105.15',
-    'name': 'Pulau Wayang',
-    'location': 'Pesawaran',
-    'category': 'Alam',
-    'rating': '4.8',
-    'reviews': '290 review',
-    'image': 'assets/images/pulau_wayang.jpg',
-    'description':
-        'Destinasi wisata bahari dengan panorama pulau dan laut yang menawarkan pengalaman menikmati keindahan alam.',
-  },
-
-  {
-    'id': 'teluk_kiluan',
-    'latitude': '-5.7333',
-    'longitude': '105.05',
-    'name': 'Teluk Kiluan',
-    'location': 'Tanggamus',
-    'category': 'Alam',
-    'rating': '4.8',
-    'reviews': '400 review',
-    'image': 'assets/images/teluk_kiluan.jpg',
-    'description':
-        'Teluk yang terkenal dengan atraksi lumba-lumba hidung botol liar yang dapat disaksikan langsung dari perahu nelayan pada pagi hari.',
-  },
-
-  {
-    'id': 'taman_nasional_way_kambas',
-    'latitude': '-4.9333',
-    'longitude': '105.7833',
-    'name': 'Taman Nasional Way Kambas',
-    'location': 'Lampung Timur',
-    'category': 'Alam',
-    'rating': '4.7',
-    'reviews': '310 review',
-    'image': 'assets/images/way_kambas.jpg',
-    'description':
-        'Salah satu taman nasional tertua di Indonesia yang menjadi pusat konservasi gajah, tempat pengunjung dapat mengamati gajah liar dan mengikuti tur konservasi.',
-  },
-
-  {
-    'id': 'air_terjun_way_lalaan',
-    'latitude': '-5.4667',
-    'longitude': '104.6167',
-    'name': 'Air Terjun Way Lalaan',
-    'location': 'Tanggamus',
-    'category': 'Alam',
-    'rating': '4.5',
-    'reviews': '180 review',
-    'image': 'assets/images/way_lalaan.jpg',
-    'description':
-        'Air terjun bertingkat dua yang mudah diakses di dekat Kota Agung, dengan suasana sejuk dan pemandangan yang asri.',
-  },
-
-  {
-    'id': 'danau_suoh',
-    'latitude': '-5.1667',
-    'longitude': '104.2167',
-    'name': 'Danau Suoh',
-    'location': 'Lampung Barat',
-    'category': 'Alam',
-    'rating': '4.6',
-    'reviews': '150 review',
-    'image': 'assets/images/danau_suoh.jpg',
-    'description':
-        'Kawasan tiga danau dengan warna air berbeda, dilengkapi sumber air panas alami dan aktivitas geotermal yang khas.',
-  },
-
   {
     'id': 'pulau_tegal_mas',
-    'latitude': '-5.6',
-    'longitude': '105.1833',
     'name': 'Pulau Tegal Mas',
     'location': 'Pesawaran',
     'category': 'Alam',
     'rating': '4.7',
-    'reviews': '220 review',
+    'reviews': '280 ulasan',
     'image': 'assets/images/pulau_tegal_mas.jpg',
-    'description':
-        'Pulau dengan resort terapung yang kerap disebut "Maldives-nya Lampung", cocok untuk snorkeling dan diving.',
+    'description': 'Destinasi wisata pulau bergaya Maldives di Lampung dengan penginapan terapung dan spot snorkeling penyu.',
+    'price': 'Rp 50.000 - Rp 150.000',
+    'time': '07.00 - 18.00',
+    'latitude': '-5.5841',
+    'longitude': '105.2562',
   },
-
   {
-    'id': 'pantai_tanjung_setia',
-    'latitude': '-5.3333',
-    'longitude': '103.9167',
-    'name': 'Pantai Tanjung Setia',
-    'location': 'Pesisir Barat',
-    'category': 'Alam',
-    'rating': '4.7',
-    'reviews': '190 review',
-    'image': 'assets/images/pantai_tanjung_setia.jpg',
-    'description':
-        'Pantai dengan ombak tinggi yang populer untuk berselancar, dilengkapi pasir putih dan pemandangan matahari terbenam.',
-  },
-
-  {
-    'id': 'air_terjun_curug_tujuh',
-    'latitude': '-5.4833',
-    'longitude': '105.1',
-    'name': 'Air Terjun Curug Tujuh',
-    'location': 'Pesawaran',
-    'category': 'Alam',
-    'rating': '4.6',
-    'reviews': '160 review',
-    'image': 'assets/images/curug_tujuh.jpg',
-    'description':
-        'Air terjun tujuh tingkat dengan ketinggian mencapai 75 meter, masih asri dan cocok untuk trekking ringan.',
-  },
-
-  {
-    'id': 'teluk_hantu',
-    'latitude': '-5.6',
-    'longitude': '105.2',
-    'name': 'Teluk Hantu',
+    'id': 'pantai_sari_ringgung',
+    'name': 'Pantai Sari Ringgung',
     'location': 'Pesawaran',
     'category': 'Alam',
     'rating': '4.5',
-    'reviews': '130 review',
-    'image': 'assets/images/teluk_hantu.jpg',
-    'description':
-        'Destinasi pesisir dengan air laut jernih, deretan bebatuan eksotis, dan suasana tenang yang cocok untuk relaksasi.',
+    'reviews': '210 ulasan',
+    'image': 'assets/images/pantai_sari_ringgung.jpg',
+    'description': 'Pantai keluarga populer dengan fenomena Pasir Timbul dan Masjid Terapung di tengah laut.',
+    'price': 'Rp 20.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.5562',
+    'longitude': '105.2341',
   },
-
   {
-    'id': 'anak_krakatau',
-    'latitude': '-6.1022',
-    'longitude': '105.4231',
-    'name': 'Anak Krakatau',
-    'location': 'Lampung Selatan',
+    'id': 'pantai_mutun',
+    'name': 'Pantai Mutun',
+    'location': 'Pesawaran',
     'category': 'Alam',
-    'rating': '4.8',
-    'reviews': '270 review',
-    'image': 'assets/images/anak_krakatau.jpg',
-    'description':
-        'Gunung berapi legendaris di Selat Sunda yang dapat diakses via Dermaga Canti, Kalianda, menawarkan panorama spektakuler dan trekking ringan.',
+    'rating': '4.4',
+    'reviews': '195 ulasan',
+    'image': 'assets/images/pantai_mutun.jpg',
+    'description': 'Pantai pasir putih terdekat dari kota Bandar Lampung, tempat ideal untuk rekreasi air dan menyeberang ke Pulau Tangkil.',
+    'price': 'Rp 25.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.5181',
+    'longitude': '105.2536',
   },
-
   {
-    'id': 'pantai_kyokko',
-    'latitude': '-5.75',
-    'longitude': '105.5667',
-    'name': 'Pantai Kyokko',
-    'location': 'Lampung Selatan',
+    'id': 'pantai_klara',
+    'name': 'Pantai Klara',
+    'location': 'Pesawaran',
     'category': 'Alam',
     'rating': '4.6',
-    'reviews': '210 review',
-    'image': 'assets/images/pantai_kyokko.jpg',
-    'description':
-        'Pantai dengan air laut biru jernih dan pasir putih bersih yang sedang naik daun di kalangan wisatawan.',
+    'reviews': '180 ulasan',
+    'image': 'assets/images/pantai_klara.jpg',
+    'description': 'Singkatan Kelapa Rapat, pantai bernuansa rindang dengan ombak sangat tenang dan jajaran pohon kelapa.',
+    'price': 'Rp 15.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.5789',
+    'longitude': '105.2154',
+  },
+  {
+    'id': 'pulau_wayang',
+    'name': 'Pulau Wayang',
+    'location': 'Pesawaran',
+    'category': 'Alam',
+    'rating': '4.9',
+    'reviews': '150 ulasan',
+    'image': 'assets/images/pulau_wayang.jpg',
+    'description': 'Gugusan tebing batu menjulang tinggi mirip Raja Ampat di ujung selatan Pesawaran.',
+    'price': 'Rp 350.000',
+    'time': '06.00 - 17.00',
+    'latitude': '-5.7335',
+    'longitude': '105.2012',
+  },
+  {
+    'id': 'teluk_hantu',
+    'name': 'Teluk Hantu',
+    'location': 'Pesawaran',
+    'category': 'Alam',
+    'rating': '4.7',
+    'reviews': '95 ulasan',
+    'image': 'assets/images/teluk_hantu.jpg',
+    'description': 'Teluk tersembunyi dengan air laut jernih kehijauan dan pantai pasir putih yang belum terjamah di Punduh Pedada.',
+    'price': 'Rp 10.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.6811',
+    'longitude': '105.2285',
+  },
+  {
+    'id': 'seafood_pesawaran',
+    'name': 'RM Bahari Cempaka Mutun',
+    'location': 'Pesawaran',
+    'category': 'Kuliner',
+    'rating': '4.6',
+    'reviews': '110 ulasan',
+    'image': 'assets/images/seafood_pesawaran.jpg',
+    'description': 'Restoran seafood tepi pantai yang menyajikan cumi bakar, kerapu asam manis, dan kelapa muda segar.',
+    'price': 'Rp 40.000 - Rp 120.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-5.5191',
+    'longitude': '105.2541',
   },
 
-  // ==============================================================
-  // BUDAYA
-  // ==============================================================
-
+  // 2. Bandar Lampung
   {
     'id': 'museum_lampung',
-    'latitude': '-5.3891',
-    'longitude': '105.2416',
     'name': 'Museum Lampung',
     'location': 'Bandar Lampung',
     'category': 'Budaya',
     'rating': '4.5',
-    'reviews': '180 review',
+    'reviews': '160 ulasan',
     'image': 'assets/images/museum_lampung.jpg',
-    'description':
-        'Museum yang menjadi salah satu tempat untuk mengenal sejarah, budaya, dan berbagai peninggalan masyarakat Lampung.',
+    'description': 'Museum negeri tempat koleksi artefak budaya, kerajinan kain tapis, dan sejarah provinsi Lampung.',
+    'price': 'Rp 5.000',
+    'time': '08.00 - 15.00',
+    'latitude': '-5.3721',
+    'longitude': '105.2425',
   },
-
-  {
-    'id': 'siger',
-    'latitude': '-5.8722',
-    'longitude': '105.7561',
-    'name': 'Siger',
-    'location': 'Lampung Selatan',
-    'category': 'Budaya',
-    'rating': '4.6',
-    'reviews': '200 review',
-    'image': 'assets/images/siger.png',
-    'description':
-        'Siger merupakan salah satu simbol budaya Lampung yang memiliki nilai penting dalam identitas dan tradisi masyarakat Lampung.',
-  },
-
-  {
-    'id': 'danau_tirta_gangga',
-    'latitude': '-4.97',
-    'longitude': '105.27',
-    'name': 'Danau Tirta Gangga',
-    'location': 'Lampung Tengah',
-    'category': 'Budaya',
-    'rating': '4.5',
-    'reviews': '170 review',
-    'image': 'assets/images/danau_tirta_gangga.jpg',
-    'description':
-        'Danau yang juga menjadi tempat wisata religi, dengan sebuah pura yang tampak berdiri di atas air, dipengaruhi tradisi masyarakat Hindu setempat.',
-  },
-
-  // ==============================================================
-  // BUATAN
-  // ==============================================================
-
   {
     'id': 'puncak_mas',
-    'latitude': '-5.36',
-    'longitude': '105.25',
     'name': 'Puncak Mas',
     'location': 'Bandar Lampung',
     'category': 'Buatan',
     'rating': '4.6',
-    'reviews': '210 review',
+    'reviews': '240 ulasan',
     'image': 'assets/images/puncak_mas.jpg',
-    'description':
-        'Destinasi wisata buatan dengan pemandangan Kota Bandar Lampung yang cocok untuk menikmati suasana dan berfoto.',
+    'description': 'Taman wisata perbukitan di Sukadanaham dengan rumah pohon, sepeda gantung, dan pemandangan laut & kota.',
+    'price': 'Rp 20.000',
+    'time': '08.00 - 22.00',
+    'latitude': '-5.4128',
+    'longitude': '105.2274',
   },
-
-  {
-    'id': 'lembah_hijau',
-    'latitude': '-5.3833',
-    'longitude': '105.2167',
-    'name': 'Lembah Hijau',
-    'location': 'Bandar Lampung',
-    'category': 'Buatan',
-    'rating': '4.5',
-    'reviews': '380 review',
-    'image': 'assets/images/lembah_hijau.jpg',
-    'description':
-        'Taman rekreasi outdoor dengan water park, kebun binatang mini, dan wahana permainan yang cocok untuk liburan keluarga.',
-  },
-
-  {
-    'id': 'trans_studio_mini_lampung',
-    'latitude': '-5.3971',
-    'longitude': '105.2668',
-    'name': 'Trans Studio Mini Lampung',
-    'location': 'Bandar Lampung',
-    'category': 'Buatan',
-    'rating': '4.4',
-    'reviews': '240 review',
-    'image': 'assets/images/trans_studio_mini_lampung.jpg',
-    'description':
-        'Taman hiburan indoor dengan berbagai wahana permainan yang cocok untuk dikunjungi bersama keluarga dan anak-anak.',
-  },
-
-  {
-    'id': 'navara_city_park',
-    'latitude': '-5.37',
-    'longitude': '105.26',
-    'name': 'Navara City Park',
-    'location': 'Bandar Lampung',
-    'category': 'Buatan',
-    'rating': '4.5',
-    'reviews': '160 review',
-    'image': 'assets/images/navara_city_park.jpg',
-    'description':
-        'Kawasan rekreasi terpadu terbaru di Bandar Lampung dengan area bermain, ruang rekreasi keluarga, dan area kuliner modern.',
-  },
-
   {
     'id': 'bukit_sakura_kemiling',
-    'latitude': '-5.39',
-    'longitude': '105.2',
     'name': 'Bukit Sakura Kemiling',
     'location': 'Bandar Lampung',
     'category': 'Buatan',
     'rating': '4.4',
-    'reviews': '190 review',
+    'reviews': '130 ulasan',
     'image': 'assets/images/bukit_sakura_kemiling.jpg',
-    'description':
-        'Taman bunga dengan konsep ala Jepang yang menjadi spot foto populer, berjarak sekitar 20-30 menit dari pusat kota.',
+    'description': 'Destinasi wisata keluarga bertema taman Jepang lengkap dengan persewaan baju kimono dan ornamen bunga sakura.',
+    'price': 'Rp 15.000',
+    'time': '08.00 - 21.00',
+    'latitude': '-5.3995',
+    'longitude': '105.2281',
   },
-
-  // ---------------- TAMBAHAN PER KABUPATEN/KOTA ----------------
-
-  // BANDAR LAMPUNG
-
   {
-    'id': 'pantai_puri_gading',
-    'latitude': '-5.437',
-    'longitude': '105.246',
-    'name': 'Pantai Puri Gading',
+    'id': 'lembah_hijau',
+    'name': 'Lembah Hijau',
     'location': 'Bandar Lampung',
-    'category': 'Alam',
-    'rating': '4.4',
-    'reviews': '140 review',
-    'image': 'assets/images/pantai_puri_gading.jpg',
-    'description':
-        'Pantai kota yang cukup mudah diakses dari pusat Bandar Lampung, cocok untuk menikmati sore hari sambil melihat aktivitas kapal di Teluk Lampung.',
+    'category': 'Buatan',
+    'rating': '4.5',
+    'reviews': '310 ulasan',
+    'image': 'assets/images/lembah_hijau.jpg',
+    'description': 'Taman rekreasi keluarga terpadu yang memadukan waterboom, taman satwa, outbond, dan penginapan.',
+    'price': 'Rp 25.000 - Rp 50.000',
+    'time': '08.00 - 17.00',
+    'latitude': '-5.4215',
+    'longitude': '105.2341',
   },
-
+  {
+    'id': 'trans_studio_mini_lampung',
+    'name': 'Trans Studio Mini Lampung',
+    'location': 'Bandar Lampung',
+    'category': 'Buatan',
+    'rating': '4.6',
+    'reviews': '270 ulasan',
+    'image': 'assets/images/trans_studio_mini_lampung.jpg',
+    'description': 'Taman bermain indoor modern dengan berbagai wahana permainan seru untuk anak-anak hingga dewasa di Transmart.',
+    'price': 'Rp 50.000 - Rp 200.000',
+    'time': '10.00 - 21.00',
+    'latitude': '-5.3855',
+    'longitude': '105.2751',
+  },
   {
     'id': 'taman_budaya_lampung',
-    'latitude': '-5.397',
-    'longitude': '105.267',
     'name': 'Taman Budaya Lampung',
     'location': 'Bandar Lampung',
     'category': 'Budaya',
     'rating': '4.3',
-    'reviews': '90 review',
+    'reviews': '85 ulasan',
     'image': 'assets/images/taman_budaya_lampung.jpg',
-    'description':
-        'Pusat kesenian dan kebudayaan milik Pemerintah Provinsi Lampung, kerap dipakai untuk pertunjukan tari, teater, dan pameran seni tradisional.',
+    'description': 'Pusat pertunjukan seni, pameran lukisan, pertunjukan teater, dan pelestarian kebudayaan Lampung.',
+    'price': 'Gratis',
+    'time': '08.00 - 16.00',
+    'latitude': '-5.4278',
+    'longitude': '105.2562',
   },
-
-  // LAMPUNG TENGAH
-
   {
-    'id': 'angkringan_jemelik',
-    'latitude': '-4.953',
-    'longitude': '105.22',
-    'name': 'Angkringan Jemelik',
-    'location': 'Lampung Tengah',
-    'category': 'Kuliner',
-    'rating': '4.3',
-    'reviews': '80 review',
-    'image': 'assets/images/angkringan_jemelik.jpg',
-    'description':
-        'Angkringan dengan suasana santai khas Lampung Tengah, menyajikan aneka gorengan, sate, dan minuman hangat untuk nongkrong malam.',
-  },
-
-  {
-    'id': 'islamic_center_lampung_tengah',
-    'latitude': '-4.95',
-    'longitude': '105.20',
-    'name': 'Islamic Center Lampung Tengah',
-    'location': 'Lampung Tengah',
-    'category': 'Buatan',
+    'id': 'pantai_puri_gading',
+    'name': 'Pantai Puri Gading',
+    'location': 'Bandar Lampung',
+    'category': 'Alam',
     'rating': '4.2',
-    'reviews': '65 review',
-    'image': 'assets/images/islamic_center_lampung_tengah.jpg',
-    'description':
-        'Bangunan islamic center yang jadi salah satu landmark di Gunung Sugih, sering dipakai untuk kegiatan keagamaan dan acara kabupaten.',
+    'reviews': '75 ulasan',
+    'image': 'assets/images/pantai_puri_gading.jpg',
+    'description': 'Pantai pesisir di Teluk Betung dengan pemandangan kapal melintas dan gazebo santai tepi pantai.',
+    'price': 'Rp 10.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.4562',
+    'longitude': '105.2471',
   },
-
-  // LAMPUNG BARAT
-
   {
-    'id': 'kopi_liwa',
-    'latitude': '-4.9667',
-    'longitude': '104.0333',
-    'name': 'Kopi Liwa',
-    'location': 'Lampung Barat',
-    'category': 'Kuliner',
-    'rating': '4.5',
-    'reviews': '110 review',
-    'image': 'assets/images/kopi_liwa.jpg',
-    'description':
-        'Kedai kopi di Liwa yang menyajikan kopi robusta khas Lampung Barat, daerah pegunungan yang jadi salah satu sentra kopi robusta terbaik di Lampung.',
-  },
-
-  {
-    'id': 'skala_brak_lamban_balak',
-    'latitude': '-5.05',
-    'longitude': '104.15',
-    'name': 'Kompleks Adat Skala Brak',
-    'location': 'Lampung Barat',
-    'category': 'Budaya',
-    'rating': '4.2',
-    'reviews': '60 review',
-    'image': 'assets/images/skala_brak_lamban_balak.jpg',
-    'description':
-        'Kawasan yang diyakini sebagai pusat kerajaan adat Skala Brak, cikal bakal masyarakat adat Lampung, dengan rumah adat dan tradisi yang masih dijaga masyarakat setempat.',
-  },
-
-  // TANGGAMUS
-
-  {
-    'id': 'waduk_batutegi',
-    'latitude': '-5.283',
-    'longitude': '104.75',
-    'name': 'Waduk Batutegi',
-    'location': 'Tanggamus',
+    'id': 'navara_city_park',
+    'name': 'Navara City Park',
+    'location': 'Bandar Lampung',
     'category': 'Buatan',
     'rating': '4.5',
-    'reviews': '170 review',
-    'image': 'assets/images/waduk_batutegi.jpg',
-    'description':
-        'Bendungan besar yang jadi sumber irigasi dan air baku untuk Lampung, sekaligus menawarkan pemandangan danau buatan yang luas dikelilingi perbukitan.',
+    'reviews': '90 ulasan',
+    'image': 'assets/images/navara_city_park.jpg',
+    'description': 'Taman kota baru bertema lanskap hijau modern dengan area kuliner outdoor dan spot santai keluarga di Kemiling.',
+    'price': 'Rp 10.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-5.3951',
+    'longitude': '105.2185',
   },
-
   {
-    'id': 'seafood_kota_agung',
-    'latitude': '-5.483',
-    'longitude': '104.617',
-    'name': 'RM Seafood Teluk Semaka',
-    'location': 'Tanggamus',
+    'id': 'mie_khodon',
+    'name': 'Mie Khodon',
+    'location': 'Bandar Lampung',
     'category': 'Kuliner',
-    'rating': '4.3',
-    'reviews': '70 review',
-    'image': 'assets/images/seafood_kota_agung.jpg',
-    'description':
-        'Rumah makan seafood di tepi Teluk Semaka, Kota Agung, menyajikan hasil laut segar khas pesisir Tanggamus.',
+    'rating': '4.7',
+    'reviews': '450 ulasan',
+    'image': 'assets/images/mie_khodon.jpg',
+    'description': 'Kuliner legendaris mie goreng & mie rebus khas Lampung bertekstur tebal sejak 1960 di Teluk Betung.',
+    'price': 'Rp 20.000 - Rp 35.000',
+    'time': '13.00 - 19.00',
+    'latitude': '-5.4418',
+    'longitude': '105.2635',
   },
-
-  // PESAWARAN
-
   {
-    'id': 'seafood_pesawaran',
-    'latitude': '-5.535',
-    'longitude': '105.22',
-    'name': 'RM Bahari Cempaka Mutun',
-    'location': 'Pesawaran',
+    'id': 'seruit_khas_lampung',
+    'name': 'RM Seruit Mendanau',
+    'location': 'Bandar Lampung',
     'category': 'Kuliner',
-    'rating': '4.3',
-    'reviews': '90 review',
-    'image': 'assets/images/seafood_pesawaran.jpg',
-    'description':
-        'Warung seafood di kawasan pesisir Pesawaran, dekat Pantai Mutun, menyajikan ikan dan hasil laut segar dengan pemandangan langsung ke arah pantai.',
+    'rating': '4.8',
+    'reviews': '380 ulasan',
+    'image': 'assets/images/seruit_khas_lampung.jpg',
+    'description': 'Restoran khas masakan tradisional Lampung dengan hidangan utama Seruit (ikan bakar/rebus, sambal terasi & tempoyak).',
+    'price': 'Rp 30.000 - Rp 75.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-5.4182',
+    'longitude': '105.2561',
+  },
+  {
+    'id': 'cafe_1',
+    'name': 'Kedai Senja Sultan Agung',
+    'location': 'Bandar Lampung',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '140 ulasan',
+    'image': 'assets/images/kedai_senja_sultan_agung.jpg',
+    'description': 'Place nongkrong kopi outdoor favorit anak muda Bandar Lampung dengan live music dan camilan kekinian.',
+    'price': 'Rp 15.000 - Rp 45.000',
+    'time': '15.00 - 23.00',
+    'latitude': '-5.3912',
+    'longitude': '105.2654',
+  },
+  {
+    'id': 'cafe_2',
+    'name': 'Cafe Rumah Kayu',
+    'location': 'Bandar Lampung',
+    'category': 'Kuliner',
+    'rating': '4.7',
+    'reviews': '520 ulasan',
+    'image': 'assets/images/cafe_rumah_kayu.jpg',
+    'description': 'Restoran keluarga dengan saung-saung di atas kolam, interior nuansa kayu asri, dan sajian seafood komplit.',
+    'price': 'Rp 50.000 - Rp 150.000',
+    'time': '10.00 - 22.00',
+    'latitude': '-5.3855',
+    'longitude': '105.2751',
+  },
+  {
+    'id': 'resto_1',
+    'name': 'RM Saung Kito Enggal',
+    'location': 'Bandar Lampung',
+    'category': 'Kuliner',
+    'rating': '4.6',
+    'reviews': '210 ulasan',
+    'image': 'assets/images/rm_saung_kito_enggal.jpg',
+    'description': 'Restoran bernuansa lesehan Sunda-Lampung yang menyajikan gurame terbang, bebek goreng, dan sambal jos.',
+    'price': 'Rp 25.000 - Rp 80.000',
+    'time': '10.00 - 21.30',
+    'latitude': '-5.4121',
+    'longitude': '105.2588',
+  },
+  {
+    'id': 'resto_2',
+    'name': 'RM Pondok Rasa Kedaton',
+    'location': 'Bandar Lampung',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '190 ulasan',
+    'image': 'assets/images/rm_pondok_rasa_kedaton.jpg',
+    'description': 'Rumah makan prasmanan dengan aneka olahan ikan mas, pindang patin, dan masakan khas rumahan.',
+    'price': 'Rp 20.000 - Rp 50.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-5.3789',
+    'longitude': '105.2552',
+  },
+  {
+    'id': 'kedai_kopi_robusta_lampung',
+    'name': 'Kedai Kopi Robusta Lampung',
+    'location': 'Bandar Lampung',
+    'category': 'Kuliner',
+    'rating': '4.6',
+    'reviews': '175 ulasan',
+    'image': 'assets/images/kedai_kopi_robusta_lampung.jpg',
+    'description': 'Warung kopi khas olahan biji kopi pilihan Robusta Lampung asli dengan aroma pekat bermutu tinggi.',
+    'price': 'Rp 12.000 - Rp 30.000',
+    'time': '08.00 - 23.00',
+    'latitude': '-5.3882',
+    'longitude': '105.2691',
   },
 
-  // LAMPUNG TIMUR
-
+  // 3. Lampung Selatan
   {
-    'id': 'situs_purbakala_pugung_raharjo',
-    'latitude': '-5.15',
-    'longitude': '105.55',
-    'name': 'Situs Purbakala Pugung Raharjo',
-    'location': 'Lampung Timur',
+    'id': 'anak_krakatau',
+    'name': 'Anak Krakatau',
+    'location': 'Lampung Selatan',
+    'category': 'Alam',
+    'rating': '4.9',
+    'reviews': '410 ulasan',
+    'image': 'assets/images/anak_krakatau.jpg',
+    'description': 'Gunung berapi aktif legendaris di Selat Sunda dengan pesona eksotis medan vulkanik dan keanekaragaman bahari.',
+    'price': 'Rp 500.000 - Rp 1.500.000',
+    'time': '06.00 - 17.00',
+    'latitude': '-6.1022',
+    'longitude': '105.4231',
+  },
+  {
+    'id': 'siger',
+    'name': 'Menara Siger',
+    'location': 'Lampung Selatan',
     'category': 'Budaya',
-    'rating': '4.4',
-    'reviews': '95 review',
-    'image': 'assets/images/situs_purbakala_pugung_raharjo.jpg',
-    'description':
-        'Kompleks situs arkeologi peninggalan masa megalitikum hingga klasik, berupa punden berundak, arca, dan benteng tanah kuno.',
+    'rating': '4.6',
+    'reviews': '530 ulasan',
+    'image': 'assets/images/siger.png',
+    'description': 'Ikon kebanggaan Lampung berbentuk mahkota Siger emas di atas bukit Bakauheni, titik nol gerbang pulau Sumatra.',
+    'price': 'Rp 10.000',
+    'time': '06.00 - 20.00',
+    'latitude': '-5.8715',
+    'longitude': '105.7554',
   },
-
   {
-    'id': 'rm_khas_sekampung',
-    'latitude': '-5.10',
-    'longitude': '105.50',
-    'name': 'RM Pondok Sekampung Asri',
-    'location': 'Lampung Timur',
-    'category': 'Kuliner',
-    'rating': '4.2',
-    'reviews': '55 review',
-    'image': 'assets/images/rm_khas_sekampung.jpg',
-    'description':
-        'Rumah makan yang menyajikan masakan khas Lampung untuk wisatawan yang mampir sebelum atau sesudah berkunjung ke Way Kambas.',
+    'id': 'pantai_kyokko',
+    'name': 'Pantai Kyokko',
+    'location': 'Lampung Selatan',
+    'category': 'Alam',
+    'rating': '4.5',
+    'reviews': '120 ulasan',
+    'image': 'assets/images/pantai_kyokko.jpg',
+    'description': 'Pantai indah dengan latar belakang pemandangan Gunung Rajabasa dan hamparan pasir halus di Rajabasa Kalianda.',
+    'price': 'Rp 15.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.6881',
+    'longitude': '105.5786',
   },
-
-  // LAMPUNG SELATAN
-
   {
     'id': 'seafood_kalianda',
-    'latitude': '-5.75',
-    'longitude': '105.57',
     'name': 'RM Seafood Dermaga Canti',
     'location': 'Lampung Selatan',
     'category': 'Kuliner',
-    'rating': '4.2',
-    'reviews': '75 review',
+    'rating': '4.6',
+    'reviews': '145 ulasan',
     'image': 'assets/images/seafood_kalianda.jpg',
-    'description':
-        'Rumah makan seafood dekat Dermaga Canti, Kalianda, titik transit populer wisatawan yang mau menyeberang ke Anak Krakatau atau Pantai Kyokko.',
+    'description': 'Rumah makan di dekat dermaga penyeberangan Canti yang terkenal dengan masakan ikan simba bakar dan sambal mentah.',
+    'price': 'Rp 35.000 - Rp 90.000',
+    'time': '08.00 - 21.00',
+    'latitude': '-5.6982',
+    'longitude': '105.5791',
   },
 
-  // METRO
-
+  // 4. Tanggamus
   {
-    'id': 'taman_merdeka_metro',
-    'latitude': '-5.114',
-    'longitude': '105.3067',
-    'name': 'Taman Merdeka Metro',
-    'location': 'Metro',
-    'category': 'Buatan',
-    'rating': '4.4',
-    'reviews': '130 review',
-    'image': 'assets/images/taman_merdeka_metro.jpg',
-    'description':
-        'Taman kota utama di Metro yang jadi ruang publik favorit warga untuk olahraga, kuliner kaki lima, dan bersantai di sore hari.',
-  },
-
-  {
-    'id': 'islamic_center_metro',
-    'latitude': '-5.12',
-    'longitude': '105.30',
-    'name': 'Islamic Center Kota Metro',
-    'location': 'Metro',
-    'category': 'Budaya',
-    'rating': '4.2',
-    'reviews': '60 review',
-    'image': 'assets/images/islamic_center_metro.jpg',
-    'description':
-        'Bangunan islamic center yang jadi landmark keagamaan sekaligus tempat kegiatan komunitas di Kota Metro.',
-  },
-
-  {
-    'id': 'angkringan_metro',
-    'latitude': '-5.11',
-    'longitude': '105.31',
-    'name': 'Angkringan Kamboja Metro',
-    'location': 'Metro',
-    'category': 'Kuliner',
-    'rating': '4.3',
-    'reviews': '70 review',
-    'image': 'assets/images/angkringan_metro.jpg',
-    'description':
-        'Angkringan yang ramai jadi tempat nongkrong warga Metro, dikenal sebagai kota pendidikan dengan banyak pilihan tempat makan santai.',
-  },
-
-  // PRINGSEWU
-
-  {
-    'id': 'tugu_bambu_pringsewu',
-    'latitude': '-5.359',
-    'longitude': '104.973',
-    'name': 'Tugu Bambu Pringsewu',
-    'location': 'Pringsewu',
-    'category': 'Buatan',
-    'rating': '4.1',
-    'reviews': '55 review',
-    'image': 'assets/images/tugu_bambu_pringsewu.jpg',
-    'description':
-        'Tugu ikonik di pusat Kota Pringsewu yang jadi penanda dan spot foto favorit warga maupun pengunjung.',
-  },
-
-  {
-    'id': 'pendopo_pringsewu',
-    'latitude': '-5.358',
-    'longitude': '104.974',
-    'name': 'Pendopo Pringsewu',
-    'location': 'Pringsewu',
-    'category': 'Budaya',
-    'rating': '4.0',
-    'reviews': '40 review',
-    'image': 'assets/images/pendopo_pringsewu.jpg',
-    'description':
-        'Bangunan pendopo kabupaten yang juga jadi tempat berbagai acara adat dan budaya di Pringsewu.',
-  },
-
-  {
-    'id': 'rm_khas_pringsewu',
-    'latitude': '-5.36',
-    'longitude': '104.97',
-    'name': 'RM Sinar Pringsewu',
-    'location': 'Pringsewu',
-    'category': 'Kuliner',
-    'rating': '4.2',
-    'reviews': '50 review',
-    'image': 'assets/images/rm_khas_pringsewu.jpg',
-    'description':
-        'Rumah makan dengan menu khas Lampung yang jadi pilihan wisatawan yang transit di Pringsewu.',
-  },
-
-  // LAMPUNG UTARA
-
-  {
-    'id': 'tugu_macan_kotabumi',
-    'latitude': '-4.8267',
-    'longitude': '104.9033',
-    'name': 'Tugu Macan Kotabumi',
-    'location': 'Lampung Utara',
-    'category': 'Buatan',
-    'rating': '4.2',
-    'reviews': '80 review',
-    'image': 'assets/images/tugu_macan_kotabumi.jpg',
-    'description':
-        'Tugu patung macan yang jadi ikon dan penanda pusat Kota Kotabumi, ibu kota Kabupaten Lampung Utara.',
-  },
-
-  {
-    'id': 'rm_khas_kotabumi',
-    'latitude': '-4.83',
-    'longitude': '104.90',
-    'name': 'RM Durian Asli Kotabumi',
-    'location': 'Lampung Utara',
-    'category': 'Kuliner',
-    'rating': '4.2',
-    'reviews': '50 review',
-    'image': 'assets/images/rm_khas_kotabumi.jpg',
-    'description':
-        'Rumah makan dengan sajian khas Lampung Utara, termasuk olahan durian yang jadi salah satu hasil bumi daerah ini.',
-  },
-
-  {
-    'id': 'agrowisata_lampung_utara',
-    'latitude': '-4.85',
-    'longitude': '104.92',
-    'name': 'Agrowisata Kebun Kopi Abung',
-    'location': 'Lampung Utara',
+    'id': 'pantai_gigi_hiu',
+    'name': 'Pantai Gigi Hiu',
+    'location': 'Tanggamus',
     'category': 'Alam',
-    'rating': '4.1',
-    'reviews': '45 review',
-    'image': 'assets/images/agrowisata_lampung_utara.jpg',
-    'description':
-        'Kebun agrowisata di kawasan Abung yang menawarkan suasana pedesaan dan perkebunan kopi khas Lampung Utara untuk wisata edukasi keluarga.',
+    'rating': '4.8',
+    'reviews': '290 ulasan',
+    'image': 'assets/images/pantai_gigi_hiu.jpg',
+    'description': 'Pantai fenomena batu karang tajam menjulang menyerupai gigi hiu di Kelumbayan, favorit fotografer dunia.',
+    'price': 'Rp 15.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.7541',
+    'longitude': '105.0562',
   },
-
-  // TULANG BAWANG
-
   {
-    'id': 'wisata_alam_21',
-    'latitude': '-4.35',
-    'longitude': '105.55',
-    'name': 'Wisata Alam 21',
-    'location': 'Tulang Bawang',
-    'category': 'Buatan',
-    'rating': '4.0',
-    'reviews': '45 review',
-    'image': 'assets/images/wisata_alam_21.jpg',
-    'description':
-        'Kawasan wisata air dan area bermain keluarga di Gedung Aji, jadi pilihan rekreasi warga sekitar Tulang Bawang.',
-  },
-
-  {
-    'id': 'rm_khas_menggala',
-    'latitude': '-4.28',
-    'longitude': '105.50',
-    'name': 'RM Tepian Menggala',
-    'location': 'Tulang Bawang',
-    'category': 'Kuliner',
-    'rating': '4.2',
-    'reviews': '40 review',
-    'image': 'assets/images/rm_khas_menggala.jpg',
-    'description':
-        'Rumah makan di Menggala, ibu kota Tulang Bawang, dengan menu khas masakan Lampung dan Sumatera.',
-  },
-
-  {
-    'id': 'tepian_way_tulang_bawang',
-    'latitude': '-4.30',
-    'longitude': '105.45',
-    'name': 'Dermaga Rakyat Tulang Bawang',
-    'location': 'Tulang Bawang',
+    'id': 'teluk_kiluan',
+    'name': 'Teluk Kiluan',
+    'location': 'Tanggamus',
     'category': 'Alam',
-    'rating': '4.0',
-    'reviews': '35 review',
-    'image': 'assets/images/tepian_way_tulang_bawang.jpg',
-    'description':
-        'Area di tepi Sungai Tulang Bawang yang jadi tempat bersantai warga sekitar sambil menikmati suasana sungai.',
+    'rating': '4.8',
+    'reviews': '360 ulasan',
+    'image': 'assets/images/teluk_kiluan.jpg',
+    'description': 'Destinasi laut populer untuk melihat atraksi lumba-lumba bebas di samudra dan laguna laut Kolam Laguna.',
+    'price': 'Rp 250.000',
+    'time': '06.00 - 17.00',
+    'latitude': '-5.7725',
+    'longitude': '105.1051',
+  },
+  {
+    'id': 'air_terjun_way_lalaan',
+    'name': 'Air Terjun Way Lalaan',
+    'location': 'Tanggamus',
+    'category': 'Alam',
+    'rating': '4.5',
+    'reviews': '170 ulasan',
+    'image': 'assets/images/way_lalaan.jpg',
+    'description': 'Air terjun bertingkat di kaki Gunung Tanggamus yang sudah dikenal sejak zaman kolonial Belanda.',
+    'price': 'Rp 10.000',
+    'time': '07.00 - 17.00',
+    'latitude': '-5.4741',
+    'longitude': '104.6285',
+  },
+  {
+    'id': 'waduk_batutegi',
+    'name': 'Waduk Batutegi',
+    'location': 'Tanggamus',
+    'category': 'Buatan',
+    'rating': '4.6',
+    'reviews': '140 ulasan',
+    'image': 'assets/images/waduk_batutegi.jpg',
+    'description': 'Bendungan terbesar di Asia Tenggara yang dikelilingi perbukitan hijau asri dan perahu wisata di Air Naningan.',
+    'price': 'Rp 10.000',
+    'time': '08.00 - 17.00',
+    'latitude': '-5.2718',
+    'longitude': '104.6985',
+  },
+  {
+    'id': 'seafood_kota_agung',
+    'name': 'RM Seafood Teluk Semaka',
+    'location': 'Tanggamus',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '95 ulasan',
+    'image': 'assets/images/seafood_kota_agung.jpg',
+    'description': 'Warung makan ikan segar khas pesisir Kota Agung dengan sajian udang bakar dan bumbu kuning khas Tanggamus.',
+    'price': 'Rp 30.000 - Rp 80.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-5.4981',
+    'longitude': '104.6152',
   },
 
-  // TULANG BAWANG BARAT
-
+  // 5. Lampung Barat & Pesisir Barat
   {
-    'id': 'masjid_agung_tubaba',
-    'latitude': '-4.4398',
-    'longitude': '105.0444',
-    'name': 'Masjid Agung Tulang Bawang Barat',
-    'location': 'Tulang Bawang Barat',
+    'id': 'danau_ranau',
+    'name': 'Danau Ranau',
+    'location': 'Lampung Barat',
+    'category': 'Alam',
+    'rating': '4.8',
+    'reviews': '310 ulasan',
+    'image': 'assets/images/danau_ranau.jpg',
+    'description': 'Danau vulkanik terbesar kedua di Sumatra dengan latar Gunung Seminung yang sejuk dan pemandian air panas.',
+    'price': 'Rp 10.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-4.8794',
+    'longitude': '103.9313',
+  },
+  {
+    'id': 'danau_suoh',
+    'name': 'Danau Suoh',
+    'location': 'Lampung Barat',
+    'category': 'Alam',
+    'rating': '4.7',
+    'reviews': '180 ulasan',
+    'image': 'assets/images/danau_suoh.jpg',
+    'description': 'Kawasan geothermal ajaib di Lampung Barat dengan 4 danau unik yang dapat berubah warna dan pasir kuning.',
+    'price': 'Rp 15.000',
+    'time': '07.00 - 17.00',
+    'latitude': '-5.2381',
+    'longitude': '104.2642',
+  },
+  {
+    'id': 'kopi_liwa',
+    'name': 'Kedai Kopi Robusta Liwa',
+    'location': 'Lampung Barat',
+    'category': 'Kuliner',
+    'rating': '4.7',
+    'reviews': '130 ulasan',
+    'image': 'assets/images/kopi_liwa.jpg',
+    'description': 'Kedai kopi khas dataran tinggi Liwa yang menyajikan kopi luwak & kopi hitam cita rasa petik merah.',
+    'price': 'Rp 15.000 - Rp 40.000',
+    'time': '08.00 - 22.00',
+    'latitude': '-5.0351',
+    'longitude': '104.0921',
+  },
+  {
+    'id': 'skala_brak_lamban_balak',
+    'name': 'Kompleks Adat Skala Brak',
+    'location': 'Lampung Barat',
     'category': 'Budaya',
     'rating': '4.6',
-    'reviews': '90 review',
-    'image': 'assets/images/masjid_agung_tubaba.jpg',
-    'description':
-        'Masjid agung dengan desain arsitektur modern yang jadi landmark ikonik Kabupaten Tulang Bawang Barat.',
+    'reviews': '95 ulasan',
+    'image': 'assets/images/skala_brak_lamban_balak.jpg',
+    'description': 'Rumah adat Lamban Balak dan pusat peradaban leluhur asal usul suku bangsa Lampung di Batu Brak.',
+    'price': 'Gratis / Donasi',
+    'time': '08.00 - 16.00',
+    'latitude': '-5.0682',
+    'longitude': '104.0815',
   },
-
-  {
-    'id': 'rm_khas_tubaba',
-    'latitude': '-4.45',
-    'longitude': '105.05',
-    'name': 'RM Saung Tubaba',
-    'location': 'Tulang Bawang Barat',
-    'category': 'Kuliner',
-    'rating': '4.1',
-    'reviews': '35 review',
-    'image': 'assets/images/rm_khas_tubaba.jpg',
-    'description':
-        'Rumah makan dengan menu khas Lampung di kawasan Panaragan Jaya, ibu kota Tulang Bawang Barat.',
-  },
-
-  {
-    'id': 'agrowisata_tubaba',
-    'latitude': '-4.50',
-    'longitude': '105.10',
-    'name': 'Kebun Buah Panaragan',
-    'location': 'Tulang Bawang Barat',
-    'category': 'Alam',
-    'rating': '4.0',
-    'reviews': '30 review',
-    'image': 'assets/images/agrowisata_tubaba.jpg',
-    'description':
-        'Kawasan perkebunan buah di Panaragan yang dikembangkan sebagai agrowisata, menawarkan suasana pedesaan khas Tulang Bawang Barat.',
-  },
-
-  // WAY KANAN
-
-  {
-    'id': 'kopi_robusta_way_kanan',
-    'latitude': '-4.45',
-    'longitude': '104.60',
-    'name': 'Kedai Kopi Baradatu',
-    'location': 'Way Kanan',
-    'category': 'Kuliner',
-    'rating': '4.3',
-    'reviews': '50 review',
-    'image': 'assets/images/kopi_robusta_way_kanan.jpg',
-    'description':
-        'Kedai kopi di Baradatu yang menyajikan kopi robusta hasil perkebunan lokal Way Kanan, salah satu daerah penghasil kopi di Lampung.',
-  },
-
-  {
-    'id': 'air_terjun_way_kanan',
-    'latitude': '-4.50',
-    'longitude': '104.55',
-    'name': 'Air Terjun Curup Sanggi',
-    'location': 'Way Kanan',
-    'category': 'Alam',
-    'rating': '4.2',
-    'reviews': '40 review',
-    'image': 'assets/images/air_terjun_way_kanan.jpg',
-    'description':
-        'Air terjun di kawasan perbukitan Way Kanan yang masih asri, cocok untuk wisata alam dan trekking ringan.',
-  },
-
-  {
-    'id': 'taman_kota_blambangan_umpu',
-    'latitude': '-4.55',
-    'longitude': '104.50',
-    'name': 'Taman Kota Blambangan Umpu',
-    'location': 'Way Kanan',
-    'category': 'Buatan',
-    'rating': '4.0',
-    'reviews': '30 review',
-    'image': 'assets/images/taman_kota_blambangan_umpu.jpg',
-    'description':
-        'Taman kota di Blambangan Umpu, ibu kota Kabupaten Way Kanan, jadi ruang publik untuk bersantai warga sekitar.',
-  },
-
-  // MESUJI
-
-  {
-    'id': 'tambak_seafood_mesuji',
-    'latitude': '-3.90',
-    'longitude': '105.45',
-    'name': 'RM Tambak Rawa Jaya',
-    'location': 'Mesuji',
-    'category': 'Kuliner',
-    'rating': '4.0',
-    'reviews': '25 review',
-    'image': 'assets/images/tambak_seafood_mesuji.jpg',
-    'description':
-        'Warung makan yang menyajikan hasil tambak segar khas Mesuji, daerah yang dikenal dengan perikanan air payaunya.',
-  },
-
-  {
-    'id': 'rawa_pesisir_mesuji',
-    'latitude': '-3.95',
-    'longitude': '105.50',
-    'name': 'Rawa Bakung Mesuji',
-    'location': 'Mesuji',
-    'category': 'Alam',
-    'rating': '3.9',
-    'reviews': '20 review',
-    'image': 'assets/images/rawa_pesisir_mesuji.jpg',
-    'description':
-        'Kawasan rawa dan pesisir di ujung utara Lampung yang menampilkan lanskap khas dataran rendah dan tambak.',
-  },
-
-  {
-    'id': 'taman_kota_mesuji',
-    'latitude': '-3.90',
-    'longitude': '105.40',
-    'name': 'Taman Kota Mesuji',
-    'location': 'Mesuji',
-    'category': 'Buatan',
-    'rating': '4.0',
-    'reviews': '20 review',
-    'image': 'assets/images/taman_kota_mesuji.jpg',
-    'description':
-        'Taman kota sederhana di pusat pemerintahan Kabupaten Mesuji, jadi ruang publik warga setempat.',
-  },
-
-  // PESISIR BARAT
-
-  {
-    'id': 'pulau_pisang',
-    'latitude': '-5.0333',
-    'longitude': '103.85',
-    'name': 'Pulau Pisang',
-    'location': 'Pesisir Barat',
-    'category': 'Alam',
-    'rating': '4.6',
-    'reviews': '150 review',
-    'image': 'assets/images/pulau_pisang.jpg',
-    'description':
-        'Pulau kecil di lepas pantai Pesisir Barat dengan pantai berpasir putih, terumbu karang, dan suasana yang masih sangat tenang.',
-  },
-
   {
     'id': 'pantai_labuhan_jukung',
-    'latitude': '-5.1833',
-    'longitude': '103.9333',
     'name': 'Pantai Labuhan Jukung',
     'location': 'Pesisir Barat',
     'category': 'Alam',
-    'rating': '4.5',
-    'reviews': '160 review',
+    'rating': '4.7',
+    'reviews': '280 ulasan',
     'image': 'assets/images/pantai_labuhan_jukung.jpg',
-    'description':
-        'Pantai populer di Krui dengan ombak yang juga diminati peselancar, serta pemandangan matahari terbenam yang jadi favorit wisatawan.',
+    'description': 'Pantai ikonik ibu kota Krui dengan pemandangan sunset memukau, ombak selancar, dan spot kuliner malam.',
+    'price': 'Rp 5.000',
+    'time': '06.00 - 22.00',
+    'latitude': '-5.1915',
+    'longitude': '103.9281',
   },
-
+  {
+    'id': 'pantai_tanjung_setia',
+    'name': 'Pantai Tanjung Setia',
+    'location': 'Pesisir Barat',
+    'category': 'Alam',
+    'rating': '4.9',
+    'reviews': '390 ulasan',
+    'image': 'assets/images/pantai_tanjung_setia.jpg',
+    'description': 'Surga selancar dunia di Pesisir Barat tempat kompetisi WSL Krui Pro dengan ombak kelas internasional.',
+    'price': 'Rp 10.000',
+    'time': '06.00 - 18.00',
+    'latitude': '-5.3112',
+    'longitude': '103.9025',
+  },
+  {
+    'id': 'pulau_pisang',
+    'name': 'Pulau Pisang',
+    'location': 'Pesisir Barat',
+    'category': 'Alam',
+    'rating': '4.8',
+    'reviews': '160 ulasan',
+    'image': 'assets/images/pulau_pisang.jpg',
+    'description': 'Pulau kecil eksotis lepas pantai Krui dengan rumah panggung tua bersejarah, lumba-lumba, dan pasir putih.',
+    'price': 'Rp 30.000 (Perahu)',
+    'time': '06.00 - 17.00',
+    'latitude': '-5.1125',
+    'longitude': '103.8412',
+  },
   {
     'id': 'rm_khas_krui',
-    'latitude': '-5.18',
-    'longitude': '103.94',
     'name': 'RM Seafood Labuhan Jukung',
     'location': 'Pesisir Barat',
     'category': 'Kuliner',
-    'rating': '4.2',
-    'reviews': '45 review',
+    'rating': '4.6',
+    'reviews': '115 ulasan',
     'image': 'assets/images/rm_khas_krui.jpg',
-    'description':
-        'Rumah makan seafood dekat Pantai Labuhan Jukung, Krui, jadi tempat singgah favorit wisatawan sebelum atau sesudah berselancar di Tanjung Setia.',
+    'description': 'Rumah makan khas Krui yang terkenal dengan olahan ikan tatsu, gurita bakar, dan gulai taboh masakan pesisir.',
+    'price': 'Rp 30.000 - Rp 85.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-5.1925',
+    'longitude': '103.9302',
   },
 
+  // 6. Lampung Tengah & Metro
+  {
+    'id': 'air_terjun_curug_tujuh',
+    'name': 'Air Terjun Curug Tujuh',
+    'location': 'Lampung Tengah',
+    'category': 'Alam',
+    'rating': '4.6',
+    'reviews': '140 ulasan',
+    'image': 'assets/images/curug_tujuh.jpg',
+    'description': 'Air terjun eksotis 7 tingkat yang berada di tengah kawasan hutan lindung Sendang Agung Lampung Tengah.',
+    'price': 'Rp 10.000',
+    'time': '07.00 - 16.00',
+    'latitude': '-5.0211',
+    'longitude': '104.9125',
+  },
+  {
+    'id': 'air_terjun_curup',
+    'name': 'Air Terjun Curup Lestari',
+    'location': 'Lampung Tengah',
+    'category': 'Alam',
+    'rating': '4.4',
+    'reviews': '95 ulasan',
+    'image': 'assets/images/air_terjun_curup.jpg',
+    'description': 'Air terjun alami dengan kolam bening yang dikelilingi pepohonan rindang di Pubian.',
+    'price': 'Rp 5.000',
+    'time': '07.00 - 17.00',
+    'latitude': '-4.9125',
+    'longitude': '104.9812',
+  },
+  {
+    'id': 'danau_tirta_gangga',
+    'name': 'Danau Tirta Gangga',
+    'location': 'Lampung Tengah',
+    'category': 'Budaya',
+    'rating': '4.5',
+    'reviews': '125 ulasan',
+    'image': 'assets/images/danau_tirta_gangga.jpg',
+    'description': 'Danau buatan bernuansa pura Bali di Seputih Banyak, lengkap dengan patung Bima dan Pura Tepi Danau.',
+    'price': 'Rp 10.000',
+    'time': '07.00 - 18.00',
+    'latitude': '-4.8985',
+    'longitude': '105.4125',
+  },
+  {
+    'id': 'islamic_center_lampung_tengah',
+    'name': 'Islamic Center Lampung Tengah',
+    'location': 'Lampung Tengah',
+    'category': 'Buatan',
+    'rating': '4.6',
+    'reviews': '200 ulasan',
+    'image': 'assets/images/islamic_center_lampung_tengah.jpg',
+    'description': 'Masjid megah kebanggaan warga Gunung Sugih dengan arsitektur memukau dan taman ruang terbuka publik.',
+    'price': 'Gratis',
+    'time': '04.00 - 21.00',
+    'latitude': '-4.9652',
+    'longitude': '105.2151',
+  },
+  {
+    'id': 'pindang_sehat_gunung_sugih',
+    'name': 'Pindang Sehat Gunung Sugih',
+    'location': 'Lampung Tengah',
+    'category': 'Kuliner',
+    'rating': '4.7',
+    'reviews': '230 ulasan',
+    'image': 'assets/images/pindang_sehat_gunung_sugih.jpg',
+    'description': 'Pusat kuliner pindang baung & patin kuah pegagan asam pedas segar di Gunung Sugih.',
+    'price': 'Rp 35.000 - Rp 70.000',
+    'time': '09.00 - 20.00',
+    'latitude': '-4.9621',
+    'longitude': '105.2162',
+  },
+  {
+    'id': 'angkringan_jemelik',
+    'name': 'Angkringan Jemelik',
+    'location': 'Lampung Tengah',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '110 ulasan',
+    'image': 'assets/images/angkringan_jemelik.jpg',
+    'description': 'Tempat santai malam favorit warga Bandar Jaya dengan sajian nasi kucing, sate-satean, dan wedang ronde.',
+    'price': 'Rp 5.000 - Rp 25.000',
+    'time': '16.00 - 23.30',
+    'latitude': '-4.9182',
+    'longitude': '105.2125',
+  },
+  {
+    'id': 'taman_merdeka_metro',
+    'name': 'Taman Merdeka Metro',
+    'location': 'Metro',
+    'category': 'Buatan',
+    'rating': '4.6',
+    'reviews': '310 ulasan',
+    'image': 'assets/images/taman_merdeka_metro.jpg',
+    'description': 'Alun-alun pusat Kota Metro dengan tugu menara air kuno Belanda, area bermain, dan pusat kuliner malam.',
+    'price': 'Gratis',
+    'time': '06.00 - 23.00',
+    'latitude': '-5.1138',
+    'longitude': '105.3068',
+  },
+  {
+    'id': 'islamic_center_metro',
+    'name': 'Islamic Center Kota Metro',
+    'location': 'Metro',
+    'category': 'Budaya',
+    'rating': '4.7',
+    'reviews': '280 ulasan',
+    'image': 'assets/images/islamic_center_metro.jpg',
+    'description': 'Masjid Agung At-Taqwa Kota Metro dengan kubah emas besar di jantung kota.',
+    'price': 'Gratis',
+    'time': '04.00 - 21.00',
+    'latitude': '-5.1132',
+    'longitude': '105.3061',
+  },
+  {
+    'id': 'angkringan_metro',
+    'name': 'Angkringan Kamboja Metro',
+    'location': 'Metro',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '150 ulasan',
+    'image': 'assets/images/angkringan_metro.jpg',
+    'description': 'Angkringan populer di Metro dengan suasana outdoor kekinian dan beragam pilihan sate usus & bakar-bakaran.',
+    'price': 'Rp 8.000 - Rp 25.000',
+    'time': '16.30 - 23.00',
+    'latitude': '-5.1152',
+    'longitude': '105.3082',
+  },
+
+  // 7. Pringsewu & Lampung Timur
+  {
+    'id': 'tugu_bambu_pringsewu',
+    'name': 'Tugu Bambu Pringsewu',
+    'location': 'Pringsewu',
+    'category': 'Buatan',
+    'rating': '4.5',
+    'reviews': '180 ulasan',
+    'image': 'assets/images/tugu_bambu_pringsewu.jpg',
+    'description': 'Landmark gerbang utama Pringsewu bertema replika rerimbunan bambu bertingkat.',
+    'price': 'Gratis',
+    'time': '24 Jam',
+    'latitude': '-5.3591',
+    'longitude': '104.9734',
+  },
+  {
+    'id': 'pendopo_pringsewu',
+    'name': 'Pendopo Pringsewu',
+    'location': 'Pringsewu',
+    'category': 'Budaya',
+    'rating': '4.6',
+    'reviews': '220 ulasan',
+    'image': 'assets/images/pendopo_pringsewu.jpg',
+    'description': 'Ruang terbuka hijau dan alun-alun utama kabupaten Pringsewu untuk rekreasi dan acara budaya.',
+    'price': 'Gratis',
+    'time': '06.00 - 22.00',
+    'latitude': '-5.3582',
+    'longitude': '104.9741',
+  },
+  {
+    'id': 'rm_khas_pringsewu',
+    'name': 'RM Sinar Pringsewu',
+    'location': 'Pringsewu',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '165 ulasan',
+    'image': 'assets/images/rm_khas_pringsewu.jpg',
+    'description': 'Rumah makan populer khas masakan Jawa-Lampung dengan keunggulan ayam bakar madu & gudeg.',
+    'price': 'Rp 20.000 - Rp 60.000',
+    'time': '08.00 - 21.00',
+    'latitude': '-5.3615',
+    'longitude': '104.9722',
+  },
+  {
+    'id': 'taman_nasional_way_kambas',
+    'name': 'Taman Nasional Way Kambas',
+    'location': 'Lampung Timur',
+    'category': 'Alam',
+    'rating': '4.8',
+    'reviews': '480 ulasan',
+    'image': 'assets/images/way_kambas.jpg',
+    'description': 'Pusat konservasi gajah Sumatra legendaris dan suaka rhino (badak) terbesar di Indonesia.',
+    'price': 'Rp 20.000 - Rp 50.000',
+    'time': '08.00 - 16.00',
+    'latitude': '-5.0542',
+    'longitude': '105.7481',
+  },
+  {
+    'id': 'situs_purbakala_pugung_raharjo',
+    'name': 'Situs Purbakala Pugung Raharjo',
+    'location': 'Lampung Timur',
+    'category': 'Budaya',
+    'rating': '4.6',
+    'reviews': '140 ulasan',
+    'image': 'assets/images/situs_purbakala_pugung_raharjo.jpg',
+    'description': 'Taman purbakala kuno peninggalan era Megalitikum berupa punden berundak dan benteng tanah di Sekampung Udik.',
+    'price': 'Rp 5.000',
+    'time': '08.00 - 16.00',
+    'latitude': '-5.3085',
+    'longitude': '105.5742',
+  },
+  {
+    'id': 'rm_khas_sekampung',
+    'name': 'RM Pondok Sekampung Asri',
+    'location': 'Lampung Timur',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '105 ulasan',
+    'image': 'assets/images/rm_khas_sekampung.jpg',
+    'description': 'Rumah makan di tepi persawahan Sekampung yang menyajikan olahan ikan gurame dan es kelapa muda.',
+    'price': 'Rp 25.000 - Rp 65.000',
+    'time': '09.00 - 20.00',
+    'latitude': '-5.1852',
+    'longitude': '105.4851',
+  },
+
+  // 8. Lampung Utara & Way Kanan
+  {
+    'id': 'tugu_macan_kotabumi',
+    'name': 'Tugu Macan Kotabumi',
+    'location': 'Lampung Utara',
+    'category': 'Buatan',
+    'rating': '4.4',
+    'reviews': '110 ulasan',
+    'image': 'assets/images/tugu_macan_kotabumi.jpg',
+    'description': 'Tugu simbolik landmark kota Kotabumi dengan patung macan emas di persimpangan utama.',
+    'price': 'Gratis',
+    'time': '24 Jam',
+    'latitude': '-4.8268',
+    'longitude': '104.9034',
+  },
+  {
+    'id': 'agrowisata_lampung_utara',
+    'name': 'Agrowisata Kebun Kopi Abung',
+    'location': 'Lampung Utara',
+    'category': 'Alam',
+    'rating': '4.5',
+    'reviews': '80 ulasan',
+    'image': 'assets/images/agrowisata_lampung_utara.jpg',
+    'description': 'Perkebunan kopi perbukitan di Abung Barat dengan fasilitas pemetikan kopi dan edukasi pengolahan.',
+    'price': 'Rp 15.000',
+    'time': '08.00 - 16.30',
+    'latitude': '-4.8612',
+    'longitude': '104.8512',
+  },
+  {
+    'id': 'rm_khas_kotabumi',
+    'name': 'RM Durian Asli Kotabumi',
+    'location': 'Lampung Utara',
+    'category': 'Kuliner',
+    'rating': '4.6',
+    'reviews': '135 ulasan',
+    'image': 'assets/images/rm_khas_kotabumi.jpg',
+    'description': 'Pusat kuliner durian lokal petik pohon & olahan tempoyak ikan baung khas Kotabumi.',
+    'price': 'Rp 20.000 - Rp 80.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-4.8291',
+    'longitude': '104.8981',
+  },
+  {
+    'id': 'taman_kota_blambangan_umpu',
+    'name': 'Taman Kota Blambangan Umpu',
+    'location': 'Way Kanan',
+    'category': 'Buatan',
+    'rating': '4.4',
+    'reviews': '90 ulasan',
+    'image': 'assets/images/taman_kota_blambangan_umpu.jpg',
+    'description': 'Taman hijau pusat pemerintahan Blambangan Umpu dengan lapangan olahraga dan pepohonan rindang.',
+    'price': 'Gratis',
+    'time': '06.00 - 21.00',
+    'latitude': '-4.4981',
+    'longitude': '104.5162',
+  },
+  {
+    'id': 'air_terjun_way_kanan',
+    'name': 'Air Terjun Curup Gangsa',
+    'location': 'Way Kanan',
+    'category': 'Alam',
+    'rating': '4.8',
+    'reviews': '210 ulasan',
+    'image': 'assets/images/air_terjun_way_kanan.jpg',
+    'description': 'Air terjun megah menyerupai Niagara mini di Kasui Way Kanan dengan tebing batu lebar bergemuruh.',
+    'price': 'Rp 10.000',
+    'time': '07.00 - 17.00',
+    'latitude': '-4.6281',
+    'longitude': '104.3812',
+  },
+  {
+    'id': 'kopi_robusta_way_kanan',
+    'name': 'Kedai Kopi Baradatu',
+    'location': 'Way Kanan',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '85 ulasan',
+    'image': 'assets/images/kopi_robusta_way_kanan.jpg',
+    'description': 'Kedai santai menyajikan kopi Robusta Baradatu racikan tradisional dan pisang goreng keju.',
+    'price': 'Rp 10.000 - Rp 25.000',
+    'time': '08.00 - 22.00',
+    'latitude': '-4.5125',
+    'longitude': '104.6152',
+  },
+
+  // 9. Tulang Bawang & Tulang Bawang Barat
+  {
+    'id': 'masjid_agung_tubaba',
+    'name': 'Masjid Agung Tulang Bawang Barat',
+    'location': 'Tulang Bawang Barat',
+    'category': 'Budaya',
+    'rating': '4.9',
+    'reviews': '450 ulasan',
+    'image': 'assets/images/masjid_agung_tubaba.jpg',
+    'description': 'Masjid 99 Cahaya bertema arsitektur kontemporer tanpa kubah tradisional di Kompleks Dunia Islam Tubaba.',
+    'price': 'Gratis',
+    'time': '04.00 - 21.00',
+    'latitude': '-4.4539',
+    'longitude': '105.0601',
+  },
+  {
+    'id': 'agrowisata_tubaba',
+    'name': 'Kebun Buah Panaragan',
+    'location': 'Tulang Bawang Barat',
+    'category': 'Alam',
+    'rating': '4.5',
+    'reviews': '110 ulasan',
+    'image': 'assets/images/agrowisata_tubaba.jpg',
+    'description': 'Taman agrowisata buah naga dan kelengkeng petik sendiri di Panaragan Jaya.',
+    'price': 'Rp 10.000',
+    'time': '08.00 - 17.00',
+    'latitude': '-4.4621',
+    'longitude': '105.0712',
+  },
+  {
+    'id': 'rm_khas_tubaba',
+    'name': 'RM Saung Tubaba',
+    'location': 'Tulang Bawang Barat',
+    'category': 'Kuliner',
+    'rating': '4.6',
+    'reviews': '130 ulasan',
+    'image': 'assets/images/rm_khas_tubaba.jpg',
+    'description': 'Restoran kayu khas Panaragan yang menyajikan lalapan belut, pindang jelabat, dan es campur.',
+    'price': 'Rp 25.000 - Rp 70.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-4.4561',
+    'longitude': '105.0582',
+  },
+  {
+    'id': 'tepian_way_tulang_bawang',
+    'name': 'Dermaga Rakyat Tulang Bawang',
+    'location': 'Tulang Bawang',
+    'category': 'Alam',
+    'rating': '4.4',
+    'reviews': '95 ulasan',
+    'image': 'assets/images/tepian_way_tulang_bawang.jpg',
+    'description': 'Tepi sungai Way Tulang Bawang di Menggala tempat pemandangan perahu kayu tradisional dan sunset.',
+    'price': 'Gratis',
+    'time': '06.00 - 18.00',
+    'latitude': '-4.2612',
+    'longitude': '105.2415',
+  },
+  {
+    'id': 'rm_khas_menggala',
+    'name': 'RM Tepian Menggala',
+    'location': 'Tulang Bawang',
+    'category': 'Kuliner',
+    'rating': '4.6',
+    'reviews': '140 ulasan',
+    'image': 'assets/images/rm_khas_menggala.jpg',
+    'description': 'Kuliner khas Menggala olahan udang galah sungai Way Tulang Bawang dan pindang patin.',
+    'price': 'Rp 40.000 - Rp 100.000',
+    'time': '09.00 - 21.00',
+    'latitude': '-4.2651',
+    'longitude': '105.2452',
+  },
+  {
+    'id': 'wisata_alam_21',
+    'name': 'Wisata Alam 21',
+    'location': 'Tulang Bawang',
+    'category': 'Buatan',
+    'rating': '4.3',
+    'reviews': '75 ulasan',
+    'image': 'assets/images/wisata_alam_21.jpg',
+    'description': 'Taman rekreasi buatan dengan kolam renang dan spot foto selfie di Banjar Margo.',
+    'price': 'Rp 15.000',
+    'time': '08.00 - 17.00',
+    'latitude': '-4.3125',
+    'longitude': '105.3152',
+  },
+
+  // 10. Mesuji
+  {
+    'id': 'taman_kota_mesuji',
+    'name': 'Taman Kota Mesuji',
+    'location': 'Mesuji',
+    'category': 'Buatan',
+    'rating': '4.3',
+    'reviews': '70 ulasan',
+    'image': 'assets/images/taman_kota_mesuji.jpg',
+    'description': 'Taman kota Simpang Pematang untuk area olahraga warga dan bermain anak.',
+    'price': 'Gratis',
+    'time': '06.00 - 21.00',
+    'latitude': '-4.0152',
+    'longitude': '105.4125',
+  },
+  {
+    'id': 'rawa_pesisir_mesuji',
+    'name': 'Rawa Bakung Mesuji',
+    'location': 'Mesuji',
+    'category': 'Alam',
+    'rating': '4.4',
+    'reviews': '65 ulasan',
+    'image': 'assets/images/rawa_pesisir_mesuji.jpg',
+    'description': 'Lanskap rawa luas alami di kabupaten Mesuji tempat habitat burung rawa dan memancing.',
+    'price': 'Gratis',
+    'time': '06.00 - 17.00',
+    'latitude': '-3.9851',
+    'longitude': '105.4852',
+  },
+  {
+    'id': 'tambak_seafood_mesuji',
+    'name': 'RM Tambak Rawa Jaya',
+    'location': 'Mesuji',
+    'category': 'Kuliner',
+    'rating': '4.5',
+    'reviews': '80 ulasan',
+    'image': 'assets/images/tambak_seafood_mesuji.jpg',
+    'description': 'Rumah makan ikan bakar tawar (gabus, nila, patin) hasil tangkapan segar rawa Mesuji.',
+    'price': 'Rp 20.000 - Rp 50.000',
+    'time': '09.00 - 20.00',
+    'latitude': '-4.0212',
+    'longitude': '105.4215',
+  },
 ];
 
 // Galeri foto tambahan (opsional) untuk destinasi yang punya lebih
@@ -1057,6 +1030,15 @@ const Map<String, List<String>> kDestinationGalleryImages = {
 // Lookup utama berdasarkan 'id' (bukan 'name', karena nama bisa
 // berubah sedangkan id tidak).
 Map<String, String>? findDestinationById(String id) {
+  final liveList = DestinationService.instance.destinations.value;
+  if (liveList.isNotEmpty) {
+    for (final d in liveList) {
+      if (d.id == id) {
+        return d.toDisplayMap();
+      }
+    }
+  }
+
   for (final destination in kDestinationsData) {
     if (destination['id'] == id) {
       return destination;
@@ -1065,6 +1047,7 @@ Map<String, String>? findDestinationById(String id) {
 
   return null;
 }
+
 
 // [DUMMY] Jam operasional diperkirakan per KATEGORI (format 24 jam),
 // belum per destinasi. TODO(backend): ganti dengan field openHour/
@@ -1170,20 +1153,70 @@ Duration estimateTravelTime(LatLng from, LatLng to, {String? vehicle}) {
 
 // Ambil koordinat (LatLng) dari satu entri destinasi.
 LatLng? coordinateOfDestination(Map<String, dynamic> destination) {
-  final double? lat =
-      double.tryParse(destination['latitude']?.toString() ?? '');
-  final double? lon =
-      double.tryParse(destination['longitude']?.toString() ?? '');
+  // 1. Coba baca koordinat langsung dari map (berbagai kunci penamaan)
+  double? lat = double.tryParse(destination['latitude']?.toString() ?? '');
+  lat ??= double.tryParse(destination['lat']?.toString() ?? '');
 
-  if (lat == null || lon == null) return null;
+  double? lon = double.tryParse(destination['longitude']?.toString() ?? '');
+  lon ??= double.tryParse(destination['lng']?.toString() ?? '');
+  lon ??= double.tryParse(destination['lon']?.toString() ?? '');
 
-  return LatLng(lat, lon);
+  // Jika koordinat valid dan bukan 0,0 (di samudra)
+  if (lat != null && lon != null && (lat.abs() > 0.001 || lon.abs() > 0.001)) {
+    return LatLng(lat, lon);
+  }
+
+  // 2. Lookup berdasarkan ID destinasi dari DestinationService/Database
+  final String? id = destination['destination_id']?.toString() ?? destination['id']?.toString();
+  if (id != null && id.isNotEmpty) {
+    final foundById = findDestinationById(id);
+    if (foundById != null) {
+      final double? foundLat = double.tryParse(foundById['latitude']?.toString() ?? '');
+      final double? foundLon = double.tryParse(foundById['longitude']?.toString() ?? '');
+      if (foundLat != null && foundLon != null && (foundLat.abs() > 0.001 || foundLon.abs() > 0.001)) {
+        return LatLng(foundLat, foundLon);
+      }
+    }
+  }
+
+  // 3. Lookup berdasarkan nama destinasi
+  final String? name = destination['destination_name']?.toString() ??
+      destination['name']?.toString() ??
+      destination['placeName']?.toString();
+  if (name != null && name.isNotEmpty) {
+    final foundByName = findDestinationByName(name);
+    if (foundByName != null) {
+      final double? foundLat = double.tryParse(foundByName['latitude']?.toString() ?? '');
+      final double? foundLon = double.tryParse(foundByName['longitude']?.toString() ?? '');
+      if (foundLat != null && foundLon != null && (foundLat.abs() > 0.001 || foundLon.abs() > 0.001)) {
+        return LatLng(foundLat, foundLon);
+      }
+    }
+  }
+
+  // 4. Fallback lokasi wilayah (misal: "Bandar Lampung", "Pesawaran", "Lampung")
+  final String location = (destination['location'] ??
+          destination['city'] ??
+          destination['destinationCity'] ??
+          destination['address'] ??
+          'bandar lampung')
+      .toString();
+
+  return coordinateForRegency(location, seed: name ?? id ?? location);
 }
 
 // Cari destinasi berdasarkan nama (legacy, untuk search bar). Untuk
 // referensi di dalam kode, pakai findDestinationById.
 Map<String, String>? findDestinationByName(String name) {
   final String normalizedName = name.trim().toLowerCase();
+  final liveList = DestinationService.instance.destinations.value;
+  if (liveList.isNotEmpty) {
+    for (final d in liveList) {
+      if (d.name.trim().toLowerCase() == normalizedName) {
+        return d.toDisplayMap();
+      }
+    }
+  }
 
   for (final destination in kDestinationsData) {
     if (destination['name']!.toLowerCase() == normalizedName) {
@@ -1193,6 +1226,7 @@ Map<String, String>? findDestinationByName(String name) {
 
   return null;
 }
+
 
 // Cocokkan 'location' destinasi dengan 'travelCity' (mis. "Kabupaten
 // Pesawaran" vs "Pesawaran"). Location generik "Lampung" selalu cocok.
@@ -1205,6 +1239,13 @@ bool destinationMatchesCity(String location, String? travelCity) {
       .trim()
       .toLowerCase();
 
+  if (normalizedCity == 'lampung' ||
+      normalizedCity == 'semua' ||
+      normalizedCity == 'seluruh lampung' ||
+      normalizedCity == 'semua kota/kabupaten') {
+    return true;
+  }
+
   final String normalizedLocation = location.trim().toLowerCase();
 
   if (normalizedLocation == 'lampung') return true;
@@ -1212,6 +1253,7 @@ bool destinationMatchesCity(String location, String? travelCity) {
   return normalizedLocation.contains(normalizedCity) ||
       normalizedCity.contains(normalizedLocation);
 }
+
 
 // Bounding box PERKIRAAN tiap kabupaten/kota di Lampung, dipakai untuk
 // koordinat dummy/fallback (kDestinationsData, ManualScheduleScreen,

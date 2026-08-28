@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../data/destinations_data.dart';
+import '../services/destination_service.dart';
+import '../widgets/smart_image.dart';
 import 'route_screen.dart';
+
 import '../theme/app_colors.dart';
 
 
@@ -82,7 +85,19 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
   String _destinationImage(
     Map<String, dynamic> destination,
   ) {
-    return _value(destination, 'image');
+    for (final key in ['image', 'main_image', 'mainImage', 'photo', 'cover_image', 'image_url']) {
+      final val = destination[key]?.toString().trim();
+      if (val != null && val.isNotEmpty && val != 'null') {
+        return val;
+      }
+    }
+    final destId = destination['id']?.toString() ?? '';
+    final destName = destination['name']?.toString() ?? '';
+    final liveDest = findDestinationById(destId) ?? findDestinationByName(destName);
+    if (liveDest != null && liveDest['image'] != null && liveDest['image']!.isNotEmpty) {
+      return liveDest['image']!;
+    }
+    return '';
   }
 
   // ============================================================
@@ -293,29 +308,20 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
       return 'Sepi';
     }
 
-    // ----------------------------------------------------------
-    // DUMMY (BELUM ADA DATA DARI AI)
-    // ----------------------------------------------------------
+    // Fetch from real crowd predictions from DestinationService backend
+    final String destId = (destination['id'] as String?) ?? (destination['destination_id'] as String? ?? '');
+    final String name = _destinationName(destination).toLowerCase();
+    final predictions = DestinationService.instance.crowdPredictions.value;
 
-    final String name =
-        _destinationName(destination);
+    for (final p in predictions) {
+      if ((destId.isNotEmpty && p.destinationId == destId) || p.name.toLowerCase() == name) {
+        return p.status;
+      }
+    }
 
-    final int seed =
-        name.codeUnits.fold<int>(
-          0,
-          (sum, code) => sum + code,
-        ) +
-        index;
-
-    const List<String> dummyStatuses = [
-      'Sepi',
-      'Ramai',
-      'Sepi',
-      'Sedang',
-    ];
-
-    return dummyStatuses[seed % dummyStatuses.length];
+    return 'Sepi';
   }
+
 
   // ============================================================
   // CROWD COLOR
@@ -634,20 +640,9 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
         _getDestinations(schedule);
 
     for (final destination in destinations) {
-      final lat = _readDouble(
-        destination,
-        'latitude',
-      );
-
-      final lng = _readDouble(
-        destination,
-        'longitude',
-      );
-
-      if (lat != null && lng != null) {
-        points.add(
-          LatLng(lat, lng),
-        );
+      final LatLng? coord = coordinateOfDestination(destination);
+      if (coord != null) {
+        points.add(coord);
       }
     }
 
@@ -793,19 +788,14 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
       final destination =
           destinations[i];
 
-      final lat = _readDouble(
-        destination,
-        'latitude',
-      );
+      final LatLng? coord = coordinateOfDestination(destination);
 
-      final lng = _readDouble(
-        destination,
-        'longitude',
-      );
-
-      if (lat == null || lng == null) {
+      if (coord == null) {
         continue;
       }
+
+      final double lat = coord.latitude;
+      final double lng = coord.longitude;
 
       // ========================================================
       // HEATMAP KEPADATAN (DI BAWAH PIN)
@@ -1021,11 +1011,8 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
               // ==========================================================
 
               TileLayer(
-                urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
-                userAgentPackageName:
-                    'com.example.smarttrip',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.smarttrip',
               ),
 
               if (routePoints.length >= 2)
@@ -1169,18 +1156,14 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
 
     for (int i = 0; i < destinations.length; i++) {
       final destination = destinations[i];
-      final lat = _readDouble(destination, 'latitude');
-      final lng = _readDouble(destination, 'longitude');
+      final LatLng? coordinate = coordinateOfDestination(destination);
 
-      if (lat == null || lng == null) continue;
+      if (coordinate == null) continue;
 
       stops.add(
         RouteStop(
           name: _destinationName(destination),
-          coordinate: LatLng(lat, lng),
-          // Index yang sama dengan _buildMarkers, supaya heatmap yang
-          // tampil di RouteScreen (full map) konsisten dengan yang di
-          // peta preview layar ini.
+          coordinate: coordinate,
           crowdStatus: _getCrowdStatus(destination, i),
         ),
       );
@@ -1233,8 +1216,9 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
         itemCount:
             widget.itinerary.length,
         separatorBuilder:
-            (_, _) =>
+            (_, __) =>
                 const SizedBox(width: 8),
+
         itemBuilder:
             (context, index) {
           final selected =
@@ -1653,55 +1637,12 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                       // ============================
 
                       ClipRRect(
-                        borderRadius:
-                            BorderRadius
-                                .circular(
-                          12,
-                        ),
-                        child:
-                            SizedBox(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SmartImage(
+                          imagePathOrUrl: image,
                           width: 66,
                           height: 66,
-                          child: image
-                                  .isNotEmpty
-                              ? Image.asset(
-                                  image,
-                                  fit: BoxFit
-                                      .cover,
-                                  errorBuilder:
-                                      (
-                                    context,
-                                    error,
-                                    stackTrace,
-                                  ) {
-                                    return Container(
-                                      color:
-                                          const Color(
-                                        0xFFEDEDED,
-                                      ),
-                                      child:
-                                          const Icon(
-                                        Icons
-                                            .image_outlined,
-                                        color:
-                                            Colors.grey,
-                                      ),
-                                    );
-                                  },
-                                )
-                              : Container(
-                                  color:
-                                      const Color(
-                                    0xFFEDEDED,
-                                  ),
-                                  child:
-                                      const Icon(
-                                    Icons
-                                        .image_outlined,
-                                    color:
-                                        Colors.grey,
-                                  ),
-                                ),
+                          fit: BoxFit.cover,
                         ),
                       ),
 

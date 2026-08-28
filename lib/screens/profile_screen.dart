@@ -4,14 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/destinations_data.dart';
+import '../services/api_service.dart';
 import '../services/saved_destinations_service.dart';
 import '../services/my_reviews_service.dart';
 import '../services/profile_service.dart';
+
 import '../services/language_service.dart';
 import '../services/notification_settings_service.dart';
 import '../widgets/love_button.dart';
+import '../widgets/smart_image.dart';
 
 import 'detail_destination_screen.dart';
+
 import 'edit_profile_screen.dart';
 import 'splash_screen.dart';
 import '../theme/app_colors.dart';
@@ -40,11 +44,26 @@ import '../theme/app_colors.dart';
 //
 // ================================================================
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    ProfileService.instance.fetchProfile();
+    SavedDestinationsService.instance.fetchFavorites();
+    MyReviewsService.instance.fetchMyReviews();
+    NotificationSettingsService.instance.fetchSettings();
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -149,6 +168,7 @@ class ProfileScreen extends StatelessWidget {
 
                   GestureDetector(
                     onTap: () {
+                      ApiService.instance.setToken(null);
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
                           builder: (context) => const SplashScreen(),
@@ -156,6 +176,7 @@ class ProfileScreen extends StatelessWidget {
                         (route) => false,
                       );
                     },
+
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 15),
@@ -312,9 +333,10 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: buildAvatarImage(
-                  profileData.photoPath ?? ProfileService.defaultAvatarUrl,
+                  profileData.photoPath,
                   size: _avatarSize - 8,
                 ),
+
               ),
             ),
           ),
@@ -430,8 +452,19 @@ class ProfileScreen extends StatelessWidget {
 // FAVORITE DESTINATIONS SCREEN
 // ================================================================
 
-class FavoriteDestinationsScreen extends StatelessWidget {
+class FavoriteDestinationsScreen extends StatefulWidget {
   const FavoriteDestinationsScreen({super.key});
+
+  @override
+  State<FavoriteDestinationsScreen> createState() => _FavoriteDestinationsScreenState();
+}
+
+class _FavoriteDestinationsScreenState extends State<FavoriteDestinationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    SavedDestinationsService.instance.fetchFavorites();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -577,21 +610,12 @@ class FavoriteDestinationsScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 160,
-                  child: Image.asset(
-                    destination['image']!,
+                  child: SmartImage(
+                    imagePathOrUrl: destination['image']!,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color:  AppColors.imagePlaceholderBg,
-                        child: const Icon(
-                          Icons.image_outlined,
-                          color: AppColors.primaryBlue,
-                          size: 42,
-                        ),
-                      );
-                    },
                   ),
                 ),
+
 
                 Positioned(
                   top: 10,
@@ -751,8 +775,19 @@ class FavoriteDestinationsScreen extends StatelessWidget {
 // terkait kalau datanya masih ada di kDestinationsData.
 // ================================================================
 
-class MyReviewsScreen extends StatelessWidget {
+class MyReviewsScreen extends StatefulWidget {
   const MyReviewsScreen({super.key});
+
+  @override
+  State<MyReviewsScreen> createState() => _MyReviewsScreenState();
+}
+
+class _MyReviewsScreenState extends State<MyReviewsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    MyReviewsService.instance.fetchMyReviews();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -994,7 +1029,7 @@ class MyReviewsScreen extends StatelessWidget {
   }
 
   // ============================================================
-  // RENDER FOTO ULASAN (asset mock ATAU file lokal)
+  // RENDER FOTO ULASAN (asset mock, URL network, ATAU file lokal)
   // ============================================================
 
   Widget _buildReviewPhoto(String path) {
@@ -1005,6 +1040,14 @@ class MyReviewsScreen extends StatelessWidget {
 
     if (path.startsWith('assets/')) {
       return Image.asset(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
+      );
+    }
+
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
         path,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => fallback,
@@ -1309,8 +1352,19 @@ class LanguageScreen extends StatelessWidget {
 // pemanggil (layar ini) tidak perlu diubah.
 //
 // ================================================================
-class NotificationSettingsScreen extends StatelessWidget {
+class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
+
+  @override
+  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+}
+
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    NotificationSettingsService.instance.fetchSettings();
+  }
 
   @override
   Widget build(BuildContext context) {

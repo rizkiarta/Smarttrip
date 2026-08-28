@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import '../theme/app_colors.dart';
+import '../services/saved_itinerary_service.dart';
 import 'map_screen.dart';
 import 'destination_selection_screen.dart';
 import 'ai_itinerary_screen.dart';
@@ -1681,121 +1682,214 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
         '${date.year}';
   }
 
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
+  Future<void> _checkDateOverlapAndProceed(
+    BuildContext context,
+    VoidCallback onProceed,
+  ) async {
+    if (startDate == null) {
+      onProceed();
+      return;
+    }
+
+    final DateTime endDate = _calculateEndDate();
+    final DateTime newStart = DateTime(startDate!.year, startDate!.month, startDate!.day);
+    final DateTime newEnd = DateTime(endDate.year, endDate.month, endDate.day);
+
+    Map<String, dynamic>? overlappingTrip;
+    final allItineraries = SavedItineraryService.instance.itineraries.value;
+
+    for (final itin in allItineraries) {
+      if (itin.isEmpty) continue;
+      final DateTime? s = _parseDate(itin.first['startDate']);
+      final DateTime? e = _parseDate(itin.first['endDate']);
+      if (s != null && e != null) {
+        final DateTime existingStart = DateTime(s.year, s.month, s.day);
+        final DateTime existingEnd = DateTime(e.year, e.month, e.day);
+
+        if (!newStart.isAfter(existingEnd) && !newEnd.isBefore(existingStart)) {
+          overlappingTrip = itin.first;
+          break;
+        }
+      }
+    }
+
+    if (overlappingTrip == null) {
+      onProceed();
+      return;
+    }
+
+    final String tripTitle = overlappingTrip['tripName'] ?? 'Perjalanan';
+
+    final bool? choice = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 28, 22, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFF4E5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFE65100),
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ada Perjalanan Bentrok!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Kamu sudah memiliki rencana "$tripTitle" di rentang tanggal ini. Tetap ingin membuat perjalanan baru?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.greyText,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Tetap Buat Perjalanan Baru',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 40,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: const Text(
+                      'Kembali & Ubah Tanggal',
+                      style: TextStyle(fontSize: 13, color: AppColors.greyText),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (choice == true) {
+      onProceed();
+    }
+  }
+
   // ============================================================
-  // CHOOSE DESTINATION
+  // HANDLE CHOOSE DESTINATION
   // ============================================================
 
   Future<void> _handleChooseDestination() async {
     FocusScope.of(context).unfocus();
 
-    // ==========================================================
-    // VALIDATION
-    // ==========================================================
-
     if (tripNameController.text.trim().isEmpty) {
       _showMessage('Silakan isi nama perjalanan terlebih dahulu.');
-
       return;
     }
 
     if (selectedStartLocation == null) {
       _showMessage('Silakan pilih lokasi awal perjalanan terlebih dahulu.');
-
       return;
     }
 
     if (selectedDestination == null) {
       _showMessage('Silakan pilih kota/kabupaten tujuan terlebih dahulu.');
-
       return;
     }
 
     if (startDate == null) {
       _showMessage('Silakan pilih tanggal mulai perjalanan terlebih dahulu.');
-
       return;
     }
 
     if (selectedVehicle == null) {
       _showMessage('Silakan pilih kendaraan terlebih dahulu.');
-
       return;
     }
 
     if (selectedCategories.isEmpty) {
       _showMessage('Silakan pilih minimal satu kategori destinasi.');
-
       return;
     }
 
-    // ==========================================================
-    // DATA PERJALANAN
-    // ==========================================================
+    _checkDateOverlapAndProceed(context, () async {
+      final DateTime endDate = _calculateEndDate();
 
-    final DateTime endDate = _calculateEndDate();
+      final Map<String, dynamic> travelData = {
+        'tripName': tripNameController.text.trim(),
+        'startLatLng': selectedStartLocation,
+        'destination': selectedDestination,
+        'duration': travelDuration,
+        'startDate': startDate,
+        'endDate': endDate,
+        'participants': '$participants Orang',
+        'vehicle': selectedVehicle,
+        'categories': selectedCategories.toList(),
+      };
 
-    final Map<String, dynamic> travelData = {
-      'tripName': tripNameController.text.trim(),
-
-      // --------------------------------------------------------
-      // KOORDINAT LOKASI AWAL (LatLng), BUKAN 'startLocation'
-      // --------------------------------------------------------
-      // Sengaja dinamai berbeda dari 'startLocation' supaya tidak
-      // bentrok dengan field 'startLocation' (nama alamat, String)
-      // yang dipakai di ManualScheduleScreen, ItineraryPreviewScreen,
-      // dan ItineraryDetailScreen.
-      // --------------------------------------------------------
-
-      'startLatLng': selectedStartLocation,
-
-      'destination': selectedDestination,
-
-      'duration': travelDuration,
-
-      'startDate': startDate,
-
-      'endDate': endDate,
-
-      'participants': '$participants Orang',
-
-      'vehicle': selectedVehicle,
-
-      'categories': selectedCategories.toList(),
-    };
-
-    // ==========================================================
-    // OPEN DESTINATION SELECTION
-    // ==========================================================
-    //
-    // travelData ikut dikirim utuh supaya semua informasi yang
-    // sudah diisi di sini (nama perjalanan, tanggal, jumlah orang,
-    // kendaraan, kota tujuan) tetap terbawa sampai ke jadwal akhir
-    // (ManualScheduleScreen -> ItineraryPreviewScreen -> PlanScreen
-    // -> ItineraryDetailScreen), bukan cuma dipakai untuk filter di
-    // layar ini saja.
-    //
-    // ==========================================================
-
-final result = await Navigator.push(
-  context,
-  MaterialPageRoute(
-    settings: RouteSettings(arguments: travelData),
-    builder: (context) {
-      return DestinationSelectionScreen(
-        selectedCategories: selectedCategories.toSet(),
-        travelDuration: travelDuration,
-        startLocation: selectedStartLocation,
-        startLocationName: startLocationController.text,
-        destinationCity: selectedDestination,
-        travelData: travelData,
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          settings: RouteSettings(arguments: travelData),
+          builder: (context) {
+            return DestinationSelectionScreen(
+              selectedCategories: selectedCategories.toSet(),
+              travelDuration: travelDuration,
+              startLocation: selectedStartLocation,
+              startLocationName: startLocationController.text,
+              destinationCity: selectedDestination,
+              travelData: travelData,
+            );
+          },
+        ),
       );
-    },
-  ),
-);
 
-if (result != null) {
-  Navigator.pop(context, result);
-}
+      if (result != null && mounted) {
+        Navigator.pop(context, result);
+      }
+    });
   }
 
   // ============================================================
@@ -1807,78 +1901,66 @@ if (result != null) {
 
     if (tripNameController.text.trim().isEmpty) {
       _showMessage('Silakan isi nama perjalanan terlebih dahulu.');
-
       return;
     }
 
     if (selectedStartLocation == null) {
       _showMessage('Silakan pilih lokasi awal perjalanan terlebih dahulu.');
-
       return;
     }
 
     if (selectedDestination == null) {
       _showMessage('Silakan pilih kota/kabupaten tujuan terlebih dahulu.');
-
       return;
     }
 
     if (startDate == null) {
       _showMessage('Silakan pilih tanggal mulai perjalanan terlebih dahulu.');
-
       return;
     }
 
     if (selectedVehicle == null) {
       _showMessage('Silakan pilih kendaraan terlebih dahulu.');
-
       return;
     }
 
     if (selectedCategories.isEmpty) {
       _showMessage('Silakan pilih minimal satu kategori destinasi.');
-
       return;
     }
 
-    // ==========================================================
-    // DATA PERJALANAN (SAMA POLA-NYA DENGAN _handleChooseDestination)
-    // ==========================================================
+    _checkDateOverlapAndProceed(context, () async {
+      final DateTime endDate = _calculateEndDate();
 
-    final DateTime endDate = _calculateEndDate();
+      final Map<String, dynamic> travelData = {
+        'tripName': tripNameController.text.trim(),
+        'startLocation': selectedStartLocation,
+        'destination': selectedDestination,
+        'duration': travelDuration,
+        'startDate': startDate,
+        'endDate': endDate,
+        'participants': participants,
+        'vehicle': selectedVehicle,
+        'categories': selectedCategories.toList(),
+      };
 
-    final Map<String, dynamic> travelData = {
-      'tripName': tripNameController.text.trim(),
-      'startLocation': selectedStartLocation,
-      'destination': selectedDestination,
-      'duration': travelDuration,
-      'startDate': startDate,
-      'endDate': endDate,
-      'participants': participants,
-      'vehicle': selectedVehicle,
-      'categories': selectedCategories.toList(),
-    };
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) {
+            return AIItineraryScreen(
+              travelData: travelData,
+              startCoordinate: selectedStartLocation,
+              startLocationName: startLocationController.text,
+            );
+          },
+        ),
+      );
 
-    // ==========================================================
-    // BUKA HALAMAN REKOMENDASI AI (ATUR RUTE & JADWAL)
-    // ==========================================================
-
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) {
-          return AIItineraryScreen(
-            travelData: travelData,
-            startCoordinate: selectedStartLocation,
-            startLocationName: startLocationController.text,
-          );
-        },
-      ),
-    );
-
-    if (result != null && mounted) {
-      Navigator.pop(context, result);
-    }
+      if (result != null && mounted) {
+        Navigator.pop(context, result);
+      }
+    });
   }
 
   // ============================================================

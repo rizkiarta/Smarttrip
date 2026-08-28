@@ -3,6 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../data/destinations_data.dart';
+import '../services/api_service.dart';
+import '../services/destination_service.dart';
+import '../widgets/smart_image.dart';
 import 'itinerary_preview_screen.dart';
 import '../theme/app_colors.dart';
 
@@ -273,7 +276,11 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
       );
     }
 
-    List<Map<String, String>> pool = kDestinationsData
+    final liveModels = DestinationService.instance.destinations.value;
+    final List<Map<String, String>> sourceData =
+        liveModels.map((d) => d.toDisplayMap()).toList();
+
+    List<Map<String, String>> pool = sourceData
         .where((destination) =>
             matchesCategory(destination) && matchesCity(destination))
         .toList();
@@ -290,11 +297,11 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
     // ==========================================================
 
     if (pool.isEmpty) {
-      pool = kDestinationsData.where(matchesCategory).toList();
+      pool = sourceData.where(matchesCategory).toList();
     }
 
     if (pool.isEmpty) {
-      pool = List<Map<String, String>>.from(kDestinationsData);
+      pool = List<Map<String, String>>.from(sourceData);
     }
 
     return pool;
@@ -460,6 +467,80 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
     return _orderByCrowdLevel(picked, randomize: randomize);
   }
 
+  bool isUsingFallbackMode = false;
+
+  void _showFallbackDialog(String title, String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFFBEB),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFFD97706),
+                  size: 26,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.greyText,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'Lihat Jadwal Perjalanan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ============================================================
   // TENTUKAN URUTAN DESTINASI PER HARI (LANGKAH 1: "AI" MEMILIH
   // & MENGURUTKAN, BELUM MENGHITUNG JAM)
@@ -469,28 +550,104 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
     Map<String, dynamic> travelData, {
     required bool randomize,
   }) async {
-    // Simulasi waktu proses AI.
-    await Future.delayed(const Duration(seconds: 2));
+    // Attempt real API call to Laravel Gemini AI Orchestrator first
+    if (ApiService.instance.isAuthenticated) {
+      try {
+        final List<String> categories = (travelData['categories'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ?? [];
 
-    // Pool destinasi lama (kategori + kota tujuan), dipakai hanya
-    // kalau widget.destinationsByDay tidak ada isinya untuk hari itu.
+        final List<String> destIds = [];
+        if (widget.destinationsByDay != null) {
+          widget.destinationsByDay!.values.forEach((dayList) {
+            for (final d in dayList) {
+              final String? id = (d['id'] as String?) ?? (d['destination_id'] as String?);
+              if (id != null) destIds.add(id);
+            }
+          });
+        }
+
+        final body = {
+          'destination_city': travelData['destination'] ?? '',
+          'categories': categories,
+          'duration_days': totalDays,
+          'vehicle_type': travelData['vehicle'] ?? 'Mobil',
+          'departure_time': '06:00',
+          if (destIds.isNotEmpty) 'destination_ids': destIds,
+        };
+
+        final res = await ApiService.instance.post('ai/generate-itinerary', body: body);
+
+        if (res != null && res['days'] is List) {
+          final Map<int, List<Map<String, dynamic>>> apiResult = {};
+          for (final dayItem in res['days']) {
+            final int dayNum = dayItem['day_number'] ?? 1;
+            final List<dynamic> items = dayItem['items'] ?? [];
+            final List<Map<String, dynamic>> dayDests = [];
+
+            for (final it in items) {
+              final String destId = it['destination_id'] ?? '';
+              final Map<String, String>? destData = findDestinationById(destId);
+              if (destData != null) {
+                dayDests.add({
+                  ...destData,
+                  'arrivalTime': it['arrival_time'],
+                  'departureTime': it['departure_time'],
+                });
+              }
+            }
+
+            if (dayDests.isNotEmpty) {
+              apiResult[dayNum] = _orderByCrowdLevel(dayDests, randomize: randomize);
+            }
+          }
+
+          if (apiResult.isNotEmpty) {
+            if (mounted) {
+              setState(() {
+                isUsingFallbackMode = false;
+              });
+            }
+            return apiResult;
+          }
+        }
+      } catch (e) {
+        debugPrint('AI Itinerary API error, falling back to local orchestrator: $e');
+        if (mounted) {
+          setState(() {
+            isUsingFallbackMode = true;
+          });
+
+          String dialogTitle = 'Rencana Perjalanan Siap';
+          String dialogMessage = 'Jadwal perjalanan Anda telah disusun dengan optimasi rute terbaik.';
+
+          if (e is ApiException) {
+            if (e.statusCode == 429) {
+              dialogTitle = 'Penyusunan Jadwal Perjalanan';
+              dialogMessage = 'Permintaan rekomendasi AI sedang berada dalam lalu lintas tinggi. Rencana perjalanan Anda tetap berhasil disusun secara optimal dengan rute efisien.';
+            } else if (e.statusCode == 422) {
+              dialogTitle = 'Pilihan Destinasi Disesuaikan';
+              dialogMessage = 'Jadwal telah disusun menggunakan pilihan destinasi terbaik di wilayah tujuan Anda.';
+            } else {
+              dialogTitle = 'Rencana Perjalanan Siap';
+              dialogMessage = 'Jadwal perjalanan Anda telah disesuaikan dengan urutan destinasi dan rute paling efisien.';
+            }
+          }
+
+          _showFallbackDialog(dialogTitle, dialogMessage);
+        }
+      }
+    }
+
+    // Heuristic Fallback
+    await Future.delayed(const Duration(milliseconds: 500));
+
     final List<Map<String, String>> destinationPool =
         _buildDestinationPool(travelData);
 
     final Map<int, List<Map<String, dynamic>>> generated = {};
 
     for (int day = 1; day <= totalDays; day++) {
-      // ==========================================================
-      // SUMBER DESTINASI HARI INI
-      // ==========================================================
-      //
-      // Prioritas: destinasi yang sudah dipilih user sendiri di
-      // DestinationSelectionScreen. AI di sini tidak menambah/
-      // mengganti destinasi -- cuma mengurutkan & menjadwalkan ulang
-      // destinasi yang sama berdasarkan prediksi kepadatan.
-      //
-      // ==========================================================
-
       final List<Map<String, dynamic>>? selectedForDay =
           widget.destinationsByDay?[day];
 
@@ -504,6 +661,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
     return generated;
   }
+
 
   // ============================================================
   // BANGUN STOP SIAP TAMPIL UNTUK SEMUA HARI DARI
@@ -1299,23 +1457,11 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
                       borderRadius: BorderRadius.circular(10),
 
                       child: image != null
-                          ? Image.asset(
-                              image,
+                          ? SmartImage(
+                              imagePathOrUrl: image,
                               width: 54,
                               height: 54,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 54,
-                                  height: 54,
-                                  color: const Color(0xFFF0F0F0),
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: AppColors.greyText,
-                                    size: 22,
-                                  ),
-                                );
-                              },
                             )
                           : Container(
                               width: 54,

@@ -1,28 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../data/destinations_data.dart';
-import 'profile_screen.dart';
 import '../theme/app_colors.dart';
 import '../services/my_reviews_service.dart';
 import '../services/profile_service.dart';
-
+import '../widgets/smart_image.dart';
+import '../services/api_service.dart';
 
 class ReviewScreen extends StatefulWidget {
   final String destinationName;
   final double overallRating;
   final int totalReviews;
-
-  // ============================================================
-  // DESTINATION ID
-  // ============================================================
-  //
-  // Dipakai supaya ulasan yang dikirim dari sini ikut tercatat di
-  // MyReviewsService dengan destinasi yang benar (untuk ditampilkan
-  // lagi di ProfileScreen -> "Ulasan Saya"). Opsional: kalau layar
-  // pemanggil belum kirim, fallback ke destinationName supaya tetap
-  // jalan tanpa error.
-  // ============================================================
 
   final String? destinationId;
 
@@ -51,63 +39,48 @@ class _ReviewScreenState extends State<ReviewScreen> {
     1: 0.02,
   };
 
-  // ============================================================
-  // REVIEWS (mock data)
-  // ============================================================
+  List<Map<String, dynamic>> _serverReviews = [];
+  bool _isLoadingReviews = false;
 
-  final List<Map<String, dynamic>> _reviews = [
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=47',
-      'name': 'Amara Tasya',
-      'rating': 4.0,
-      'time': '2 minggu lalu',
-      'text':
-          'Tempatnya bagus banget dan estetik, suasannya juga nyaman',
-      'likes': '102',
-      'photos': <String>[],
-    },
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=47',
-      'name': 'Amara Tasya',
-      'rating': 4.0,
-      'time': '2 minggu lalu',
-      'text':
-          'Tempatnya bagus banget dan estetik, suasannya juga nyaman',
-      'likes': '102',
-      'photos': <String>[
-        'assets/images/pulau_wayang.jpg',
-        'assets/images/pulau_pahawang.jpg',
-      ],
-    },
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=12',
-      'name': 'Bagas Pratama',
-      'rating': 5.0,
-      'time': '1 bulan lalu',
-      'text':
-          'Pemandangannya luar biasa, worth it banget buat healing akhir pekan.',
-      'likes': '76',
-      'photos': <String>[],
-    },
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=32',
-      'name': 'Citra Ayu',
-      'rating': 3.0,
-      'time': '1 bulan lalu',
-      'text': 'Aksesnya lumayan jauh, tapi kebersihan tempatnya terjaga.',
-      'likes': '54',
-      'photos': <String>[],
-    },
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=5',
-      'name': 'Dimas Saputra',
-      'rating': 5.0,
-      'time': '2 bulan lalu',
-      'text': 'Cocok buat foto-foto, mending datang pagi biar tidak ramai.',
-      'likes': '41',
-      'photos': <String>[],
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchDestinationReviews();
+  }
+
+  Future<void> _fetchDestinationReviews() async {
+    if (widget.destinationId == null || widget.destinationId!.isEmpty) return;
+    if (mounted) setState(() => _isLoadingReviews = true);
+    try {
+      final safeId = Uri.encodeComponent(widget.destinationId!);
+      final res = await ApiService.instance.get('destinations/$safeId/reviews');
+      if (res != null && res['data'] is List) {
+        final list = (res['data'] as List).map((r) => _mapReview(r)).toList();
+        if (mounted) setState(() => _serverReviews = list);
+      }
+    } on ApiException catch (e) {
+      debugPrint('Fetch reviews ApiException: ${e.message}');
+    } catch (e) {
+      debugPrint('Fetch reviews error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingReviews = false);
+    }
+  }
+
+  Map<String, dynamic> _mapReview(dynamic r) => {
+    'id': r['id'],
+    'avatar': r['user_avatar'],
+    'name': r['user_name'] ?? 'Pengguna SmartTrip',
+    'rating': (r['rating'] as num?)?.toDouble() ?? 5.0,
+    'time': r['created_at'] ?? 'Baru saja',
+    'text': r['review_text'] ?? '',
+    'likes': (r['likes_count'] ?? 0).toString(),
+    'photos': r['photos'] != null ? List<String>.from(r['photos']) : <String>[],
+    'liked': r['liked'] == true,
+  };
+
+  final List<Map<String, dynamic>> _reviews = [];
+
 
   // ============================================================
   // FILTER STATE (null = Semua)
@@ -126,44 +99,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
   // ============================================================
 
   Widget _buildPhotoImage(String path) {
-    if (path.startsWith('assets/')) {
-      return Image.asset(
-        path,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color:  AppColors.imagePlaceholderBg,
-            child: const Icon(
-              Icons.image_outlined,
-              color: AppColors.primaryBlue,
-              size: 26,
-            ),
-          );
-        },
-      );
-    }
-
-    return Image.file(
-      File(path),
+    return SmartImage(
+      imagePathOrUrl: path,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          color:  AppColors.imagePlaceholderBg,
-          child: const Icon(
-            Icons.image_outlined,
-            color: AppColors.primaryBlue,
-            size: 26,
-          ),
-        );
-      },
     );
   }
 
-  List<Map<String, dynamic>> get _filteredReviews {
-    if (_selectedStarFilter == null) return _reviews;
 
-    return _reviews.where((review) {
-      final double rating = review['rating'] as double;
+  List<Map<String, dynamic>> get _allReviews =>
+      _serverReviews.isNotEmpty ? _serverReviews : _reviews;
+
+  List<Map<String, dynamic>> get _filteredReviews {
+    final list = _allReviews;
+    if (_selectedStarFilter == null) return list;
+
+    return list.where((review) {
+      final double rating = (review['rating'] as num).toDouble();
       return rating.round() == _selectedStarFilter;
     }).toList();
   }
@@ -192,7 +143,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
                       const SizedBox(height: 18),
 
-                      if (_filteredReviews.isEmpty)
+                      if (_isLoadingReviews)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_filteredReviews.isEmpty)
                         _buildEmptyState()
                       else
                         ..._filteredReviews.map((review) {
@@ -499,11 +455,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
   // TOGGLE LIKE
   // ============================================================
 
-  void _toggleLike(Map<String, dynamic> review) {
-    setState(() {
-      final bool currentlyLiked = review['liked'] as bool? ?? false;
-      final int currentLikes = int.tryParse(review['likes'] as String) ?? 0;
+  Future<void> _toggleLike(Map<String, dynamic> review) async {
+    final dynamic rawId = review['id'];
+    final int? reviewId = (rawId is int) ? rawId : int.tryParse(rawId?.toString() ?? '');
+    final bool currentlyLiked = review['liked'] as bool? ?? false;
+    final int currentLikes = int.tryParse(review['likes']?.toString() ?? '0') ?? 0;
 
+    setState(() {
       if (currentlyLiked) {
         review['liked'] = false;
         review['likes'] = (currentLikes - 1).clamp(0, 999999).toString();
@@ -512,6 +470,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
         review['likes'] = (currentLikes + 1).toString();
       }
     });
+
+    if (reviewId != null) {
+      try {
+        final res = await ApiService.instance.post('reviews/$reviewId/like');
+        if (res['likes_count'] != null && mounted) {
+          setState(() {
+            review['liked'] = res['liked'] == true;
+            review['likes'] = res['likes_count'].toString();
+          });
+        }
+      } catch (e) {
+        debugPrint('Toggle review like API error: $e');
+      }
+    }
   }
 
   Widget _buildReviewCard(Map<String, dynamic> review) {
@@ -544,7 +516,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
           Row(
             children: [
-              buildAvatarImage(review['avatar'] as String, size: 42),
+              buildAvatarImage(review['avatar'] as String?, size: 42),
+
 
               const SizedBox(width: 12),
 
@@ -944,7 +917,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   void _showAddReviewSheet(BuildContext context) {
-    final BuildContext parentContext = context;
+    final messenger = ScaffoldMessenger.of(context);
     int selectedRating = 5;
     final TextEditingController textController = TextEditingController();
     final List<XFile> selectedPhotos = [];
@@ -1064,68 +1037,88 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       width: double.infinity,
                       height: 46,
                       child: ElevatedButton(
-                        onPressed: () {
-                          final String reviewText =
-                              textController.text.trim();
+                        onPressed: () async {
+                          final String reviewText = textController.text.trim();
 
                           if (reviewText.isEmpty && selectedPhotos.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                  'Isi ulasan atau tambahkan foto terlebih dahulu.',
-                                ),
+                                content: Text('Isi ulasan atau tambahkan foto terlebih dahulu.'),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
                             return;
                           }
 
-                          // Nama & foto diambil dari ProfileService
-                          // supaya ulasan yang tampil di sini dan di
-                          // ProfileScreen -> "Ulasan Saya" konsisten
-                          // dengan profil user saat ini.
-                          final ProfileData myProfile =
-                              ProfileService.instance.profile.value;
-                          final List<String> photoPaths = selectedPhotos
-                              .map((file) => file.path)
-                              .toList();
-
-                          setState(() {
-                            _reviews.insert(0, {
-                              'avatar': ProfileService
-                                  .instance.currentAvatarForReview,
-                              'name': myProfile.name,
-                              'rating': selectedRating.toDouble(),
-                              'time': 'Baru saja',
-                              'text': reviewText,
-                              'likes': '0',
-                              'photos': photoPaths,
-                            });
-                          });
-
-                          MyReviewsService.instance.addReview(
-                            MyReviewEntry(
-                              destinationId:
-                                  widget.destinationId ?? widget.destinationName,
-                              destinationName: widget.destinationName,
-                              avatar:
-                                  ProfileService.instance.currentAvatarForReview,
-                              name: myProfile.name,
-                              rating: selectedRating.toDouble(),
-                              time: 'Baru saja',
-                              text: reviewText,
-                              photos: photoPaths,
-                            ),
-                          );
+                          final ProfileData myProfile = ProfileService.instance.profile.value;
+                          final List<File> imageFiles = selectedPhotos.map((f) => File(f.path)).toList();
+                          final List<String> photoPaths = selectedPhotos.map((f) => f.path).toList();
+                          final String targetDestId = (widget.destinationId != null && widget.destinationId!.isNotEmpty)
+                              ? widget.destinationId!
+                              : widget.destinationName;
 
                           Navigator.pop(context);
 
-                          ScaffoldMessenger.of(parentContext).showSnackBar(
-                            const SnackBar(
-                              content: Text('Ulasan berhasil ditambahkan'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          // Optimistic: tampilkan ulasan sementara
+                          if (mounted) {
+                            setState(() {
+                              _serverReviews.insert(0, {
+                                'id': null,
+                                'avatar': ProfileService.instance.currentAvatarForReview,
+                                'name': myProfile.name,
+                                'rating': selectedRating.toDouble(),
+                                'time': 'Baru saja',
+                                'text': reviewText,
+                                'likes': '0',
+                                'photos': photoPaths,
+                                'liked': false,
+                              });
+                            });
+                          }
+
+                          try {
+                            await MyReviewsService.instance.addReview(
+                              MyReviewEntry(
+                                destinationId: targetDestId,
+                                destinationName: widget.destinationName,
+                                avatar: ProfileService.instance.currentAvatarForReview,
+                                name: myProfile.name,
+                                rating: selectedRating.toDouble(),
+                                time: 'Baru saja',
+                                text: reviewText,
+                                photos: photoPaths,
+                              ),
+                              localImageFiles: imageFiles,
+                            );
+                            // Refresh dari server setelah berhasil
+                            await _fetchDestinationReviews();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('✅ Ulasan berhasil ditambahkan'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } on ApiException catch (e) {
+                            // Rollback optimistic update
+                            if (mounted) setState(() => _serverReviews.removeWhere((r) => r['id'] == null));
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('❌ Gagal: ${e.message}'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.red.shade700,
+                              ),
+                            );
+                          } catch (e) {
+                            if (mounted) setState(() => _serverReviews.removeWhere((r) => r['id'] == null));
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('❌ Gagal menyimpan ulasan. Coba lagi.'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,

@@ -3,6 +3,8 @@ import 'package:latlong2/latlong.dart';
 import 'itinerary_preview_screen.dart';
 import '../data/destinations_data.dart';
 import '../theme/app_colors.dart';
+import '../widgets/smart_image.dart';
+
 
 
 class ManualScheduleScreen extends StatefulWidget {
@@ -482,24 +484,11 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 child: SizedBox(
                   width: 78,
                   height: 78,
-                  child: image.isNotEmpty
-                      ? Image.asset(
-                          image,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: const Color(0xFFEAEAEA),
-                              child: const Icon(
-                                Icons.image,
-                                color: Colors.grey,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: const Color(0xFFEAEAEA),
-                          child: const Icon(Icons.image, color: Colors.grey),
-                        ),
+                  child: SmartImage(
+                    imagePathOrUrl: image,
+                    fit: BoxFit.cover,
+                  ),
+
                 ),
               ),
 

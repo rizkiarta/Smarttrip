@@ -3,9 +3,12 @@ import 'package:latlong2/latlong.dart';
 import 'travel_information_screen.dart';
 import 'itinerary_detail_screen.dart';
 import '../services/saved_itinerary_service.dart';
+import '../data/destinations_data.dart';
 import 'manual_schedule_screen.dart';
 import 'ai_itinerary_screen.dart';
 import '../theme/app_colors.dart';
+import '../widgets/smart_image.dart';
+
 
 
 class PlanScreen extends StatefulWidget {
@@ -16,23 +19,18 @@ class PlanScreen extends StatefulWidget {
 }
 
 class _PlanScreenState extends State<PlanScreen> {
-  // ============================================================
-  // ITINERARY STATE
-  // ============================================================
-  //
-  // Sumber data sebenarnya sekarang ada di SavedItineraryService
-  // (lihat itinerary_service.dart), bukan state lokal lagi. Jadi
-  // kartu itinerary di sini selalu ikut ter-update walau
-  // perubahannya terjadi dari layar lain (mis. setelah "Simpan
-  // Jadwal" di ItineraryPreviewScreen), tanpa bergantung pada nilai
-  // balik Navigator.pop yang bisa hilang kalau ada popUntil di
-  // tengah jalan.
-  //
-  // ============================================================
+
+  @override
+  void initState() {
+    super.initState();
+    SavedItineraryService.instance.fetchItineraries();
+  }
+
 
   // ============================================================
   // BUILD
   // ============================================================
+
 
   @override
   Widget build(BuildContext context) {
@@ -366,16 +364,24 @@ class _PlanScreenState extends State<PlanScreen> {
       return fallback;
     }
 
-    final dynamic destinations = itinerary.first['destinations'];
-
-    if (destinations is List && destinations.isNotEmpty) {
-      final dynamic firstDestination = destinations.first;
-
-      if (firstDestination is Map) {
-        final String image = firstDestination['image']?.toString().trim() ?? '';
-
-        if (image.isNotEmpty) {
-          return image;
+    for (final day in itinerary) {
+      final dynamic destinations = day['destinations'];
+      if (destinations is List) {
+        for (final dest in destinations) {
+          if (dest is Map) {
+            for (final key in ['image', 'main_image', 'mainImage', 'photo', 'cover_image', 'image_url']) {
+              final val = dest[key]?.toString().trim();
+              if (val != null && val.isNotEmpty && val != 'null') {
+                return val;
+              }
+            }
+            final String destId = dest['id']?.toString() ?? '';
+            final String destName = dest['name']?.toString() ?? '';
+            final liveDest = findDestinationById(destId) ?? findDestinationByName(destName);
+            if (liveDest != null && liveDest['image'] != null && liveDest['image']!.isNotEmpty) {
+              return liveDest['image']!;
+            }
+          }
         }
       }
     }
@@ -499,23 +505,11 @@ class _PlanScreenState extends State<PlanScreen> {
 
                         height: 145,
 
-                        child: Image.asset(
-                          _cardImagePath(itinerary),
-
+                        child: SmartImage(
+                          imagePathOrUrl: _cardImagePath(itinerary),
                           fit: BoxFit.cover,
-
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color:  AppColors.imagePlaceholderBg,
-
-                              child: const Icon(
-                                Icons.image_outlined,
-                                color: AppColors.primaryBlue,
-                                size: 45,
-                              ),
-                            );
-                          },
                         ),
+
                       ),
                     ),
 
@@ -729,9 +723,21 @@ class _PlanScreenState extends State<PlanScreen> {
   // FORMAT RENTANG TANGGAL
   // ============================================================
 
-  String _formatDateRange(dynamic startDate, dynamic endDate) {
-    if (startDate is! DateTime || endDate is! DateTime) {
-      return '20–21 Juli 2026';
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
+  String _formatDateRange(dynamic rawStart, dynamic rawEnd) {
+    final DateTime? startDate = _parseDate(rawStart);
+    final DateTime? endDate = _parseDate(rawEnd);
+
+    if (startDate == null || endDate == null) {
+      return 'Perjalanan Lampung';
     }
 
     const months = [
@@ -756,6 +762,7 @@ class _PlanScreenState extends State<PlanScreen> {
 
     return '$start – $end';
   }
+
 
   // ============================================================
   // SMALL DOT

@@ -3,6 +3,8 @@ import 'package:latlong2/latlong.dart';
 import 'ai_itinerary_screen.dart';
 import 'itinerary_detail_screen.dart';
 import '../services/saved_itinerary_service.dart';
+import '../widgets/smart_image.dart';
+import '../data/destinations_data.dart';
 import 'manual_schedule_screen.dart';
 import 'travel_information_screen.dart';
 import '../theme/app_colors.dart';
@@ -62,32 +64,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
   bool _isFinished(List<Map<String, dynamic>> itinerary) {
     if (itinerary.isEmpty) return false;
 
-    // Minimal SATU hari sudah ditandai selesai manual lewat
-    // TripScreen._markDayFinished ("Tandai Hari Ini Selesai") -- ini
-    // dicek DULUAN sebelum endDate, supaya itinerary yang salah satu
-    // harinya sudah selesai lebih awal (sebelum endDate aslinya lewat)
-    // tetap langsung ikut masuk Riwayat, tanpa harus menunggu tanggal
-    // sistem lewat endDate dulu. Beda dengan flag lama
-    // 'finishedManually' yang sekali dipasang berlaku untuk SELURUH
-    // itinerary, ini murni per-hari (lihat
-    // SavedItineraryService.hasAnyCompletedDay) -- itinerary yang
-    // sama TETAP bisa muncul aktif di TripScreen untuk hari lain yang
-    // belum ditandai selesai.
     if (SavedItineraryService.instance.hasAnyCompletedDay(itinerary)) {
       return true;
     }
 
     final dynamic end = itinerary.first['endDate'];
+    DateTime? endDay;
 
-    if (end is! DateTime) {
-      // Tidak ada endDate yang valid -- anggap belum bisa ditentukan
-      // selesai atau belum, jadi jangan ditampilkan sebagai riwayat.
-      return false;
+    if (end is DateTime) {
+      endDay = _dateOnly(end);
+    } else if (end is String) {
+      final parsed = DateTime.tryParse(end);
+      if (parsed != null) {
+        endDay = _dateOnly(parsed);
+      }
     }
 
-    final DateTime today = _dateOnly(DateTime.now());
-    final DateTime endDay = _dateOnly(end);
+    if (endDay == null) return false;
 
+    final DateTime today = _dateOnly(DateTime.now());
     return endDay.isBefore(today);
   }
 
@@ -205,16 +200,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
 
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        await SavedItineraryService.instance.fetchItineraries();
+                      },
+                      color: AppColors.primaryBlue,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
 
-                      padding: const EdgeInsets.fromLTRB(20, 32, 20, 110),
+                        padding: const EdgeInsets.fromLTRB(20, 32, 20, 110),
 
-                      child: Column(
-                        children: [
-                          for (final savedItinerary in savedItineraries)
-                            _buildHistoryCard(context, savedItinerary),
-                        ],
+                        child: Column(
+                          children: [
+                            for (final savedItinerary in savedItineraries)
+                              _buildHistoryCard(context, savedItinerary),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -322,7 +323,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 return Icon(
                                   Icons.history_rounded,
                                   size: 60,
-                                  color: AppColors.primaryBlue.withOpacity(0.85),
+                                  color: AppColors.primaryBlue.withValues(alpha: 0.85),
                                 );
                               },
                             ),
@@ -453,7 +454,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -467,32 +468,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
               // ======================================================
               // THUMBNAIL
               // ======================================================
-              ClipRRect(
+              SmartImage(
+                imagePathOrUrl: _cardImagePath(itinerary),
+                width: 78,
+                height: 78,
+                fit: BoxFit.cover,
                 borderRadius: BorderRadius.circular(14),
-
-                child: Image.asset(
-                  _cardImagePath(itinerary),
-
-                  width: 78,
-                  height: 78,
-
-                  fit: BoxFit.cover,
-
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 78,
-                      height: 78,
-
-                      color:  AppColors.imagePlaceholderBg,
-
-                      child: const Icon(
-                        Icons.image_outlined,
-                        color: AppColors.primaryBlue,
-                        size: 30,
-                      ),
-                    );
-                  },
-                ),
               ),
 
               const SizedBox(width: 14),
@@ -592,16 +573,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return fallback;
     }
 
-    final dynamic destinations = itinerary.first['destinations'];
-
-    if (destinations is List && destinations.isNotEmpty) {
-      final dynamic firstDestination = destinations.first;
-
-      if (firstDestination is Map) {
-        final String image = firstDestination['image']?.toString().trim() ?? '';
-
-        if (image.isNotEmpty) {
-          return image;
+    for (final day in itinerary) {
+      final dynamic destinations = day['destinations'];
+      if (destinations is List) {
+        for (final dest in destinations) {
+          if (dest is Map) {
+            for (final key in ['image', 'main_image', 'mainImage', 'photo', 'cover_image', 'image_url']) {
+              final val = dest[key]?.toString().trim();
+              if (val != null && val.isNotEmpty && val != 'null') {
+                return val;
+              }
+            }
+            final String destId = dest['id']?.toString() ?? '';
+            final String destName = dest['name']?.toString() ?? '';
+            final liveDest = findDestinationById(destId) ?? findDestinationByName(destName);
+            if (liveDest != null && liveDest['image'] != null && liveDest['image']!.isNotEmpty) {
+              return liveDest['image']!;
+            }
+          }
         }
       }
     }
@@ -636,12 +625,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ================================================================
-  // FORMAT RENTANG TANGGAL (SAMA POLANYA DENGAN
-  // PlanScreen._formatDateRange)
+  // FORMAT RENTANG TANGGAL
   // ================================================================
 
   String _formatDateRange(dynamic startDate, dynamic endDate) {
-    if (startDate is! DateTime || endDate is! DateTime) {
+    DateTime? startDt;
+    DateTime? endDt;
+
+    if (startDate is DateTime) {
+      startDt = startDate;
+    } else if (startDate is String) {
+      startDt = DateTime.tryParse(startDate);
+    }
+
+    if (endDate is DateTime) {
+      endDt = endDate;
+    } else if (endDate is String) {
+      endDt = DateTime.tryParse(endDate);
+    }
+
+    if (startDt == null || endDt == null) {
       return '20–21 Juli 2026';
     }
 
@@ -660,10 +663,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       'Desember',
     ];
 
-    final String start = '${startDate.day} ${months[startDate.month - 1]}';
-
-    final String end =
-        '${endDate.day} ${months[endDate.month - 1]} ${endDate.year}';
+    final String start = '${startDt.day} ${months[startDt.month - 1]}';
+    final String end = '${endDt.day} ${months[endDt.month - 1]} ${endDt.year}';
 
     return '$start – $end';
   }

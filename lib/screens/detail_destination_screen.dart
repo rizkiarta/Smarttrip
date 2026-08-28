@@ -5,7 +5,9 @@ import 'review_screen.dart';
 import 'route_screen.dart';
 import '../theme/app_colors.dart';
 import '../widgets/love_button.dart';
-
+import '../widgets/smart_image.dart';
+import '../services/profile_service.dart';
+import '../services/api_service.dart';
 
 class DetailDestinationScreen extends StatefulWidget {
   final String name;
@@ -25,27 +27,16 @@ class DetailDestinationScreen extends StatefulWidget {
   //   galleryImages: [
   //     'assets/images/danau_ranau.jpg',
   //     'assets/images/danau_ranau_2.jpg',
-  //   ],
-  //
-  // Kalau tidak diisi (default), gallery otomatis hanya
-  // menampilkan mainImage milik destinasi ini sendiri.
+  //   ]
   // ============================================================
 
   final List<String>? galleryImages;
 
   // ============================================================
-  // DESTINATION ID (untuk tombol Love / simpan)
-  // ============================================================
+  // DESTINATION ID (opsional)
   //
-  // Opsional. Kalau pemanggil sudah punya id destinasi (dari
-  // kDestinationsData), kirim di sini supaya LoveButton langsung
-  // pakai id yang benar.
-  //
-  // Kalau tidak dikirim (null), id otomatis dicari lewat
-  // findDestinationByName(name) -- lihat _resolvedDestinationId
-  // di bawah -- jadi layar-layar yang sudah memanggil
-  // DetailDestinationScreen sebelum ada field ini tetap jalan
-  // tanpa perlu diubah.
+  // Dipakai supaya LoveButton & backend API mencatat favorit dengan ID
+  // yang konsisten.
   // ============================================================
 
   final String? destinationId;
@@ -54,8 +45,8 @@ class DetailDestinationScreen extends StatefulWidget {
     super.key,
     required this.name,
     required this.location,
-    required this.rating,
-    required this.reviews,
+    this.rating = '4.8',
+    this.reviews = '235 ulasan',
     required this.mainImage,
     required this.description,
     this.latitude,
@@ -80,11 +71,6 @@ class _DetailDestinationScreenState
 
   // ============================================================
   // CROWD PREDICTION DATA (per hari)
-  // ============================================================
-  //
-  // Level: 0 = Sepi, 1 = Sedang, 2 = Ramai
-  // Titik waktu tetap: 06.00, 08.00, 10.00, 12.00, 14.00, 16.00, 18.00
-  //
   // ============================================================
 
   static const List<String> _dayOptions = [
@@ -119,6 +105,15 @@ class _DetailDestinationScreenState
 
   String _selectedDay = 'Minggu';
 
+  // State dynamic dari Laravel Backend DB
+  String? _openHour;
+  String? _closeHour;
+  String? _priceRange;
+  String? _dbDescription;
+  List<String> _galleryImages = [];
+  List<Map<String, dynamic>> _dbReviews = [];
+  Map<String, dynamic>? _crowdPredictionData;
+
   // ============================================================
   // RESOLVED DESTINATION ID
   // ============================================================
@@ -134,6 +129,72 @@ class _DetailDestinationScreenState
       widget.destinationId ??
       findDestinationByName(widget.name)?['id'] ??
       widget.name;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDestinationBackendDetails();
+  }
+
+  Future<void> _fetchDestinationBackendDetails() async {
+    try {
+      final String safeId = Uri.encodeComponent(_destinationId);
+      final res = await ApiService.instance.get('destinations/$safeId');
+      if (res['data'] != null && res['data'] is Map) {
+        final data = Map<String, dynamic>.from(res['data'] as Map);
+        if (mounted) {
+          setState(() {
+            _openHour = data['open_hour']?.toString();
+            _closeHour = data['close_hour']?.toString();
+            _priceRange = data['price_range']?.toString();
+            _dbDescription = data['description']?.toString();
+            if (data['gallery'] is List) {
+              _galleryImages = (data['gallery'] as List).map((e) => e.toString()).toList();
+            }
+            if (data['reviews'] is List) {
+              _dbReviews = (data['reviews'] as List)
+                  .map((e) => Map<String, dynamic>.from(e as Map))
+                  .toList();
+            }
+          });
+        }
+      }
+
+      final crowdRes = await ApiService.instance.get('destinations/$safeId/crowd-prediction');
+      if (crowdRes['data'] != null && crowdRes['data'] is Map) {
+        if (mounted) {
+          setState(() {
+            _crowdPredictionData = Map<String, dynamic>.from(crowdRes['data'] as Map);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Fetch destination details error: $e');
+    }
+  }
+
+  List<int> _getCrowdLevelsForDay(String day) {
+    if (_crowdPredictionData != null) {
+      final String status = _crowdPredictionData!['status']?.toString() ?? 'Sedang';
+      final int peakStart = int.tryParse(_crowdPredictionData!['peak_start']?.toString() ?? '9') ?? 9;
+      final int peakEnd = int.tryParse(_crowdPredictionData!['peak_end']?.toString() ?? '15') ?? 15;
+      final bool isWeekend = (day == 'Sabtu' || day == 'Minggu');
+
+      final List<int> hours = [6, 8, 10, 12, 14, 16, 18];
+      return hours.map((h) {
+        if (h >= peakStart && h <= peakEnd) {
+          if (status == 'Ramai' || isWeekend) return 2;
+          if (status == 'Sedang') return 1;
+          return 0;
+        }
+        if (h == peakStart - 2 || h == peakEnd + 2) {
+          return status == 'Ramai' ? 1 : 0;
+        }
+        return 0;
+      }).toList();
+    }
+    return _crowdData[day] ?? [0, 0, 1, 1, 1, 0, 0];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -163,23 +224,12 @@ class _DetailDestinationScreenState
                     SizedBox(
                       width: double.infinity,
                       height: 285,
-                      child: Image.asset(
-                        widget.mainImage,
+                      child: SmartImage(
+                        imagePathOrUrl: widget.mainImage,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color:  AppColors.imagePlaceholderBg,
-                            child: const Center(
-                              child: Icon(
-                                Icons.image_outlined,
-                                size: 60,
-                                color: AppColors.primaryBlue,
-                              ),
-                            ),
-                          );
-                        },
                       ),
                     ),
+
 
                     // ==================================================
                     // BACK BUTTON
@@ -391,9 +441,9 @@ class _DetailDestinationScreenState
 
               const SizedBox(width: 5),
 
-              const Text(
-                '• Buka pukul 08.00',
-                style: TextStyle(
+              Text(
+                '• Buka pukul ${_openHour ?? "08.00"}${_closeHour != null ? " - $_closeHour" : ""}',
+                style: const TextStyle(
                   color: AppColors.greyText,
                   fontSize: 11,
                 ),
@@ -413,7 +463,9 @@ class _DetailDestinationScreenState
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Text(
-        widget.description,
+        (_dbDescription != null && _dbDescription!.isNotEmpty)
+            ? _dbDescription!
+            : widget.description,
         textAlign: TextAlign.left,
         style: const TextStyle(
           fontSize: 13,
@@ -430,13 +482,11 @@ class _DetailDestinationScreenState
   // ============================================================
 
   Widget _buildGallery(BuildContext context) {
-    // Pakai foto milik destinasi ini sendiri (widget.galleryImages).
-    // Kalau destinasi belum punya galleryImages sendiri, fallback ke
-    // mainImage-nya saja — bukan lagi 3 foto tetap untuk semua tempat.
-    final List<String> galleryImages =
-        (widget.galleryImages != null && widget.galleryImages!.isNotEmpty)
-        ? widget.galleryImages!
-        : [widget.mainImage];
+    final List<String> galleryImages = _galleryImages.isNotEmpty
+        ? _galleryImages
+        : ((widget.galleryImages != null && widget.galleryImages!.isNotEmpty)
+            ? widget.galleryImages!
+            : [widget.mainImage]);
 
     return SizedBox(
       height: 75,
@@ -478,27 +528,14 @@ class _DetailDestinationScreenState
           index,
         );
       },
-      child: ClipRRect(
+      child: SmartImage(
+        imagePathOrUrl: imagePath,
+        width: 130,
+        height: 75,
+        fit: BoxFit.cover,
         borderRadius: BorderRadius.circular(13),
-        child: SizedBox(
-          width: 130,
-          height: 75,
-          child: Image.asset(
-            imagePath,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color:  AppColors.imagePlaceholderBg,
-                child: const Icon(
-                  Icons.image_outlined,
-                  color: AppColors.primaryBlue,
-                  size: 30,
-                ),
-              );
-            },
-          ),
-        ),
       ),
+
     );
   }
 
@@ -528,7 +565,7 @@ class _DetailDestinationScreenState
   // ============================================================
 
   Widget _buildCrowdPrediction() {
-    final List<int> levels = _crowdData[_selectedDay]!;
+    final List<int> levels = _getCrowdLevelsForDay(_selectedDay);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -774,7 +811,7 @@ class _DetailDestinationScreenState
 
   Widget _buildRecommendedTime() {
     final _CrowdSummary summary =
-        _summaryFor(_crowdData[_selectedDay]!);
+        _summaryFor(_getCrowdLevelsForDay(_selectedDay));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -988,49 +1025,9 @@ class _DetailDestinationScreenState
   // REVIEWS
   // ============================================================
 
-  final List<Map<String, dynamic>> _mockReviews = [
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=47',
-      'name': 'Amara Tasya',
-      'rating': 4.5,
-      'time': '2 minggu lalu',
-      'text': 'Tempatnya bagus banget dan estetik, suasananya juga nyaman',
-      'likes': '102',
-      'liked': false,
-    },
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=12',
-      'name': 'Bagas Pratama',
-      'rating': 5.0,
-      'time': '1 bulan lalu',
-      'text':
-          'Pemandangannya luar biasa, worth it banget buat healing akhir pekan.',
-      'likes': '76',
-      'liked': false,
-    },
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=32',
-      'name': 'Citra Ayu',
-      'rating': 4.0,
-      'time': '1 bulan lalu',
-      'text': 'Aksesnya lumayan jauh, tapi kebersihan tempatnya terjaga.',
-      'likes': '54',
-      'liked': false,
-    },
-    {
-      'avatar': 'https://i.pravatar.cc/150?img=5',
-      'name': 'Dimas Saputra',
-      'rating': 4.5,
-      'time': '2 bulan lalu',
-      'text': 'Cocok buat foto-foto, mending datang pagi biar tidak ramai.',
-      'likes': '41',
-      'liked': false,
-    },
-  ];
+  final List<Map<String, dynamic>> _mockReviews = [];
 
   Widget _buildReviews(BuildContext context) {
-    final Map<String, dynamic> firstReview = _mockReviews.first;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -1049,24 +1046,12 @@ class _DetailDestinationScreenState
                 ),
               ),
 
-              // ==============================================
-              // LIHAT SEMUA
-              // ==============================================
-
               GestureDetector(
-                onTap: () {
-                  final double? parsedRating =
-                      double.tryParse(widget.rating);
+                onTap: () async {
+                  final double? parsedRating = double.tryParse(widget.rating);
+                  final int parsedTotal = _dbReviews.length;
 
-                  final int parsedTotal = int.tryParse(
-                        widget.reviews.replaceAll(
-                          RegExp(r'[^0-9]'),
-                          '',
-                        ),
-                      ) ??
-                      _mockReviews.length;
-
-                  Navigator.push(
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) {
@@ -1079,6 +1064,7 @@ class _DetailDestinationScreenState
                       },
                     ),
                   );
+                  _fetchDestinationBackendDetails();
                 },
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1090,9 +1076,7 @@ class _DetailDestinationScreenState
                         color: AppColors.greyText,
                       ),
                     ),
-
                     SizedBox(width: 4),
-
                     Icon(
                       Icons.chevron_right,
                       size: 17,
@@ -1106,7 +1090,48 @@ class _DetailDestinationScreenState
 
           const SizedBox(height: 14),
 
-          _buildReviewCard(firstReview),
+          if (_dbReviews.isNotEmpty)
+            ..._dbReviews.take(3).map((rev) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildReviewCard({
+                  'id': rev['id'],
+                  'avatar': rev['user_avatar'],
+                  'name': rev['user_name'] ?? 'Pengguna SmartTrip',
+                  'rating': (rev['rating'] as num?)?.toDouble() ?? 5.0,
+                  'time': rev['created_at'] ?? 'Baru saja',
+                  'text': rev['review_text'] ?? '',
+                  'likes': (rev['likes_count'] ?? 0).toString(),
+                  'liked': rev['liked'] == true,
+                  'photos': rev['photos'] is List ? List<String>.from(rev['photos']) : <String>[],
+                }),
+              );
+            })
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderColor),
+              ),
+              child: const Column(
+                children: [
+                  Icon(Icons.rate_review_outlined, color: AppColors.greyText, size: 28),
+                  SizedBox(height: 6),
+                  Text(
+                    'Belum ada ulasan untuk destinasi ini.',
+                    style: TextStyle(fontSize: 13, color: AppColors.greyText, fontWeight: FontWeight.w500),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Jadilah yang pertama memberikan rating & ulasan!',
+                    style: TextStyle(fontSize: 11, color: AppColors.greyText),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -1116,12 +1141,13 @@ class _DetailDestinationScreenState
   // REVIEW CARD
   // ============================================================
 
-  void _toggleLike(Map<String, dynamic> review) {
+  Future<void> _toggleLike(Map<String, dynamic> review) async {
+    final dynamic rawId = review['id'];
+    final int? reviewId = (rawId is int) ? rawId : int.tryParse(rawId?.toString() ?? '');
+    final bool currentlyLiked = review['liked'] as bool? ?? false;
+    final int currentLikes = int.tryParse(review['likes']?.toString() ?? '0') ?? 0;
 
     setState(() {
-      final bool currentlyLiked = review['liked'] as bool? ?? false;
-      final int currentLikes = int.tryParse(review['likes'] as String) ?? 0;
-
       if (currentlyLiked) {
         review['liked'] = false;
         review['likes'] = (currentLikes - 1).clamp(0, 999999).toString();
@@ -1130,15 +1156,29 @@ class _DetailDestinationScreenState
         review['likes'] = (currentLikes + 1).toString();
       }
     });
+
+    if (reviewId != null) {
+      try {
+        final res = await ApiService.instance.post('reviews/$reviewId/like');
+        if (res['likes_count'] != null && mounted) {
+          setState(() {
+            review['liked'] = res['liked'] == true;
+            review['likes'] = res['likes_count'].toString();
+          });
+        }
+      } catch (e) {
+        debugPrint('Toggle review like API error: $e');
+      }
+    }
   }
 
   Widget _buildReviewCard(Map<String, dynamic> review) {
-    final double rating = review['rating'] as double;
-    final String avatarUrl = review['avatar'] as String;
-    final String name = review['name'] as String;
-    final String timeAgo = review['time'] as String;
-    final String text = review['text'] as String;
-    final String likes = review['likes'] as String;
+    final double rating = (review['rating'] as num?)?.toDouble() ?? 5.0;
+    final String? avatarUrl = review['avatar'] as String?;
+    final String name = review['name'] as String? ?? 'Pengguna SmartTrip';
+    final String timeAgo = review['time'] as String? ?? 'Baru saja';
+    final String text = review['text'] as String? ?? '';
+    final String likes = review['likes']?.toString() ?? '0';
     final bool liked = review['liked'] as bool? ?? false;
     final int fullStars = rating.floor();
     final bool hasHalfStar = (rating - fullStars) >= 0.5;
@@ -1168,17 +1208,8 @@ class _DetailDestinationScreenState
 
           Row(
             children: [
-              Container(
-                width: 45,
-                height: 45,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: NetworkImage(avatarUrl),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
+              buildAvatarImage(avatarUrl, size: 45),
+
 
               const SizedBox(width: 12),
 
@@ -1404,21 +1435,11 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
                 minScale: 1.0,
                 maxScale: 4.0,
                 child: Center(
-                  child: Image.asset(
-                    widget.images[index],
+                  child: SmartImage(
+                    imagePathOrUrl: widget.images[index],
                     fit: BoxFit.contain,
-                    errorBuilder: (
-                      context,
-                      error,
-                      stackTrace,
-                    ) {
-                      return const Icon(
-                        Icons.broken_image_outlined,
-                        color: Colors.white,
-                        size: 60,
-                      );
-                    },
                   ),
+
                 ),
               );
             },

@@ -8,6 +8,19 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'main_navigation_screen.dart';
 import 'register_screen.dart';
 import '../theme/app_colors.dart';
+import '../services/api_service.dart';
+import '../services/profile_service.dart';
+import '../services/saved_destinations_service.dart';
+import '../services/saved_itinerary_service.dart';
+import '../services/my_reviews_service.dart';
+import '../services/google_auth_service.dart';
+import '../services/facebook_auth_service.dart';
+import '../widgets/app_notification.dart';
+
+
+
+
+
 
 // ================================================================
 // LOGIN SCREEN
@@ -47,19 +60,171 @@ class _LoginScreenState extends State<LoginScreen> {
   final FocusNode _passwordFocus = FocusNode();
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  Future<void> _handleLogin() async {
+    final identifier = _identifierController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (identifier.isEmpty || password.isEmpty) {
+      AppNotification.showError(context, 'Email/Username dan kata sandi wajib diisi.');
+      return;
+    }
+
+
+    setState(() => _isLoading = true);
+
+    debugPrint('🔑 [LOGIN ATTEMPT] Identifier: $identifier');
+
+    try {
+      final res = await ApiService.instance.post('auth/login', body: {
+        'identifier': identifier,
+        'password': password,
+      });
+
+      debugPrint('✅ [LOGIN SUCCESS] Respon: $res');
+
+      if (res['token'] != null) {
+        ApiService.instance.setToken(res['token']);
+
+        // Fetch initial user data from server
+        debugPrint('🔄 [SYNCING USER DATA FROM SERVER...]');
+        await Future.wait([
+          ProfileService.instance.fetchProfile(),
+          SavedDestinationsService.instance.fetchFavorites(),
+          SavedItineraryService.instance.fetchItineraries(),
+          MyReviewsService.instance.fetchMyReviews(),
+        ]);
+        debugPrint('✨ [DATA SYNC COMPLETED]');
+      }
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MainNavigationScreen(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ [LOGIN FAILED] Error: $e');
+      debugPrint('   Stacktrace: $stackTrace');
+      if (!mounted) return;
+
+      String displayError = 'Tidak dapat terhubung ke layanan. Silakan periksa koneksi internet Anda atau coba beberapa saat lagi.';
+      if (e is ApiException) {
+        displayError = e.message;
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('ClientException') ||
+          e.toString().contains('Connection refused')) {
+        displayError = 'Tidak dapat terhubung ke layanan. Silakan periksa koneksi internet Anda atau coba beberapa saat lagi.';
+      } else {
+        displayError = e.toString().replaceAll('Exception: ', '');
+      }
+
+      AppNotification.showError(context, displayError);
+
+
+
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await GoogleAuthService.instance.signIn();
+
+      if (res['token'] != null) {
+        ApiService.instance.setToken(res['token']);
+
+        debugPrint('🔄 [SYNCING USER DATA FROM SERVER AFTER GOOGLE AUTH...]');
+        await Future.wait([
+          ProfileService.instance.fetchProfile(),
+          SavedDestinationsService.instance.fetchFavorites(),
+          SavedItineraryService.instance.fetchItineraries(),
+          MyReviewsService.instance.fetchMyReviews(),
+        ]);
+        debugPrint('✨ [DATA SYNC COMPLETED]');
+      }
+
+      if (!mounted) return;
+
+      AppNotification.showSuccess(context, 'Login Google berhasil!');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MainNavigationScreen(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ [GOOGLE LOGIN FAILED] $e');
+      if (!mounted) return;
+      AppNotification.showError(context, e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleFacebookSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await FacebookAuthService.instance.signIn();
+
+      if (res['token'] != null) {
+        ApiService.instance.setToken(res['token']);
+
+        debugPrint('🔄 [SYNCING USER DATA FROM SERVER AFTER FACEBOOK AUTH...]');
+        await Future.wait([
+          ProfileService.instance.fetchProfile(),
+          SavedDestinationsService.instance.fetchFavorites(),
+          SavedItineraryService.instance.fetchItineraries(),
+          MyReviewsService.instance.fetchMyReviews(),
+        ]);
+        debugPrint('✨ [DATA SYNC COMPLETED]');
+      }
+
+      if (!mounted) return;
+
+      AppNotification.showSuccess(context, 'Login Facebook berhasil!');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MainNavigationScreen(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ [FACEBOOK LOGIN FAILED] $e');
+      if (!mounted) return;
+      AppNotification.showError(context, e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+
+
 
   @override
   void initState() {
     super.initState();
-    // edgeToEdge -- wajib di-set biar body app-nya beneran digambar
-    // MELEWATI system navigation bar (bukan cuma berhenti di atasnya),
-    // sama kaya di RegisterScreen, supaya wave-nya nyampe ke ujung fisik
-    // layar paling bawah tanpa sisa celah putih (dan tinggi wave-nya
-    // konsisten sama Register pas pindah halaman).
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _identifierFocus.addListener(_onFocusChange);
     _passwordFocus.addListener(_onFocusChange);
   }
+
 
   void _onFocusChange() => setState(() {});
 
@@ -162,20 +327,14 @@ class _LoginScreenState extends State<LoginScreen> {
   // ============================================================
 
   Widget _buildLogo() {
-    // Logo SAMA PERSIS dengan yang dipakai SplashScreen --
-    // assets/images/smarttrip_logo.png (sudah termasuk ikon pin +
-    // wordmark "SMART TRIP AI" + tagline jadi satu gambar), bukan
-    // lagi dirakit manual dari Icon/Text seperti draf sebelumnya.
-    //
-    // Siger-nya sekarang ditaruh terpisah di Stack utama (lihat
-    // build()) supaya bisa selebar 1 layar penuh -- di sini logo aja,
-    // otomatis tergambar DI ATAS siger karena urutannya belakangan.
     return Image.asset(
       'assets/images/smarttrip_logo.png',
       width: 240,
       fit: BoxFit.contain,
     );
   }
+
+
 
   // ============================================================
   // FORM CARD
@@ -290,26 +449,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             child: ElevatedButton(
-              onPressed: () {
-                // Sementara langsung lanjut ke halaman utama supaya
-                // alur splash -> login -> app bisa langsung dicoba.
-                // Nanti diganti validasi input + panggil API auth
-                // dulu sebelum pindah halaman.
-                //
-                // settings: RouteSettings(name: '/main') dipasang di sini
-                // supaya layar lain (mis. ItineraryPreviewScreen) bisa
-                // popUntil ke route INI secara eksplisit lewat namanya --
-                // bukan cuma nebak "yang paling bawah stack pasti Main"
-                // (route.isFirst), yang gampang meleset kalau ada layar
-                // lain yang kebetulan nangkring di bawah Main.
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MainNavigationScreen(),
-                    settings: const RouteSettings(name: '/main'),
-                  ),
-                );
-              },
+              onPressed: _isLoading ? null : _handleLogin,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
@@ -317,11 +457,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
-              child: const Text(
-                'Masuk',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
-              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                    )
+                  : const Text(
+                      'Masuk',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+                    ),
             ),
+
           ),
 
           const SizedBox(height: 24),
@@ -348,20 +495,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: _buildSocialButton(
                   label: 'Google',
                   icon: _buildGoogleLogo(),
-                  onTap: () {
-                    // TODO: login dengan Google
-                  },
+                  onTap: _handleGoogleSignIn,
                 ),
+
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildSocialButton(
                   label: 'Facebook',
                   icon: const Icon(Icons.facebook_rounded, color: Color(0xFF1877F2), size: 20),
-                  onTap: () {
-                    // TODO: login dengan Facebook
-                  },
+                  onTap: _handleFacebookSignIn,
                 ),
+
               ),
             ],
           ),

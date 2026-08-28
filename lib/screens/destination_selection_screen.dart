@@ -5,6 +5,9 @@ import 'manual_schedule_screen.dart';
 import 'ai_itinerary_screen.dart';
 import '../data/destinations_data.dart';
 import '../theme/app_colors.dart';
+import '../services/destination_service.dart';
+import '../widgets/smart_image.dart';
+
 
 
 class DestinationSelectionScreen extends StatefulWidget {
@@ -115,10 +118,24 @@ class _DestinationSelectionScreenState
   late Map<int, Set<String>> selectedDestinationsByDay;
 
   // ============================================================
-  // DESTINATION DATA (SUMBER BERSAMA, LIHAT destinations_data.dart)
+  // DESTINATION DATA (DARI DATABASE LARAVEL BACKEND)
   // ============================================================
 
-  final List<Map<String, String>> destinations = kDestinationsData;
+  List<Map<String, String>> get destinations {
+    final liveModels = DestinationService.instance.destinations.value;
+    return liveModels.map((d) => {
+      'id': d.id,
+      'latitude': d.latitude.toString(),
+      'longitude': d.longitude.toString(),
+      'name': d.name,
+      'location': d.location,
+      'category': d.category,
+      'rating': d.rating.toStringAsFixed(1),
+      'reviews': '${d.reviewsCount} ulasan',
+      'image': d.mainImage ?? 'assets/images/pulau_wayang.jpg',
+      'description': d.description,
+    }).toList();
+  }
 
   // ============================================================
   // FAVORITES
@@ -134,9 +151,9 @@ class _DestinationSelectionScreenState
   void initState() {
     super.initState();
 
-    // ------------------------------------------------------------
-    // BUAT PENYIMPANAN UNTUK SETIAP HARI
-    // ------------------------------------------------------------
+    if (DestinationService.instance.destinations.value.isEmpty) {
+      DestinationService.instance.fetchDashboardData();
+    }
 
     selectedDestinationsByDay = {};
 
@@ -144,6 +161,7 @@ class _DestinationSelectionScreenState
       selectedDestinationsByDay[day] = {};
     }
   }
+
 
   // ============================================================
   // DISPOSE
@@ -163,11 +181,12 @@ class _DestinationSelectionScreenState
     final String keyword = searchController.text.trim().toLowerCase();
 
     return destinations.where((destination) {
-      final String name = destination['name']!.toLowerCase();
+      final String name = (destination['name'] ?? '').toLowerCase();
 
-      final String location = destination['location']!.toLowerCase();
+      final String location = (destination['location'] ?? '').toLowerCase();
 
-      final String category = destination['category']!;
+      final String category = destination['category'] ?? 'Alam';
+
 
       // ========================================================
       // FILTER KATEGORI DARI INFORMASI PERJALANAN
@@ -583,39 +602,42 @@ class _DestinationSelectionScreenState
   // ============================================================
 
   Widget _buildDestinationList() {
-    final List<Map<String, String>> data = filteredDestinations;
+    return ValueListenableBuilder<List<DestinationModel>>(
+      valueListenable: DestinationService.instance.destinations,
+      builder: (context, liveModels, child) {
+        final List<Map<String, String>> data = filteredDestinations;
 
-    if (data.isEmpty) {
-      return _buildEmptyState();
-    }
+        if (data.isEmpty) {
+          return _buildEmptyState();
+        }
 
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 25),
-
-      itemCount: data.length,
-
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 18),
-
-          child: _buildDestinationCard(data[index]),
+        return ListView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 25),
+          itemCount: data.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: _buildDestinationCard(data[index]),
+            );
+          },
         );
       },
     );
   }
+
 
   // ============================================================
   // DESTINATION CARD
   // ============================================================
 
   Widget _buildDestinationCard(Map<String, String> destination) {
-    final String name = destination['name']!;
+    final String name = destination['name'] ?? 'Destinasi';
 
-    final String image = destination['image']!;
+    final String image = destination['image'] ?? 'assets/images/pulau_wayang.jpg';
 
-    final String reviews = destination['reviews']!;
+    final String reviews = destination['reviews'] ?? '0 ulasan';
+
 
     // ==========================================================
     // CEK DESTINASI UNTUK HARI YANG SEDANG AKTIF
@@ -669,27 +691,12 @@ class _DestinationSelectionScreenState
                 SizedBox(
                   width: double.infinity,
                   height: 145,
-
-                  child: Image.asset(
-                    image,
-
+                  child: SmartImage(
+                    imagePathOrUrl: image,
                     fit: BoxFit.cover,
-
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color:  AppColors.lightBlue,
-
-                        child: const Icon(
-                          Icons.image_outlined,
-
-                          color: AppColors.primaryBlue,
-
-                          size: 40,
-                        ),
-                      );
-                    },
                   ),
                 ),
+
 
                 // ----------------------------------------------
                 // FAVORITE BUTTON

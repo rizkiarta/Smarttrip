@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/saved_itinerary_service.dart';
+import '../widgets/smart_image.dart';
+import '../data/destinations_data.dart';
 import 'itinerary_detail_screen.dart';
 import 'main_navigation_screen.dart';
 import '../theme/app_colors.dart';
@@ -53,7 +55,19 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
   // ============================================================
 
   String _destinationImage(Map<String, dynamic> destination) {
-    return _value(destination, 'image');
+    for (final key in ['image', 'main_image', 'mainImage', 'photo', 'cover_image', 'image_url']) {
+      final val = destination[key]?.toString().trim();
+      if (val != null && val.isNotEmpty && val != 'null') {
+        return val;
+      }
+    }
+    final destId = destination['id']?.toString() ?? '';
+    final destName = destination['name']?.toString() ?? '';
+    final liveDest = findDestinationById(destId) ?? findDestinationByName(destName);
+    if (liveDest != null && liveDest['image'] != null && liveDest['image']!.isNotEmpty) {
+      return liveDest['image']!;
+    }
+    return '';
   }
 
   // ============================================================
@@ -471,31 +485,11 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                           // IMAGE
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: SizedBox(
+                            child: SmartImage(
+                              imagePathOrUrl: image,
                               width: 82,
                               height: 82,
-                              child: image.isNotEmpty
-                                  ? Image.asset(
-                                      image,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Container(
-                                              color: const Color(0xFFEDEDED),
-                                              child: const Icon(
-                                                Icons.image_outlined,
-                                                color: Colors.grey,
-                                              ),
-                                            );
-                                          },
-                                    )
-                                  : Container(
-                                      color: const Color(0xFFEDEDED),
-                                      child: const Icon(
-                                        Icons.image_outlined,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
+                              fit: BoxFit.cover,
                             ),
                           ),
 

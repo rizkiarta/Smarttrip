@@ -6,6 +6,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/app_colors.dart';
+import 'main_navigation_screen.dart';
+import '../services/api_service.dart';
+import '../services/profile_service.dart';
+import '../services/saved_destinations_service.dart';
+import '../services/saved_itinerary_service.dart';
+import '../services/my_reviews_service.dart';
+import '../services/google_auth_service.dart';
+import '../services/facebook_auth_service.dart';
+import '../widgets/app_notification.dart';
+
+
+
+
+
 
 // ================================================================
 // REGISTER SCREEN
@@ -50,6 +64,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
+
 
   @override
   void initState() {
@@ -72,17 +88,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   // ============================================================
-  // VALIDASI + SUBMIT REGISTER
+  // VALIDASI & PROSES DAFTAR (API INTEGRATION)
   // ============================================================
-  //
-  // Validasi ringan di sisi UI dulu (belum panggil API beneran --
-  // itu nanti tinggal ganti bagian "TODO: panggil API register" di
-  // bawah). Kalau semua valid, tampilkan pesan sukses lalu balik
-  // ke LoginScreen supaya user login manual pakai akun barunya.
-  //
+  // Validasi input di UI, lalu kirim payload ke API Laravel
+  // (/api/v1/auth/register). Jika berhasil, simpan token Sanctum
+  // dan sync data profil pengguna.
   // ============================================================
 
-  void _handleRegister() {
+
+  Future<void> _handleRegister() async {
     final String name = _nameController.text.trim();
     final String email = _emailController.text.trim();
     final String phone = _phoneController.text.trim();
@@ -114,40 +128,158 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppNotification.showError(context, errorMessage);
       return;
     }
 
-    // TODO: panggil API register di sini (name, email, phone, password).
-    // Kalau responsnya sukses, baru lanjut ke bagian bawah ini.
-    // Kalau gagal (mis. email sudah terdaftar), tampilkan errornya lewat
-    // SnackBar seperti di atas dan JANGAN panggil Navigator di bawah.
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pendaftaran berhasil! Silakan masuk.'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    setState(() => _isLoading = true);
 
-    // Dulu ini Navigator.pushReplacement(...LoginScreen()) -- bikin
-    // LoginScreen BARU ditumpuk di atas, sementara LoginScreen yang lama
-    // (tempat awal RegisterScreen ini di-push) tetap nangkring di bawah
-    // stack, ga pernah kehapus. Efeknya: begitu user sudah login dan
-    // pencet tombol back sistem, dia nyasar balik ke LoginScreen lama itu
-    // -- keliatan kaya logout padahal bukan.
-    //
-    // Fix: cukup pop balik ke LoginScreen yang SUDAH ADA di bawah,
-    // ga perlu bikin instance baru.
-    Navigator.pop(context);
+    try {
+      debugPrint('📝 [REGISTER ATTEMPT] Name: $name | Email: $email');
+      final res = await ApiService.instance.post('auth/register', body: {
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'password': password,
+        'password_confirmation': confirmPassword,
+      });
+
+      debugPrint('✅ [REGISTER SUCCESS] Respon: $res');
+
+      if (res['token'] != null) {
+        ApiService.instance.setToken(res['token']);
+
+        debugPrint('🔄 [SYNCING USER DATA FROM SERVER...]');
+        await Future.wait([
+          ProfileService.instance.fetchProfile(),
+          SavedDestinationsService.instance.fetchFavorites(),
+          SavedItineraryService.instance.fetchItineraries(),
+          MyReviewsService.instance.fetchMyReviews(),
+        ]);
+        debugPrint('✨ [DATA SYNC COMPLETED]');
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MainNavigationScreen(),
+            settings: const RouteSettings(name: '/main'),
+          ),
+        );
+        return;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ [REGISTER FAILED] Error: $e');
+      debugPrint('   Stacktrace: $stackTrace');
+      if (!mounted) return;
+
+      String displayError = 'Tidak dapat terhubung ke layanan. Silakan periksa koneksi internet Anda atau coba beberapa saat lagi.';
+      if (e is ApiException) {
+        displayError = e.message;
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('ClientException') ||
+          e.toString().contains('Connection refused')) {
+        displayError = 'Tidak dapat terhubung ke layanan. Silakan periksa koneksi internet Anda atau coba beberapa saat lagi.';
+      } else {
+        displayError = e.toString().replaceAll('Exception: ', '');
+      }
+
+      AppNotification.showError(context, displayError);
+
+
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await GoogleAuthService.instance.signIn();
+
+      if (res['token'] != null) {
+        ApiService.instance.setToken(res['token']);
+
+        debugPrint('🔄 [SYNCING USER DATA FROM SERVER AFTER GOOGLE AUTH...]');
+        await Future.wait([
+          ProfileService.instance.fetchProfile(),
+          SavedDestinationsService.instance.fetchFavorites(),
+          SavedItineraryService.instance.fetchItineraries(),
+          MyReviewsService.instance.fetchMyReviews(),
+        ]);
+        debugPrint('✨ [DATA SYNC COMPLETED]');
+      }
+
+      if (!mounted) return;
+
+      AppNotification.showSuccess(context, 'Pendaftaran via Google berhasil!');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MainNavigationScreen(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ [GOOGLE REGISTER FAILED] $e');
+      if (!mounted) return;
+      AppNotification.showError(context, e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleFacebookSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await FacebookAuthService.instance.signIn();
+
+      if (res['token'] != null) {
+        ApiService.instance.setToken(res['token']);
+
+        debugPrint('🔄 [SYNCING USER DATA FROM SERVER AFTER FACEBOOK AUTH...]');
+        await Future.wait([
+          ProfileService.instance.fetchProfile(),
+          SavedDestinationsService.instance.fetchFavorites(),
+          SavedItineraryService.instance.fetchItineraries(),
+          MyReviewsService.instance.fetchMyReviews(),
+        ]);
+        debugPrint('✨ [DATA SYNC COMPLETED]');
+      }
+
+      if (!mounted) return;
+
+      AppNotification.showSuccess(context, 'Pendaftaran via Facebook berhasil!');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MainNavigationScreen(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ [FACEBOOK REGISTER FAILED] $e');
+      if (!mounted) return;
+      AppNotification.showError(context, e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+
+
+
+
 
   // ============================================================
   // BUILD
@@ -239,15 +371,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ============================================================
 
   Widget _buildLogo() {
-    // Sama persis dengan LoginScreen/SplashScreen --
-    // assets/images/smarttrip_logo.png (ikon + wordmark + tagline
-    // sudah jadi satu gambar).
     return Image.asset(
       'assets/images/smarttrip_logo.png',
       width: 240,
       fit: BoxFit.contain,
     );
   }
+
+
 
   // ============================================================
   // FORM CARD
@@ -370,18 +501,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _handleRegister,
+              onPressed: _isLoading ? null : _handleRegister,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
-              child: const Text(
-                'Daftar',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                    )
+                  : const Text(
+                      'Daftar',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
             ),
+
           ),
 
           const SizedBox(height: 20),
@@ -408,20 +546,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: _buildSocialButton(
                   label: 'Google',
                   icon: _buildGoogleLogo(),
-                  onTap: () {
-                    // TODO: daftar/login dengan Google
-                  },
+                  onTap: _handleGoogleSignIn,
                 ),
+
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildSocialButton(
                   label: 'Facebook',
                   icon: const Icon(Icons.facebook_rounded, color: Color(0xFF1877F2), size: 20),
-                  onTap: () {
-                    // TODO: daftar/login dengan Facebook
-                  },
+                  onTap: _handleFacebookSignIn,
                 ),
+
               ),
             ],
           ),

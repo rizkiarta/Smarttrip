@@ -6,6 +6,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 
 // ================================================================
@@ -308,45 +310,37 @@ class _RouteScreenState extends State<RouteScreen> {
     });
 
     try {
-      // Kalau startCoordinate sudah dikasih (mode readOnly dari
-      // ItineraryDetailScreen), pakai itu langsung sebagai titik
-      // awal -- TIDAK perlu minta izin/lokasi GPS sama sekali.
-      // Geolocator cuma dipanggil kalau memang tidak ada titik awal
-      // yang sudah diketahui (mode navigasi aktif dari TripScreen).
-      final LatLng origin;
+      final LatLng origin = await _determineOriginLocation();
 
-      if (widget.startCoordinate != null) {
-        origin = widget.startCoordinate!;
-      } else {
-        final currentPosition = await _determineCurrentPosition();
-        origin = LatLng(
-          currentPosition.latitude,
-          currentPosition.longitude,
-        );
-      }
-
-      final List<_RouteLeg?> legs = [];
-      LatLng legOrigin = origin;
-
+      final List<LatLng> origins = [];
+      LatLng currentLegOrigin = origin;
       for (final stop in widget.stops) {
-        try {
-          final leg = await _fetchLeg(
-            origin: legOrigin,
-            destination: stop.coordinate,
-          );
-          legs.add(leg);
-        } catch (_) {
-          // Satu leg gagal (mis. OSRM tidak nemu rute jalan kaki di
-          // lokasi itu) tidak boleh bikin seluruh rute multi-stop
-          // ikut gagal -- leg lain tetap dicoba.
-          legs.add(null);
-        }
-
-        // Leg berikutnya dihitung dari titik stop ini, TERLEPAS
-        // dari leg di atas berhasil atau tidak, supaya urutan rute
-        // tetap sesuai jadwal.
-        legOrigin = stop.coordinate;
+        origins.add(currentLegOrigin);
+        currentLegOrigin = stop.coordinate;
       }
+
+      // ⚡ PARALEL EKSEKUSI: Panggil seluruh leg secara bersamaan via Future.wait
+      final List<_RouteLeg?> legs = await Future.wait(
+        List.generate(widget.stops.length, (i) async {
+          final legOrigin = origins[i];
+          final stop = widget.stops[i];
+          try {
+            return await _fetchLeg(
+              origin: legOrigin,
+              destination: stop.coordinate,
+            );
+          } catch (e) {
+            debugPrint('⚠️ Leg $i fetch error, fallback straight line: $e');
+            final double distance =
+                _calculateDistanceMeters(legOrigin, stop.coordinate);
+            return _RouteLeg(
+              points: [legOrigin, stop.coordinate],
+              distanceMeters: distance,
+              durationSeconds: (distance / 12),
+            );
+          }
+        }),
+      );
 
       if (!mounted) return;
 
@@ -367,35 +361,65 @@ class _RouteScreenState extends State<RouteScreen> {
     }
   }
 
+  double _calculateDistanceMeters(LatLng p1, LatLng p2) {
+    final double dLat = (p2.latitude - p1.latitude) * (math.pi / 180.0);
+    final double dLon = (p2.longitude - p1.longitude) * (math.pi / 180.0);
+    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(p1.latitude * (math.pi / 180.0)) *
+            math.cos(p2.latitude * (math.pi / 180.0)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return 6371000 * c;
+  }
+
   // ============================================================
-  // LOKASI PENGGUNA SAAT INI
+  // LOKASI KEBERANGKATAN / AKURASI LOKASI PENGGUNA
   // ============================================================
 
-  Future<Position> _determineCurrentPosition() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
-    if (!serviceEnabled) {
-      throw Exception('Aktifkan GPS terlebih dahulu untuk melihat rute.');
+  Future<LatLng> _determineOriginLocation() async {
+    if (widget.startCoordinate != null) {
+      return widget.startCoordinate!;
     }
 
-    LocationPermission permission = await Geolocator.checkPermission();
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
 
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+        if (permission != LocationPermission.denied &&
+            permission != LocationPermission.deniedForever) {
+          final pos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.medium,
+            ),
+          ).timeout(const Duration(seconds: 4));
+
+          // Cek apakah posisi GPS berada di sekitar area Lampung (lat -6.5 ~ -3.5, lon 103.5 ~ 106.5)
+          final bool isInLampung = pos.latitude >= -6.5 &&
+              pos.latitude <= -3.5 &&
+              pos.longitude >= 103.5 &&
+              pos.longitude <= 106.5;
+
+          if (isInLampung) {
+            return LatLng(pos.latitude, pos.longitude);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ GPS location error or out of bounds, using fallback origin: $e');
     }
 
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      throw Exception(
-        'Izin lokasi diperlukan untuk menampilkan rute ke destinasi.',
-      );
+    // Fallback cerdas: Titik awal dekat destinasi pertama agar peta terfokus jelas di Lampung
+    if (widget.stops.isNotEmpty) {
+      final firstCoord = widget.stops.first.coordinate;
+      return LatLng(firstCoord.latitude - 0.015, firstCoord.longitude - 0.015);
     }
 
-    return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
-    );
+    return const LatLng(-5.4292, 105.2611); // Bandar Lampung
   }
 
   // ============================================================
@@ -406,15 +430,55 @@ class _RouteScreenState extends State<RouteScreen> {
     required LatLng origin,
     required LatLng destination,
   }) async {
-    // Profil OSRM SELALU 'driving' -- lihat catatan besar di atas
-    // class ini kenapa Mobil/Motor/Bus tidak punya profil routing
-    // terpisah di server demo publik.
-    const profile = 'driving';
+    final String modeParam = switch (_travelMode) {
+      _TravelMode.motorcycle => 'motorcycle',
+      _TravelMode.bus => 'bus',
+      _ => 'car',
+    };
 
-    // OSRM format koordinat: lon,lat (kebalikan dari LatLng)
-    final coordinates =
-        '${origin.longitude},${origin.latitude};'
-        '${destination.longitude},${destination.latitude}';
+    final String originStr = '${origin.longitude},${origin.latitude}';
+    final String destStr = '${destination.longitude},${destination.latitude}';
+
+    // --------------------------------------------------------
+    // 1. BACKEND ROUTE PROXY (ORS_API_KEY aman di backend .env)
+    // --------------------------------------------------------
+    try {
+      final responseData = await ApiService.instance.get(
+        'route/directions',
+        queryParams: {
+          'origin': originStr,
+          'destination': destStr,
+          'mode': modeParam,
+        },
+      ).timeout(const Duration(seconds: 12));
+
+      if (responseData != null && responseData is Map<String, dynamic>) {
+        if (responseData['status'] == 'success' &&
+            responseData['points'] != null) {
+          final List<dynamic> rawCoords = responseData['points'];
+          final points = rawCoords.map<LatLng>((c) {
+            return LatLng(
+              (c[1] as num).toDouble(),
+              (c[0] as num).toDouble(),
+            );
+          }).toList();
+
+          return _RouteLeg(
+            points: points,
+            distanceMeters: (responseData['distance'] as num).toDouble(),
+            durationSeconds: (responseData['duration'] as num).toDouble(),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Backend routing proxy failed, fallback to OSRM: $e');
+    }
+
+    // --------------------------------------------------------
+    // 2. FALLBACK KE OSRM (LANGSUNG DARI FLUTTER JIKA SERVER OFFLINE)
+    // --------------------------------------------------------
+    const profile = 'driving';
+    final coordinates = '$originStr;$destStr';
 
     final uri = Uri.parse(
       'https://router.project-osrm.org/route/v1/$profile/$coordinates'
@@ -438,11 +502,9 @@ class _RouteScreenState extends State<RouteScreen> {
     }
 
     final route = data['routes'][0];
-
     final List<dynamic> rawCoords = route['geometry']['coordinates'];
 
     final points = rawCoords.map<LatLng>((c) {
-      // GeoJSON: [lon, lat]
       return LatLng(
         (c[1] as num).toDouble(),
         (c[0] as num).toDouble(),
@@ -531,6 +593,59 @@ class _RouteScreenState extends State<RouteScreen> {
     // Kasih tau parent (TripScreen) supaya progress card & timeline
     // di sana ikut gerak -- lihat komentar widget.onStopIndexChanged.
     widget.onStopIndexChanged?.call(_currentStopIndex);
+  }
+
+  Future<void> _openInGoogleMaps() async {
+    if (widget.stops.isEmpty) return;
+
+    final String travelModeParam = switch (_travelMode) {
+      _TravelMode.motorcycle => 'two-wheeler',
+      _TravelMode.bus => 'transit',
+      _ => 'driving',
+    };
+
+    final LatLng originCoord = _currentLocation ?? widget.stops.first.coordinate;
+    final LatLng destCoord = widget.stops.last.coordinate;
+
+    final String originStr = '${originCoord.latitude},${originCoord.longitude}';
+    final String destStr = '${destCoord.latitude},${destCoord.longitude}';
+
+    String webUrl =
+        'https://www.google.com/maps/dir/?api=1&origin=$originStr&destination=$destStr&travelmode=$travelModeParam';
+
+    if (widget.stops.length > 1) {
+      final List<String> waypoints = [];
+      for (int i = 0; i < widget.stops.length - 1; i++) {
+        final stop = widget.stops[i];
+        waypoints.add('${stop.coordinate.latitude},${stop.coordinate.longitude}');
+      }
+      if (waypoints.isNotEmpty) {
+        webUrl += '&waypoints=${waypoints.join('|')}';
+      }
+    }
+
+    final Uri webUri = Uri.parse(webUrl);
+
+    try {
+      bool launched = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        launched = await launchUrl(webUri, mode: LaunchMode.platformDefault);
+      }
+      if (!launched) {
+        final Uri geoUri = Uri.parse('geo:$destStr?q=$destStr(${Uri.encodeComponent(widget.stops.last.name)})');
+        await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error opening Google Maps: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka Google Maps: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   Color _legColor(int index) {
@@ -645,7 +760,15 @@ class _RouteScreenState extends State<RouteScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 45),
+          IconButton(
+            onPressed: _openInGoogleMaps,
+            tooltip: 'Buka di Google Maps',
+            icon: const Icon(
+              Icons.map_rounded,
+              color: AppColors.primaryBlue,
+              size: 24,
+            ),
+          ),
         ],
       ),
     );
@@ -884,9 +1007,7 @@ class _RouteScreenState extends State<RouteScreen> {
       ),
       children: [
         TileLayer(
-          urlTemplate:
-              'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-          subdomains: const ['a', 'b', 'c', 'd'],
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.example.smarttrip',
         ),
 
@@ -1074,46 +1195,71 @@ class _RouteScreenState extends State<RouteScreen> {
             ),
           ],
 
-          // Tombol "Tandai Sudah Sampai" HANYA dirender kalau bukan
-          // readOnly -- lihat komentar widget.readOnly di atas.
-          // Sisa kartu info (mode kendaraan, jarak, durasi, "Menuju
-          // ...") tetap sama persis supaya bentuk/isi kartunya identik
-          // dengan versi navigasi aktif, cuma aksinya yang dihilangkan.
-          if (!widget.readOnly) ...[
-            const SizedBox(height: 16),
-
-            // Sinkron ke TripScreen lewat widget.onStopIndexChanged
-            // (dipanggil di _markArrived) -- lihat komentar di sana.
-            //
-            // CATATAN: sebelumnya kondisi tombol ini digabung dengan
-            // 'widget.stops.length > 1' (dulu dipakai bareng counter
-            // "Tujuan x/y" di atas) -- akibatnya kalau destinasi hari
-            // itu cuma 1, tombol "Tandai Sudah Sampai" ikut hilang
-            // total padahal user tetap butuh cara menandai dia sudah
-            // sampai. Sekarang dipisah: counter tetap butuh > 1 stop,
-            // tombol cukup butuh !readOnly.
+          const SizedBox(height: 16),
+          if (widget.readOnly) ...[
             SizedBox(
               width: double.infinity,
               height: 46,
-              child: ElevatedButton(
-                onPressed: allArrived ? null : _markArrived,
+              child: ElevatedButton.icon(
+                onPressed: _openInGoogleMaps,
+                icon: const Icon(Icons.navigation_rounded, size: 20),
+                label: const Text(
+                  'Buka di Google Maps',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: allArrived ? const Color(0xFFEDEDED) : AppColors.darkBlue,
-                  foregroundColor: allArrived ? AppColors.greyText : Colors.white,
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(23),
                   ),
                 ),
-                child: Text(
-                  allArrived
-                      ? 'Semua Destinasi Sudah Dikunjungi'
-                      : 'Tandai Sudah Sampai di ${activeStop!.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-                ),
               ),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _openInGoogleMaps,
+                  icon: const Icon(Icons.navigation_rounded, size: 18, color: AppColors.primaryBlue),
+                  label: const Text(
+                    'Google Maps',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.darkText),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(23),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: allArrived ? null : _markArrived,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: allArrived ? const Color(0xFFEDEDED) : AppColors.darkBlue,
+                        foregroundColor: allArrived ? AppColors.greyText : Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(23),
+                        ),
+                      ),
+                      child: Text(
+                        allArrived
+                            ? 'Selesai'
+                            : 'Tandai Sampai',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ],

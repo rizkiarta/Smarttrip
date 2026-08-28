@@ -1,31 +1,8 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-
 import '../theme/app_colors.dart';
-
-// ================================================================
-// PROFILE SERVICE
-// ================================================================
-//
-// Sumber kebenaran tunggal (single source of truth) untuk data
-// profil user: nama, bio, dan foto profil. Disimpan di memori
-// (in-memory) selama aplikasi berjalan lewat ValueNotifier bawaan
-// Flutter, polanya sama seperti SavedDestinationsService, jadi
-// tidak perlu package state management tambahan.
-//
-// Dipakai oleh:
-// - ProfileScreen: menampilkan avatar/nama/bio
-// - EditProfileScreen (edit_profile_screen.dart): mengubah
-//   avatar/nama/bio
-// - ReviewScreen (review_screen.dart): mengambil nama & foto user
-//   saat kirim ulasan baru
-//
-// buildAvatarImage (di bawah) juga ikut dipindah ke sini karena
-// dipakai di tempat-tempat yang sama dengan ProfileService, supaya
-// screens/ tidak perlu tahu detail cara avatar dirender.
-//
-// ================================================================
+import 'api_service.dart';
+import 'language_service.dart';
 
 class ProfileData {
   final String name;
@@ -34,11 +11,6 @@ class ProfileData {
   final DateTime? birthDate;
   final String phone;
   final String email;
-
-  // Path foto profil. Bisa berupa:
-  // - null / kosong -> pakai avatar default (network placeholder)
-  // - path file lokal (hasil kamera/galeri) -> ditampilkan lewat
-  //   Image.file
   final String? photoPath;
 
   const ProfileData({
@@ -70,29 +42,61 @@ class ProfileData {
       photoPath: photoPath ?? this.photoPath,
     );
   }
+
+  factory ProfileData.fromJson(Map<String, dynamic> json) {
+    DateTime? bDate;
+    if (json['birth_date'] != null) {
+      try {
+        bDate = DateTime.parse(json['birth_date']);
+      } catch (_) {}
+    }
+
+    return ProfileData(
+      name: json['name'] ?? '',
+      bio: json['bio'] ?? 'Traveler',
+      username: json['username'] ?? '',
+      birthDate: bDate,
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
+      photoPath: json['photo_url'],
+    );
+  }
 }
 
 class ProfileService {
   ProfileService._internal();
-
   static final ProfileService instance = ProfileService._internal();
 
-  // Avatar default (dipakai sebelum user pernah ganti foto profil).
-  static const String defaultAvatarUrl = 'https://i.pravatar.cc/150?img=47';
-
   final ValueNotifier<ProfileData> profile = ValueNotifier<ProfileData>(
-    ProfileData(
-      name: 'Kang Hearin',
+    const ProfileData(
+      name: '',
       bio: 'Traveler',
-      username: 'green_meowww',
-      birthDate: DateTime(2006, 10, 7),
-      phone: '088736492071',
-      email: 'hearin777@gmail.com',
+      username: '',
+      email: '',
       photoPath: null,
     ),
   );
 
-  void updateProfile({
+  /// Fetch profile data from Laravel API backend
+  Future<void> fetchProfile() async {
+    if (!ApiService.instance.isAuthenticated) return;
+    try {
+      final res = await ApiService.instance.get('profile');
+      if (res != null && res['data'] != null) {
+        final dataMap = Map<String, dynamic>.from(res['data'] as Map);
+        profile.value = ProfileData.fromJson(dataMap);
+        if (dataMap['language'] != null) {
+          LanguageService.instance.languageCode.value = dataMap['language'].toString();
+        }
+        debugPrint('👤 [PROFILE FETCHED] Name: ${profile.value.name}, Photo: ${profile.value.photoPath}');
+      }
+    } catch (e) {
+      debugPrint('Fetch profile error: $e');
+    }
+  }
+
+  /// Update profile data and sync with Laravel backend
+  Future<void> updateProfile({
     required String name,
     String? bio,
     String? username,
@@ -100,7 +104,8 @@ class ProfileService {
     String? phone,
     String? email,
     String? photoPath,
-  }) {
+  }) async {
+    // 1. Update local state immediately for instant UI feedback
     profile.value = profile.value.copyWith(
       name: name,
       bio: bio,
@@ -110,59 +115,151 @@ class ProfileService {
       email: email,
       photoPath: photoPath,
     );
+
+    // 2. Sync to Laravel backend if authenticated
+    if (ApiService.instance.isAuthenticated) {
+      try {
+        final body = {
+          'name': name,
+          if (bio != null) 'bio': bio,
+          if (username != null) 'username': username,
+          if (phone != null) 'phone': phone,
+          if (email != null) 'email': email,
+          if (birthDate != null) 'birth_date': birthDate.toIso8601String().split('T').first,
+        };
+        await ApiService.instance.put('profile', body: body);
+
+        // Upload photo if a new local file is selected
+        if (photoPath != null && !photoPath.startsWith('http')) {
+          final file = File(photoPath);
+          if (file.existsSync()) {
+            final photoRes = await ApiService.instance.multipartPost(
+              'profile/photo',
+              fileField: 'photo',
+              file: file,
+            );
+            if (photoRes != null && photoRes['photo_url'] != null) {
+              profile.value = profile.value.copyWith(photoPath: photoRes['photo_url']);
+            }
+          }
+        }
+
+        // Re-fetch profile to ensure 100% server sync
+        await fetchProfile();
+      } catch (e) {
+        debugPrint('Sync update profile error: $e');
+      }
+    }
   }
 
-  // Foto profil yang dipakai saat menulis ulasan baru. Kalau user
-  // belum pernah ganti foto, fallback ke avatar default supaya
-  // konsisten dengan avatar yang tampil di ProfileScreen.
-  String get currentAvatarForReview =>
-      profile.value.photoPath ?? defaultAvatarUrl;
+  String? get currentAvatarForReview => profile.value.photoPath;
 }
 
-// ================================================================
-// SHARED AVATAR RENDERER
-// ================================================================
-//
-// Dipakai di mana pun avatar user ditampilkan (ProfileScreen di atas,
-// EditProfileScreen, kartu ulasan di review_screen.dart, & kartu
-// "Ulasan Saya" di atas). Avatar bisa berupa:
-// - URL network (avatar mock/default, mis. dari pravatar.cc)
-// - path file lokal (hasil kamera/galeri lewat image_picker)
-//
-// Sebelumnya beberapa layar langsung pakai NetworkImage untuk semua
-// avatar, padahal path file lokal bukan URL -> crash. Fungsi ini
-// otomatis memilih Image.network atau Image.file berdasarkan
-// bentuk path-nya, mirip pola _buildPhotoImage di review_screen.dart
-// untuk foto ulasan.
-// ================================================================
+String _resolveAvatarUrl(String url) {
+  if (url.trim().isEmpty) return url;
+  if (url.startsWith('assets/')) return url;
+
+  // Clean double storage prefix if present
+  if (url.contains('/storage/storage/')) {
+    url = url.replaceAll('/storage/storage/', '/storage/');
+  }
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      final parsed = Uri.parse(url);
+      final baseUri = Uri.parse(ApiService.baseUrl);
+
+      // Always align host/port with active ApiService.baseUrl unless external URL
+      if (parsed.host == 'localhost' ||
+          parsed.host == '127.0.0.1' ||
+          parsed.host == 'smarttrip-backend.test' ||
+          parsed.host == baseUri.host) {
+        return Uri(
+          scheme: baseUri.scheme,
+          host: baseUri.host,
+          port: baseUri.port,
+          path: parsed.path,
+        ).toString();
+      }
+    } catch (_) {}
+    return url;
+  }
+  final file = File(url);
+  if (file.existsSync()) {
+    return url;
+  }
+  try {
+    final baseUri = Uri.parse(ApiService.baseUrl);
+    String cleanPath = url;
+    if (cleanPath.startsWith('/storage/')) {
+      cleanPath = cleanPath;
+    } else if (cleanPath.startsWith('storage/')) {
+      cleanPath = '/$cleanPath';
+    } else {
+      cleanPath = '/storage/${cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath}';
+    }
+    return '${baseUri.scheme}://${baseUri.host}:${baseUri.port}$cleanPath';
+  } catch (_) {}
+  return url;
+}
+
 
 Widget buildAvatarImage(
-  String avatarPathOrUrl, {
+  String? avatarPathOrUrl, {
   double size = 42,
-  Color backgroundColor =  AppColors.imagePlaceholderBg,
-  Color iconColor =  AppColors.primaryBlue,
+  Color backgroundColor = AppColors.imagePlaceholderBg,
+  Color iconColor = AppColors.primaryBlue,
 }) {
   final Widget fallback = Container(
-    color: backgroundColor,
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: backgroundColor,
+      shape: BoxShape.circle,
+    ),
     alignment: Alignment.center,
-    child: Icon(Icons.person, color: iconColor, size: size * 0.55),
+    child: Icon(Icons.person_rounded, color: iconColor, size: size * 0.55),
   );
 
-  final bool isNetwork = avatarPathOrUrl.startsWith('http');
+  if (avatarPathOrUrl == null || avatarPathOrUrl.trim().isEmpty) {
+    return fallback;
+  }
 
-  final Widget image = isNetwork
-      ? Image.network(
-          avatarPathOrUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => fallback,
-        )
-      : Image.file(
-          File(avatarPathOrUrl),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => fallback,
-        );
+  final String resolved = _resolveAvatarUrl(avatarPathOrUrl);
+  final bool isNetwork = resolved.startsWith('http://') || resolved.startsWith('https://');
+  final bool isAsset = resolved.startsWith('assets/');
+
+  Widget imageWidget;
+  if (isNetwork) {
+    imageWidget = Image.network(
+      resolved,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('❌ [AVATAR IMAGE ERROR] Failed to load network image: $resolved | Error: $error');
+        return fallback;
+      },
+    );
+  } else if (isAsset) {
+
+    imageWidget = Image.asset(
+      resolved,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => fallback,
+    );
+  } else {
+    final file = File(resolved);
+    if (file.existsSync()) {
+      imageWidget = Image.file(
+        file,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
+      );
+    } else {
+      imageWidget = fallback;
+    }
+  }
 
   return ClipOval(
-    child: SizedBox(width: size, height: size, child: image),
+    child: SizedBox(width: size, height: size, child: imageWidget),
   );
 }
