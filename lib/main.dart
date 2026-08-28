@@ -1,13 +1,18 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-import 'screens/main_navigation_screen.dart';
+import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inisialisasi push notification secara asynchronous tanpa menghambat UI render
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    }
+  } catch (_) {}
+  // Jangan await lama biar splash tetap cepat, tapi Firebase sudah ready untuk getToken
   PushNotificationService.instance.initialize();
 
   runApp(const SmartTripApp());

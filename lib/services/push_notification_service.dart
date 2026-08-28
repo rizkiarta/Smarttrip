@@ -160,6 +160,7 @@ class PushNotificationService {
     if (!ApiService.instance.isAuthenticated) return;
 
     try {
+      await _ensureFirebaseInitialized();
       _fcmToken ??= await _messaging.getToken();
       if (_fcmToken == null || _fcmToken!.isEmpty) return;
 
