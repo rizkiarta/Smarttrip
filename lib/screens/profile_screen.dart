@@ -10,7 +10,9 @@ import '../services/my_reviews_service.dart';
 import '../services/profile_service.dart';
 
 import '../services/language_service.dart';
+import '../services/notification_service.dart';
 import '../services/notification_settings_service.dart';
+import '../services/saved_itinerary_service.dart';
 import '../services/auth_guard.dart';
 import '../widgets/love_button.dart';
 import '../widgets/smart_image.dart';
@@ -173,8 +175,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // ==============================================
 
                   GestureDetector(
-                    onTap: () {
+                    onTap: () async {
+                      // Clear all user-scoped caches so next login doesn't see previous user's data
                       ApiService.instance.setToken(null);
+                      ProfileService.instance.profile.value = const ProfileData(name: '', bio: 'Traveler', username: '', email: '', photoPath: null);
+                      SavedDestinationsService.instance.savedIds.value = <String>{};
+                      try { MyReviewsService.instance.reviews.value = <MyReviewEntry>[]; } catch (_) {}
+                      try { NotificationService.instance.notifications.value = []; NotificationService.instance.unreadCount.value = 0; } catch (_) {}
+                      try { SavedItineraryService.instance.itineraries.value = <List<Map<String, dynamic>>>[]; } catch (_) {}
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
                           builder: (context) => const SplashScreen(),
