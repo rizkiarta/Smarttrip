@@ -74,7 +74,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                           return const Center(
                             child: Text(
                               'Belum ada data prediksi kepadatan dari server.',
-                              style: TextStyle(color: AppColors.greyText, fontSize: 13),
+                              style: TextStyle(color: AppColors.greyText, fontSize: 14),
                             ),
                           );
                         }
@@ -201,7 +201,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
             Text(
               day,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: active ? Colors.white70 : AppColors.greyText,
               ),
@@ -210,7 +210,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
             Text(
               date,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: active ? Colors.white : AppColors.darkText,
               ),
@@ -328,7 +328,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                       Text(
                         item.location,
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: AppColors.greyText,
                         ),
                       ),
@@ -342,7 +342,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                       Text(
                         'Jam Ramai: ${item.time}',
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: AppColors.darkText,
                         ),

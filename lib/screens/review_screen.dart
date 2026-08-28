@@ -220,7 +220,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             const Text(
               'Ulasan',
               style: TextStyle(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
               ),
@@ -310,7 +310,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     Text(
                       '${entry.key}',
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: AppColors.greyText,
                         fontWeight: FontWeight.w600,
                       ),
@@ -413,7 +413,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: active ? Colors.white : AppColors.darkText,
               ),
@@ -965,7 +965,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     Text(
                       'Beri rating untuk ${widget.destinationName}',
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: AppColors.darkText,
                       ),

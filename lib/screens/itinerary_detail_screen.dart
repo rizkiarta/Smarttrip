@@ -453,7 +453,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
         Text(
           status,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: color,
           ),
@@ -509,7 +509,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
             const Text(
               'Kota/Kabupaten Tujuan',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.darkText,
               ),
@@ -534,7 +534,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                     overflow:
                         TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: AppColors.greyText,
                     ),
                   ),
@@ -575,7 +575,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                 child: const Text(
                   'Rute',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight:
                         FontWeight.w700,
                   ),
@@ -1266,7 +1266,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                   index,
                 ),
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight:
                       FontWeight.w600,
                   color: selected
@@ -1458,8 +1458,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                     .ellipsis,
                             style:
                                 TextStyle(
-                              fontSize:
-                                  14,
+                              fontSize: 14,
                               fontWeight:
                                   FontWeight
                                       .w700,
@@ -1480,8 +1479,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                     .ellipsis,
                             style:
                                 const TextStyle(
-                              fontSize:
-                                  12,
+                              fontSize: 12,
                               color:
                                   AppColors.greyText,
                             ),
@@ -1672,8 +1670,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                       .ellipsis,
                               style:
                                   const TextStyle(
-                                fontSize:
-                                    14,
+                                fontSize: 14,
                                 height:
                                     1.25,
                                 fontWeight:
@@ -1698,8 +1695,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                         .ellipsis,
                                 style:
                                     const TextStyle(
-                                  fontSize:
-                                      12,
+                                  fontSize: 12,
                                   color:
                                       AppColors.greyText,
                                 ),
@@ -1985,7 +1981,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
             overflow:
                 TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 21,
+              fontSize: 20,
               fontWeight:
                   FontWeight.w700,
               color: AppColors.darkText,
@@ -2100,7 +2096,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                 const Text(
                   'Lokasi Awal',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight:
                         FontWeight.w600,
                     color: AppColors.darkText,

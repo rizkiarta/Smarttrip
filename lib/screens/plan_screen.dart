@@ -72,7 +72,7 @@ class _PlanScreenState extends State<PlanScreen> {
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Rencana', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                      Text('Rencana', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold)),
                       SizedBox(height: 5),
                       Text('Kelola semua itinerary perjalananmu di Lampung', style: TextStyle(color: Colors.white, fontSize: 12)),
                     ],
@@ -173,7 +173,7 @@ class _PlanScreenState extends State<PlanScreen> {
 
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 28,
+                          fontSize: 25,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -361,7 +361,7 @@ class _PlanScreenState extends State<PlanScreen> {
 
             textAlign: TextAlign.center,
 
-            style: TextStyle(fontSize: 13, color: AppColors.greyText, height: 1.4),
+            style: TextStyle(fontSize: 14, color: AppColors.greyText, height: 1.4),
           ),
 
           const SizedBox(height: 26),
@@ -394,7 +394,7 @@ class _PlanScreenState extends State<PlanScreen> {
               child: const Text(
                 'Buat Itinerary',
 
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -723,7 +723,7 @@ class _PlanScreenState extends State<PlanScreen> {
                             'Estimasi Budget:  ${itinerary.first['budget']}',
 
                             style: const TextStyle(
-                              fontSize: 9,
+                              fontSize: 10,
                               color: AppColors.darkBlue,
                               fontWeight: FontWeight.w500,
                             ),
@@ -850,7 +850,7 @@ class _PlanScreenState extends State<PlanScreen> {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: 6),
 
-      child: Text('•', style: TextStyle(fontSize: 9, color: AppColors.greyText)),
+      child: Text('•', style: TextStyle(fontSize: 10, color: AppColors.greyText)),
     );
   }
 
@@ -1214,7 +1214,7 @@ class _PlanScreenState extends State<PlanScreen> {
                   'Itinerary ini akan dihapus dari daftar rencana perjalananmu.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     height: 1.4,
                     color: AppColors.greyText,
                   ),
@@ -1251,7 +1251,7 @@ class _PlanScreenState extends State<PlanScreen> {
                     child: const Text(
                       'Hapus',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1270,7 +1270,7 @@ class _PlanScreenState extends State<PlanScreen> {
                   child: const Text(
                     'Batal',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: AppColors.greyText,
                     ),
                   ),

@@ -426,7 +426,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                   child: Text(
                     'Lupa kata sandi?',
-                    style: TextStyle(fontSize: 12.5, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 12, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

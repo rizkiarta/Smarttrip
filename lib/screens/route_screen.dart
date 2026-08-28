@@ -928,7 +928,7 @@ class _RouteScreenState extends State<RouteScreen> {
                           '${i + 1}',
                           style: TextStyle(
                             color: pinColor,
-                            fontSize: 9,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                             height: 1,
                           ),
@@ -986,7 +986,7 @@ class _RouteScreenState extends State<RouteScreen> {
                 '$minutes mnt',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: active ? Colors.white : AppColors.darkText,
                 ),
@@ -1186,7 +1186,7 @@ class _RouteScreenState extends State<RouteScreen> {
                 Text(
                   'Semua destinasi sudah dikunjungi',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.darkBlue,
                   ),
@@ -1225,7 +1225,7 @@ class _RouteScreenState extends State<RouteScreen> {
                   icon: const Icon(Icons.navigation_rounded, size: 18, color: AppColors.primaryBlue),
                   label: const Text(
                     'Google Maps',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.darkText),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.darkText),
                   ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
@@ -1254,7 +1254,7 @@ class _RouteScreenState extends State<RouteScreen> {
                             : 'Tandai Sampai',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),

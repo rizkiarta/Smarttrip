@@ -822,7 +822,7 @@ class _MapScreenState extends State<MapScreen> {
       'Gunakan Lokasi Ini',
 
       style: TextStyle(
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: FontWeight.bold,
       ),
     ),

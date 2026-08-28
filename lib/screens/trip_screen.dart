@@ -458,7 +458,7 @@ class _TripScreenState extends State<TripScreen> {
         Text(
           status,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: color,
           ),
@@ -764,7 +764,7 @@ class _TripScreenState extends State<TripScreen> {
                         'Trip',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 28,
+                          fontSize: 25,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -837,7 +837,7 @@ class _TripScreenState extends State<TripScreen> {
                           const Text(
                             'Yuk buat itinerary untuk merencanakan perjalananmu berikutnya',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: AppColors.greyText, height: 1.4),
+                            style: TextStyle(fontSize: 14, color: AppColors.greyText, height: 1.4),
                           ),
 
                           const SizedBox(height: 26),
@@ -864,7 +864,7 @@ class _TripScreenState extends State<TripScreen> {
                               ),
                               child: const Text(
                                 'Buat Itinerary',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ),
@@ -892,7 +892,7 @@ class _TripScreenState extends State<TripScreen> {
           SafeArea(
             child: Column(
               children: [
-                Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(25, 30, 25, 0), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Trip', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('Pantau perjalananmu yang sedang berlangsung', style: TextStyle(color: Colors.white, fontSize: 12))])),
+                Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(25, 30, 25, 0), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Trip', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('Pantau perjalananmu yang sedang berlangsung', style: TextStyle(color: Colors.white, fontSize: 12))])),
                 const SizedBox(height: 35),
                 Expanded(
                   child: Container(
@@ -1253,7 +1253,7 @@ class _TripScreenState extends State<TripScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppColors.darkText,
                       ),
@@ -1333,7 +1333,7 @@ class _TripScreenState extends State<TripScreen> {
                 ),
                 child: const Text(
                   'Rute',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -1357,7 +1357,7 @@ class _TripScreenState extends State<TripScreen> {
                 Text(
                   'Estimasi keberangkatan 30 menit lagi',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.darkBlue,
                   ),
@@ -1405,7 +1405,7 @@ class _TripScreenState extends State<TripScreen> {
                 Text(
                   'Perjalanan Aktif ${currentIndex + 1} dari ${activeTrips.length}',
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primaryBlue,
                   ),
@@ -1418,7 +1418,7 @@ class _TripScreenState extends State<TripScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.darkBlue,
                   ),
@@ -1488,7 +1488,7 @@ class _TripScreenState extends State<TripScreen> {
               const Text(
                 'Pilih Perjalanan Aktif',
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
                 ),
@@ -1621,7 +1621,7 @@ class _TripScreenState extends State<TripScreen> {
           tripName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: AppColors.darkText),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.darkText),
         ),
 
         const SizedBox(height: 10),
@@ -1673,7 +1673,7 @@ class _TripScreenState extends State<TripScreen> {
           children: [
             Text(
               'Hari ke-$dayNumber dari $totalDays hari',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.darkText),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkText),
             ),
             const Spacer(),
             Container(
@@ -1688,7 +1688,7 @@ class _TripScreenState extends State<TripScreen> {
               child: Text(
                 isDayCompleted ? 'Selesai' : 'Sedang Berjalan',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: isDayCompleted ? const Color(0xFF1E8E4F) : AppColors.darkBlue,
                 ),
@@ -1802,7 +1802,7 @@ class _TripScreenState extends State<TripScreen> {
                   Text(
                     'Hari $day',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: selected
                           ? Colors.white
@@ -1965,7 +1965,7 @@ class _TripScreenState extends State<TripScreen> {
               ),
               child: Text(
                 isLastDay ? 'Tandai Trip Selesai' : 'Tandai Hari Ini Selesai',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -2045,7 +2045,7 @@ class _TripScreenState extends State<TripScreen> {
                       : 'Hari ke-$dayNumber akan ditandai selesai dan trip ini ikut ditampilkan di Riwayat. Hari berikutnya tetap akan aktif normal di tab Trip begitu tanggalnya tiba.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     height: 1.4,
                     color: AppColors.greyText,
                   ),
@@ -2084,7 +2084,7 @@ class _TripScreenState extends State<TripScreen> {
                     child: const Text(
                       'Ya, Selesai',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -2101,7 +2101,7 @@ class _TripScreenState extends State<TripScreen> {
                   child: const Text(
                     'Batal',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: AppColors.greyText,
                     ),
                   ),
@@ -2239,7 +2239,7 @@ class _TripScreenState extends State<TripScreen> {
                                     SizedBox(width: 4),
                                     Text(
                                       'Sudah dikunjungi',
-                                      style: TextStyle(fontSize: 11, color: AppColors.doneGrey, fontWeight: FontWeight.w600),
+                                      style: TextStyle(fontSize: 12, color: AppColors.doneGrey, fontWeight: FontWeight.w600),
                                     ),
                                   ],
                                 ),
@@ -2272,7 +2272,7 @@ class _TripScreenState extends State<TripScreen> {
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Text(
           'Belum ada aktivitas untuk hari ini',
-          style: TextStyle(fontSize: 13, color: AppColors.greyText),
+          style: TextStyle(fontSize: 14, color: AppColors.greyText),
         ),
       );
     }
@@ -2315,7 +2315,7 @@ class _TripScreenState extends State<TripScreen> {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 12.5, color: warnText, height: 1.4),
+                style: const TextStyle(fontSize: 12, color: warnText, height: 1.4),
                 children: [
                   TextSpan(text: '$name ', style: const TextStyle(fontWeight: FontWeight.w700)),
                   TextSpan(text: 'diprediksi ramai pada pukul $arrival - $departure'),
@@ -2351,7 +2351,7 @@ class _TripScreenState extends State<TripScreen> {
       children: [
         const Text(
           'Penyesuaian Itinerary',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.darkText),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.darkText),
         ),
         const SizedBox(height: 12),
         ...List.generate(options.length, (index) {
@@ -2383,7 +2383,7 @@ class _TripScreenState extends State<TripScreen> {
                     Text(
                       option['title']!,
                       style: TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: selected ? AppColors.darkBlue : AppColors.darkText,
                       ),
@@ -2417,7 +2417,7 @@ class _TripScreenState extends State<TripScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
             ),
-            child: const Text('Terapkan Perubahan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            child: const Text('Terapkan Perubahan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           ),
         ),
       ],

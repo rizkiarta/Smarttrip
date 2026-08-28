@@ -378,7 +378,7 @@ class _DetailDestinationScreenState
                 child: Text(
                   widget.name,
                   style: const TextStyle(
-                    fontSize: 19,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkText,
                   ),
@@ -446,7 +446,7 @@ class _DetailDestinationScreenState
                 '• Buka pukul ${_openHour ?? "08.00"}${_closeHour != null ? " - $_closeHour" : ""}',
                 style: const TextStyle(
                   color: AppColors.greyText,
-                  fontSize: 11,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -469,7 +469,7 @@ class _DetailDestinationScreenState
             : widget.description,
         textAlign: TextAlign.left,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 14,
           height: 1.5,
           color: Color(0xFF4F4F4F),
           fontWeight: FontWeight.w400,
@@ -656,7 +656,7 @@ class _DetailDestinationScreenState
                           'Ramai',
                           style: TextStyle(
                             color: Colors.red,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -670,7 +670,7 @@ class _DetailDestinationScreenState
                           'Sedang',
                           style: TextStyle(
                             color: AppColors.warningYellow,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -684,7 +684,7 @@ class _DetailDestinationScreenState
                           'Sepi',
                           style: TextStyle(
                             color: Colors.green,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -754,7 +754,7 @@ class _DetailDestinationScreenState
             child: Text(
               day,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight:
                     active ? FontWeight.bold : FontWeight.w500,
                 color: active ? AppColors.primaryBlue : AppColors.darkText,
@@ -867,7 +867,7 @@ class _DetailDestinationScreenState
                       summary.badgeText,
                       style: TextStyle(
                         color: summary.badgeColor,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -882,7 +882,7 @@ class _DetailDestinationScreenState
           Text(
             summary.suggestion,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               color: AppColors.greyText,
               fontWeight: FontWeight.w500,
             ),
@@ -1123,12 +1123,12 @@ class _DetailDestinationScreenState
                   SizedBox(height: 6),
                   Text(
                     'Belum ada ulasan untuk destinasi ini.',
-                    style: TextStyle(fontSize: 13, color: AppColors.greyText, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 14, color: AppColors.greyText, fontWeight: FontWeight.w500),
                   ),
                   SizedBox(height: 2),
                   Text(
                     'Jadilah yang pertama memberikan rating & ulasan!',
-                    style: TextStyle(fontSize: 11, color: AppColors.greyText),
+                    style: TextStyle(fontSize: 12, color: AppColors.greyText),
                   ),
                 ],
               ),

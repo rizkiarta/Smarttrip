@@ -138,37 +138,52 @@ class _MainNavigationScreenState
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          height: 86,
-          color: Colors.white,
+          height: 68, // CHANGED: sebelumnya 86 -> diperkecil jadi 68
+          padding: const EdgeInsets.symmetric(horizontal: 25), // CHANGED: tambah padding kanan-kiri 25
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06), // CHANGED: shadow tipis buat kasih batas navbar
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
           child: Row(
             children: [
               _buildNavItem(
                 index: 0,
                 iconPath: 'assets/icons/home.svg',
+                activeIconPath: 'assets/icons/home_filled.svg', // CHANGED: icon versi solid saat aktif
                 label: 'Beranda',
               ),
 
               _buildNavItem(
                 index: 1,
                 iconPath: 'assets/icons/plan.svg',
+                activeIconPath: 'assets/icons/plan_filled.svg', // CHANGED: icon versi solid saat aktif
                 label: 'Rencana',
               ),
 
               _buildNavItem(
                 index: 2,
                 iconPath: 'assets/icons/trip.svg',
+                activeIconPath: 'assets/icons/trip_filled.svg', // CHANGED: icon versi solid saat aktif
                 label: 'Trip',
               ),
 
               _buildNavItem(
                 index: 3,
                 iconPath: 'assets/icons/riwayat.svg',
+                activeIconPath: 'assets/icons/riwayat_filled.svg', // CHANGED: icon versi solid saat aktif
                 label: 'Riwayat',
               ),
 
               _buildNavItem(
                 index: 4,
                 iconPath: 'assets/icons/profile.svg',
+                activeIconPath: 'assets/icons/profile_filled.svg', // CHANGED: icon versi solid saat aktif
                 label: 'Profil',
               ),
             ],
@@ -185,6 +200,7 @@ class _MainNavigationScreenState
   Widget _buildNavItem({
     required int index,
     required String iconPath,
+    required String activeIconPath, // CHANGED: path icon versi filled/solid untuk state aktif
     required String label,
   }) {
     final bool isActive = _currentIndex == index;
@@ -201,10 +217,10 @@ class _MainNavigationScreenState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SvgPicture.asset(
-              iconPath,
+              isActive ? activeIconPath : iconPath, // CHANGED: pakai versi filled kalau tab ini aktif
 
-              width: 29,
-              height: 29,
+              width: 22, // CHANGED: sebelumnya 29 -> diperkecil jadi 22
+              height: 22, // CHANGED: sebelumnya 29 -> diperkecil jadi 22
 
               colorFilter: ColorFilter.mode(
                 isActive
@@ -214,12 +230,12 @@ class _MainNavigationScreenState
               ),
             ),
 
-            const SizedBox(height: 5),
+            const SizedBox(height: 3), // CHANGED: sebelumnya 5 -> diperkecil jadi 3
 
             Text(
               label,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 11, // CHANGED: sebelumnya 15 -> diperkecil jadi 11
 
                 fontWeight: isActive
                     ? FontWeight.w600

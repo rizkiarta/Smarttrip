@@ -282,7 +282,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
               child: Text(
                 _getDayLabel(schedules[index], index),
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: isSelected ? Colors.white :  AppColors.greyText,
                 ),
@@ -395,7 +395,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                         children: [
                           const Text(
                             'Berangkat',
-                            style: TextStyle(fontSize: 11, color: AppColors.greyText),
+                            style: TextStyle(fontSize: 12, color: AppColors.greyText),
                           ),
 
                           const SizedBox(height: 3),
@@ -419,7 +419,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                     Text(
                       time,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: AppColors.darkBlue,
                       ),
@@ -566,7 +566,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                               Text(
                                 duration,
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: AppColors.greyText,
                                 ),
                               ),
@@ -675,7 +675,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
             const Text(
               'Silakan atur destinasi dan waktu perjalanan terlebih dahulu.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.greyText, height: 1.4),
+              style: TextStyle(fontSize: 14, color: AppColors.greyText, height: 1.4),
             ),
           ],
         ),
@@ -824,7 +824,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                     child: const Text(
                       'Lihat Itinerary',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -876,7 +876,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                   child: const Text(
                     'Kembali ke Beranda',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: AppColors.greyText,
                     ),
                   ),
@@ -947,7 +947,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
               ),
               child: const Text(
                 'Simpan Jadwal',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
           ),

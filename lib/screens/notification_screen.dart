@@ -132,7 +132,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 padding: EdgeInsets.only(left: 5, bottom: 12),
                                 child: Text(
                                   'Hari ini',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.darkText),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.darkText),
                                 ),
                               ),
                               ...todayNotifications.map((n) => Padding(
@@ -146,7 +146,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 padding: EdgeInsets.only(left: 5, bottom: 12),
                                 child: Text(
                                   'Sebelumnya',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.darkText),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.darkText),
                                 ),
                               ),
                               ...earlierNotifications.map((n) => Padding(
@@ -194,7 +194,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
             const Text(
               'Notifikasi',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.darkText),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.darkText),
             ),
             Align(
               alignment: Alignment.centerRight,
@@ -210,7 +210,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 },
                 child: const Text(
                   'Tandai semua',
-                  style: TextStyle(fontSize: 11, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 12, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -297,7 +297,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 10,
                       height: 1.4,
                       color: AppColors.greyText,
                     ),
@@ -306,7 +306,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   Text(
                     notification.timeAgo,
                     style: const TextStyle(
-                      fontSize: 9,
+                      fontSize: 10,
                       color: Color(0xFF999999),
                     ),
                   ),

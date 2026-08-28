@@ -216,7 +216,7 @@ class _SearchScreenState extends State<SearchScreen> {
       title: Text(
         label,
         style: TextStyle(
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: selected ? FontWeight.bold : FontWeight.normal,
           color: selected ? AppColors.primaryBlue : AppColors.darkText,
         ),
@@ -335,12 +335,12 @@ class _SearchScreenState extends State<SearchScreen> {
                                 hintText: 'Cari destinasi...',
                                 hintStyle: TextStyle(
                                   color: Colors.grey,
-                                  fontSize: 13,
+                                  fontSize: 14,
                                 ),
                               ),
                               style: const TextStyle(
                                 color: AppColors.darkText,
-                                fontSize: 13,
+                                fontSize: 14,
                               ),
                             ),
                           ),
@@ -408,7 +408,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       '${results.length} destinasi ditemukan',
                       style: const TextStyle(
                         color: AppColors.darkText,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -449,7 +449,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             _sortLabel,
                             style: const TextStyle(
                               color: AppColors.darkText,
-                              fontSize: 11,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -719,7 +719,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                       style: const TextStyle(
                         color: AppColors.greyText,
-                        fontSize: 9,
+                        fontSize: 10,
                       ),
                     ),
                   ],
@@ -750,7 +750,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                     style: const TextStyle(
                       color: Color(0xFF1689D5),
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -813,7 +813,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
             style: const TextStyle(
               color: AppColors.greyText,
-              fontSize: 11,
+              fontSize: 12,
             ),
           ),
         ],

@@ -270,7 +270,7 @@ class _DestinationSelectionScreenState
                       child: Text(
                         'Menampilkan destinasi untuk ${widget.destinationCity}',
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: AppColors.greyText,
                           fontWeight: FontWeight.w500,
                         ),
@@ -763,7 +763,7 @@ class _DestinationSelectionScreenState
                           overflow: TextOverflow.ellipsis,
 
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
@@ -924,7 +924,7 @@ class _DestinationSelectionScreenState
             'Destinasi tidak ditemukan',
 
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.darkText,
             ),
@@ -935,7 +935,7 @@ class _DestinationSelectionScreenState
           const Text(
             'Coba gunakan kata kunci lainnya.',
 
-            style: TextStyle(fontSize: 11, color: AppColors.greyText),
+            style: TextStyle(fontSize: 12, color: AppColors.greyText),
           ),
         ],
       ),
@@ -985,7 +985,7 @@ class _DestinationSelectionScreenState
                 child: const Text(
                   'Atur Manual',
 
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -1017,7 +1017,7 @@ class _DestinationSelectionScreenState
                 child: const Text(
                   'Atur dengan AI',
 
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),

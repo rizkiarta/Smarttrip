@@ -345,7 +345,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: const Text(
                         'Ganti Foto Profil',
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.primaryBlue,
                         ),
@@ -408,7 +408,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   ? 'Pilih tanggal lahir'
                                   : _formatDate(_birthDate!),
                               style: TextStyle(
-                                fontSize: 13.5,
+                                fontSize: 14,
                                 color: _birthDate == null
                                     ? const Color(0xFF9A9A9A)
                                     : AppColors.darkText,
@@ -498,7 +498,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Text(
       label,
       style: const TextStyle(
-        fontSize: 12.5,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         color: AppColors.darkText,
       ),
@@ -519,7 +519,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 13.5, color: AppColors.darkText),
+      style: const TextStyle(fontSize: 14, color: AppColors.darkText),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(color: Color(0xFF9A9A9A)),

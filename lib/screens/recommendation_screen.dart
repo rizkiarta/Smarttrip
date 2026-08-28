@@ -112,7 +112,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     child: Text(
                       'Urutkan Rekomendasi',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: AppColors.darkText,
                       ),
@@ -141,7 +141,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       title: Text(
         label,
         style: TextStyle(
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: selected ? FontWeight.bold : FontWeight.normal,
           color: selected ? AppColors.primaryBlue : AppColors.darkText,
         ),
@@ -207,7 +207,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                           Text(
                             _sortLabel,
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.darkText,
                               fontWeight: FontWeight.w500,
                             ),
@@ -364,9 +364,9 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                         isDense: true,
                         border: InputBorder.none,
                         hintText: 'Cari rekomendasi destinasi...',
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                        hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13),
+                      style: const TextStyle(color: AppColors.darkText, fontSize: 14),
                     ),
                   ),
                   if (_searchQuery.isNotEmpty)
@@ -521,7 +521,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                           Text(
                             '${destination.rating.toStringAsFixed(1)} (${destination.reviewsCount})',
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.greyText,
                               fontWeight: FontWeight.w500,
                             ),
@@ -572,7 +572,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       height: 1.4,
                       color: AppColors.greyText,
                     ),

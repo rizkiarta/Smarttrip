@@ -508,7 +508,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
                 message,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   color: AppColors.greyText,
                   height: 1.4,
                 ),
@@ -1165,7 +1165,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
               textAlign: TextAlign.center,
 
               style: TextStyle(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
               ),
@@ -1250,7 +1250,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
           Text(
             'AI sedang menyusun rekomendasi rute...',
 
-            style: TextStyle(fontSize: 13, color: AppColors.greyText),
+            style: TextStyle(fontSize: 14, color: AppColors.greyText),
           ),
         ],
       ),
@@ -1268,7 +1268,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
       return const Center(
         child: Text(
           'Belum ada rute untuk hari ini.',
-          style: TextStyle(fontSize: 13, color: AppColors.greyText),
+          style: TextStyle(fontSize: 14, color: AppColors.greyText),
         ),
       );
     }
@@ -1378,7 +1378,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
               child: Text(
                 time,
 
-                style: const TextStyle(fontSize: 11, color: AppColors.greyText),
+                style: const TextStyle(fontSize: 12, color: AppColors.greyText),
               ),
             ),
           ),
@@ -1489,7 +1489,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
                             overflow: TextOverflow.ellipsis,
 
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: AppColors.darkText,
                             ),
@@ -1501,7 +1501,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
                             subtitle,
 
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.greyText,
                             ),
                           ),
@@ -1614,7 +1614,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
             style: TextStyle(
               color: textColor,
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1725,7 +1725,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
           text,
 
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: AppColors.darkBlue,
           ),
@@ -1911,7 +1911,7 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
                     ? const Center(
                         child: Text(
                           'Tidak ada destinasi lain yang bisa ditambahkan.',
-                          style: TextStyle(fontSize: 13, color: AppColors.greyText),
+                          style: TextStyle(fontSize: 14, color: AppColors.greyText),
                         ),
                       )
                     : ListView.builder(
@@ -1946,7 +1946,7 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
                             title: Text(
                               destination['name'] ?? '',
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.darkText,
                               ),
@@ -1954,7 +1954,7 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
                             subtitle: Text(
                               '${destination['category'] ?? ''} • ${destination['location'] ?? ''}',
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: AppColors.greyText,
                               ),
                             ),

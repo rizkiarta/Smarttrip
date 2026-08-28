@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
@@ -75,6 +76,25 @@ class SmartTripApp extends StatelessWidget {
             TargetPlatform.fuchsia: _InstantPageTransitionsBuilder(),
           },
         ),
+
+        // =======================================================
+        // FONT GLOBAL — INTER
+        // =======================================================
+        //
+        // textTheme di sini jadi acuan default font untuk SEMUA
+        // widget Text() di seluruh halaman, selama widget Text
+        // tersebut tidak dikasih `style: TextStyle(...)` manual
+        // yang override-nya (mis. fontFamily beda atau dari
+        // GoogleFonts lain langsung). Kalau masih ada halaman yang
+        // fontnya belum ikut berubah, kemungkinan besar itu karena
+        // ada TextStyle hardcode di file screen-nya masing-masing
+        // yang perlu diganti agar merujuk ke Theme.of(context)
+        // .textTheme, bukan bikin TextStyle baru.
+        //
+        // =======================================================
+
+        textTheme: GoogleFonts.interTextTheme(),
+        fontFamily: GoogleFonts.inter().fontFamily,
       ),
 
       // =========================================================

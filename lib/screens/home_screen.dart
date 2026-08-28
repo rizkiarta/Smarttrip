@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.white.withOpacity(0.5)),
                           ),
-                          child: const Text('Masuk / Daftar', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                          child: const Text('Masuk / Daftar', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
                       )
                     else
@@ -282,11 +282,11 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: const InputDecoration(
             border: InputBorder.none,
             hintText: 'Cari destinasi wisata...',
-            hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
+            hintStyle: TextStyle(color: Colors.black54, fontSize: 14),
             prefixIcon: Icon(Icons.search, color: Colors.grey, size: 21),
             contentPadding: EdgeInsets.symmetric(vertical: 8),
           ),
-          style: const TextStyle(color: Colors.black, fontSize: 13),
+          style: const TextStyle(color: Colors.black, fontSize: 14),
         ),
       ),
     );
@@ -301,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25),
+          padding: const EdgeInsets.symmetric(horizontal: 15),
           child: Row(
             children: [
               const Expanded(
@@ -346,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, destinations, _) {
                 if (isLoading && destinations.isEmpty) {
                   return const SizedBox(
-                    height: 208,
+                    height: 246, // CHANGED
                     child: Center(
                       child: CircularProgressIndicator(color: AppColors.primaryBlue),
                     ),
@@ -366,11 +366,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 return SizedBox(
-                  height: 208,
+                  height: 246, // CHANGED
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.only(left: 25, right: 20),
+                    padding: const EdgeInsets.only(left: 15, right: 15),
                     itemCount: destinations.length,
                     itemBuilder: (context, index) {
                       final item = destinations[index];
@@ -409,7 +409,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        width: 208,
+        width: 155,
+        height: 246, // CHANGED - tinggi total card mengikuti proporsi referensi (~1.6x lebar)
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -426,23 +427,27 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                SizedBox(
-                  height: 111,
-                  width: double.infinity,
-                  child: buildSmartImage(
+            Expanded( // CHANGED - gambar mengisi sisa ruang setelah bagian teks, sesuai tinggi card baru
+              child: Stack(
+                fit: StackFit.expand, // CHANGED
+                children: [
+                  buildSmartImage(
                     destination.mainImage,
                     width: double.infinity,
-                    height: 111,
+                    height: double.infinity, // CHANGED
                   ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: LoveButton(destinationId: destination.id, size: 30),
-                ),
-              ],
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: CategoryBadge(category: destination.category, compact: true),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: LoveButton(destinationId: destination.id, size: 30),
+                  ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
@@ -454,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -468,11 +473,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           destination.location,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11, color: AppColors.greyText),
+                          style: const TextStyle(fontSize: 12, color: AppColors.greyText),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      CategoryBadge(category: destination.category, compact: true),
                     ],
                   ),
                   const SizedBox(height: 3),
@@ -704,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 5),
                 Text(
                   item.time,
-                  style: const TextStyle(fontSize: 9, color: AppColors.greyText),
+                  style: const TextStyle(fontSize: 10, color: AppColors.greyText),
                 ),
               ],
             ),

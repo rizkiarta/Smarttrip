@@ -520,12 +520,12 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
         keyboardType: keyboardType,
 
-        style: const TextStyle(fontSize: 13, color: AppColors.darkText),
+        style: const TextStyle(fontSize: 14, color: AppColors.darkText),
 
         decoration: InputDecoration(
           hintText: hintText,
 
-          hintStyle: const TextStyle(fontSize: 13, color: AppColors.greyText),
+          hintStyle: const TextStyle(fontSize: 14, color: AppColors.greyText),
 
           border: InputBorder.none,
 
@@ -587,11 +587,11 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
           hint: const Text(
             'Pilih kota/kabupaten tujuan',
 
-            style: TextStyle(fontSize: 13, color: AppColors.greyText),
+            style: TextStyle(fontSize: 14, color: AppColors.greyText),
           ),
 
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             color: AppColors.darkText,
             fontWeight: FontWeight.w500,
           ),
@@ -609,7 +609,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                   overflow: TextOverflow.ellipsis,
 
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: AppColors.darkText,
                     fontWeight: FontWeight.w500,
                   ),
@@ -661,7 +661,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                         overflow: TextOverflow.ellipsis,
 
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
 
                           color: isSelected ? AppColors.darkBlue : AppColors.darkText,
 
@@ -739,7 +739,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
           ),
 
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             color: AppColors.darkText,
             fontWeight: FontWeight.w500,
           ),
@@ -754,7 +754,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                 '$days ${days == 1 ? 'Hari' : 'Hari'}',
 
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   color: AppColors.darkText,
                   fontWeight: FontWeight.w500,
                 ),
@@ -823,11 +823,11 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
           hint: const Text(
             'Pilih kendaraan',
 
-            style: TextStyle(fontSize: 13, color: AppColors.greyText),
+            style: TextStyle(fontSize: 14, color: AppColors.greyText),
           ),
 
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             color: AppColors.darkText,
             fontWeight: FontWeight.w500,
           ),
@@ -841,7 +841,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                   vehicle,
 
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: AppColors.darkText,
                     fontWeight: FontWeight.w500,
                   ),
@@ -908,7 +908,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                         vehicle,
 
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
 
                           color: isSelected ? AppColors.darkBlue : AppColors.darkText,
 
@@ -1011,7 +1011,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                         : 'Lokasi dipilih',
 
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: AppColors.darkText,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1028,7 +1028,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
                     overflow: TextOverflow.ellipsis,
 
-                    style: const TextStyle(fontSize: 11, color: AppColors.greyText),
+                    style: const TextStyle(fontSize: 12, color: AppColors.greyText),
                   ),
                 ],
               ),
@@ -1099,7 +1099,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                   'Pilih Lokasi Awal',
 
                   style: TextStyle(
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkText,
                   ),
@@ -1231,7 +1231,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     title,
 
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkText,
                     ),
@@ -1303,7 +1303,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     : _formatDate(startDate!),
 
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
 
                   color: startDate == null ? AppColors.greyText : AppColors.darkText,
 
@@ -1439,7 +1439,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
               child: Text(
                 '$participants Orang',
 
-                style: const TextStyle(fontSize: 13, color: AppColors.darkText),
+                style: const TextStyle(fontSize: 14, color: AppColors.darkText),
               ),
             ),
           ),
@@ -1758,7 +1758,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                   'Ada Perjalanan Bentrok!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.darkText,
                   ),
@@ -1768,7 +1768,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                   'Kamu sudah memiliki rencana "$tripTitle" di rentang tanggal ini. Tetap ingin membuat perjalanan baru?',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: AppColors.greyText,
                     height: 1.4,
                   ),
@@ -1789,7 +1789,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     ),
                     child: const Text(
                       'Tetap Buat Perjalanan Baru',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -1801,7 +1801,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     onPressed: () => Navigator.pop(dialogContext, false),
                     child: const Text(
                       'Kembali & Ubah Tanggal',
-                      style: TextStyle(fontSize: 13, color: AppColors.greyText),
+                      style: TextStyle(fontSize: 14, color: AppColors.greyText),
                     ),
                   ),
                 ),

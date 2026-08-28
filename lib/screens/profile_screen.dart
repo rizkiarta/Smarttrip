@@ -269,11 +269,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
               child: Column(
                 children: [
-                  const Text('Masuk untuk mengakses profil, favorit, dan ulasanmu.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.greyText, height: 1.4)),
+                  const Text('Masuk untuk mengakses profil, favorit, dan ulasanmu.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: AppColors.greyText, height: 1.4)),
                   const SizedBox(height: 18),
                   SizedBox(width: double.infinity, height: 46, child: ElevatedButton(onPressed: () => showLoginRequiredSheet(context, action: 'membuka profil'), style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))), child: const Text('Masuk / Daftar', style: TextStyle(fontWeight: FontWeight.bold)))),
                   const SizedBox(height: 12),
-                  Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF7F9FB), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.fieldBorder)), child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.info_outline, size: 16, color: AppColors.greyText), SizedBox(width: 8), Expanded(child: Text('Sebagai tamu kamu tetap bisa melihat destinasi, prediksi kepadatan, dan rute.', style: TextStyle(fontSize: 11, color: AppColors.greyText, height: 1.4)))])),
+                  Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF7F9FB), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.fieldBorder)), child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.info_outline, size: 16, color: AppColors.greyText), SizedBox(width: 8), Expanded(child: Text('Sebagai tamu kamu tetap bisa melihat destinasi, prediksi kepadatan, dan rute.', style: TextStyle(fontSize: 12, color: AppColors.greyText, height: 1.4)))])),
                 ],
               ),
             ),
@@ -443,7 +443,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: FontWeight.bold,
         color: AppColors.darkText,
       ),
@@ -498,7 +498,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 12.5, color: AppColors.darkText),
+                style: const TextStyle(fontSize: 12, color: AppColors.darkText),
               ),
             ),
 
@@ -701,7 +701,7 @@ class _FavoriteDestinationsScreenState extends State<FavoriteDestinationsScreen>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.darkText,
                     ),
@@ -723,7 +723,7 @@ class _FavoriteDestinationsScreenState extends State<FavoriteDestinationsScreen>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: AppColors.greyText,
                           ),
                         ),
@@ -818,7 +818,7 @@ class _FavoriteDestinationsScreenState extends State<FavoriteDestinationsScreen>
           const Text(
             'Tap ikon hati di kartu destinasi untuk menyimpannya di sini',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.greyText, fontSize: 11),
+            style: TextStyle(color: AppColors.greyText, fontSize: 12),
           ),
         ],
       ),
@@ -1026,7 +1026,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                       Text(
                         review.name,
                         style: const TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: AppColors.darkText,
                         ),
@@ -1181,7 +1181,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           const Text(
             'Ulasan yang kamu tulis di destinasi manapun\nakan muncul di sini',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.greyText, fontSize: 11),
+            style: TextStyle(color: AppColors.greyText, fontSize: 12),
           ),
         ],
       ),
@@ -1233,7 +1233,7 @@ class LanguageScreen extends StatelessWidget {
                   const Text(
                     'Pilih Bahasa',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkText,
                     ),
@@ -1280,7 +1280,7 @@ class LanguageScreen extends StatelessWidget {
                             'Bahasa Indonesia. Dukungan penuh untuk bahasa '
                             'lain akan menyusul di update berikutnya.',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.greyText,
                               height: 1.4,
                             ),
@@ -1331,7 +1331,7 @@ class LanguageScreen extends StatelessWidget {
               child: Text(
                 option.nativeLabel,
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 14,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: AppColors.darkText,
                 ),
@@ -1448,7 +1448,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   const Text(
                     'Kelola Notifikasi',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkText,
                     ),
@@ -1514,7 +1514,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                             'notifikasi tetap bisa dilihat lewat ikon '
                             'lonceng di halaman Beranda.',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.greyText,
                               height: 1.4,
                             ),
@@ -1568,7 +1568,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppColors.darkText,
                       ),
@@ -1577,7 +1577,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 10,
                         color: AppColors.greyText,
                         height: 1.3,
                       ),
@@ -1727,7 +1727,7 @@ class HelpCenterScreen extends StatelessWidget {
                   const Text(
                     'Pertanyaan yang Sering Diajukan',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkText,
                     ),
@@ -1760,7 +1760,7 @@ class HelpCenterScreen extends StatelessWidget {
                                 child: Text(
                                   item.question,
                                   style: TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 12,
                                     fontWeight: isExpanded
                                         ? FontWeight.w700
                                         : FontWeight.w600,
@@ -1791,7 +1791,7 @@ class HelpCenterScreen extends StatelessWidget {
                   const Text(
                     'Hubungi Kami',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkText,
                     ),
@@ -1864,13 +1864,13 @@ class HelpCenterScreen extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(fontSize: 11, color: AppColors.greyText),
+                    style: const TextStyle(fontSize: 12, color: AppColors.greyText),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     value,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkText,
                     ),
@@ -1917,7 +1917,7 @@ class HelpCenterScreen extends StatelessWidget {
               'Bantuan dan Pusat Informasi',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
               ),

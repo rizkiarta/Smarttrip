@@ -133,7 +133,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           SafeArea(
             child: Column(
               children: [
-                Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(25, 30, 25, 0), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Riwayat', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('Lihat semua itinerary yang pernah kamu buat', style: TextStyle(color: Colors.white, fontSize: 12))])),
+                Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(25, 30, 25, 0), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Riwayat', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('Lihat semua itinerary yang pernah kamu buat', style: TextStyle(color: Colors.white, fontSize: 12))])),
                 const SizedBox(height: 35),
                 Expanded(
                   child: Container(
@@ -212,7 +212,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 28,
+                          fontSize: 25,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -320,7 +320,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         'Riwayat',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 28,
+                          fontSize: 25,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -393,7 +393,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             'Yuk buat rencana perjalananmu dan temukan destinasi wisata terbaik di Lampung',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 14,
                               color: AppColors.greyText,
                               height: 1.4,
                             ),
@@ -419,7 +419,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               child: const Text(
                                 'Buat Itinerary',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -561,7 +561,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           dateRangeText,
 
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: AppColors.greyText,
                           ),
                         ),
@@ -574,7 +574,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       '$totalDays Hari  •  $totalDestinations Destinasi',
 
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: AppColors.greyText,
                       ),
                     ),
@@ -870,7 +870,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   'Itinerary ini akan dihapus dari daftar riwayat perjalananmu.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     height: 1.4,
                     color: AppColors.greyText,
                   ),
@@ -903,7 +903,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     child: const Text(
                       'Hapus',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -922,7 +922,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   child: const Text(
                     'Batal',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: AppColors.greyText,
                     ),
                   ),

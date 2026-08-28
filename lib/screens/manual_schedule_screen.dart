@@ -358,7 +358,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
             Text(
               _formatTime(time),
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF333333),
               ),
@@ -412,7 +412,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
               children: [
                 const Text(
                   'Lokasi Awal',
-                  style: TextStyle(fontSize: 13, color: AppColors.mutedText),
+                  style: TextStyle(fontSize: 14, color: AppColors.mutedText),
                 ),
 
                 const SizedBox(height: 4),
@@ -559,7 +559,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: Text(
                   's/d',
-                  style: TextStyle(fontSize: 13, color: AppColors.greyText),
+                  style: TextStyle(fontSize: 14, color: AppColors.greyText),
                 ),
               ),
 
@@ -631,7 +631,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
               child: Text(
                 'Hari $day',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: isSelected ? Colors.white :  AppColors.greyText,
                 ),
@@ -822,7 +822,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 Text(
                   'Belum ada destinasi',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF555555),
                   ),
@@ -1236,7 +1236,7 @@ if (result != null) {
           'Atur Waktu Perjalanan',
           style: TextStyle(
             color: Color(0xFF333333),
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1290,7 +1290,7 @@ if (result != null) {
                         child: const Text(
                           'Lihat Preview',
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
