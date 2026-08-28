@@ -8,6 +8,8 @@ import 'manual_schedule_screen.dart';
 import 'ai_itinerary_screen.dart';
 import '../theme/app_colors.dart';
 import '../widgets/smart_image.dart';
+import '../services/api_service.dart';
+import '../services/auth_guard.dart';
 
 
 
@@ -23,7 +25,9 @@ class _PlanScreenState extends State<PlanScreen> {
   @override
   void initState() {
     super.initState();
-    SavedItineraryService.instance.fetchItineraries();
+    if (ApiService.instance.isAuthenticated) {
+      SavedItineraryService.instance.fetchItineraries();
+    }
   }
 
 
@@ -34,6 +38,9 @@ class _PlanScreenState extends State<PlanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!ApiService.instance.isAuthenticated) {
+      return _buildGuestScaffold(context);
+    }
     return ValueListenableBuilder<List<List<Map<String, dynamic>>>>(
       valueListenable: SavedItineraryService.instance.itineraries,
       builder: (context, savedItineraries, _) {
@@ -41,6 +48,75 @@ class _PlanScreenState extends State<PlanScreen> {
 
         return _buildScaffold(context, hasItinerary, savedItineraries);
       },
+    );
+  }
+
+  Widget _buildGuestScaffold(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          Container(
+            height: 285,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              image: DecorationImage(image: AssetImage('assets/images/background_header.png'), fit: BoxFit.cover),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(25, 30, 25, 0),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Rencana', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 5),
+                      Text('Kelola semua itinerary perjalananmu di Lampung', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 35),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(42), topRight: Radius.circular(42))),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 36),
+                      child: Column(
+                        children: [
+                          const Spacer(flex: 5),
+                          Container(
+                            width: 80, height: 80,
+                            decoration: BoxDecoration(color: AppColors.primaryBlue.withOpacity(0.1), shape: BoxShape.circle),
+                            child: const Icon(Icons.lock_outline, color: AppColors.primaryBlue, size: 36),
+                          ),
+                          const SizedBox(height: 18),
+                          const Text('Masuk untuk melihat rencana', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.darkText)),
+                          const SizedBox(height: 8),
+                          const Text('Simpan dan kelola itinerary perjalananmu. Masuk untuk mulai membuat rencana.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.greyText, height: 1.4)),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: 180, height: 44,
+                            child: ElevatedButton(
+                              onPressed: () => showLoginRequiredSheet(context, action: 'membuat dan melihat rencana perjalanan'),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                              child: const Text('Masuk / Daftar', style: TextStyle(fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                          const Spacer(flex: 7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -175,6 +251,7 @@ class _PlanScreenState extends State<PlanScreen> {
 
               child: GestureDetector(
                 onTap: () {
+                  if (!requireAuth(context, action: 'membuat itinerary baru')) return;
                   _openTravelInformation(context);
                 },
 
@@ -298,6 +375,7 @@ class _PlanScreenState extends State<PlanScreen> {
 
             child: ElevatedButton(
               onPressed: () {
+                if (!requireAuth(context, action: 'membuat itinerary')) return;
                 _openTravelInformation(context);
               },
 

@@ -217,12 +217,17 @@ class FcmService
     /**
      * OAuth2 Bearer Token Generator untuk Google Cloud API
      */
+    private static function base64UrlEncode(string $data): string
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
     private static function getGoogleAccessToken(array $json): ?string
     {
         try {
-            $header = base64_encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
+            $header = self::base64UrlEncode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
             $now = time();
-            $claims = base64_encode(json_encode([
+            $claims = self::base64UrlEncode(json_encode([
                 'iss'   => $json['client_email'],
                 'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
                 'aud'   => 'https://oauth2.googleapis.com/token',
@@ -233,10 +238,10 @@ class FcmService
             $unsignedJwt = "$header.$claims";
             $signature = '';
             openssl_sign($unsignedJwt, $signature, $json['private_key'], 'SHA256');
-            $jwt = "$unsignedJwt." . base64_encode($signature);
+            $jwt = "$unsignedJwt." . self::base64UrlEncode($signature);
 
             $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
-                'grant_type' => 'urn:ietf:params:oauth:grant-types:jwt-bearer',
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 'assertion'  => $jwt,
             ]);
 

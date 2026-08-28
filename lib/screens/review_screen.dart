@@ -6,6 +6,7 @@ import '../services/my_reviews_service.dart';
 import '../services/profile_service.dart';
 import '../widgets/smart_image.dart';
 import '../services/api_service.dart';
+import '../services/auth_guard.dart';
 
 class ReviewScreen extends StatefulWidget {
   final String destinationName;
@@ -456,6 +457,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   // ============================================================
 
   Future<void> _toggleLike(Map<String, dynamic> review) async {
+    if (!requireAuth(context, action: 'menyukai ulasan')) return;
     final dynamic rawId = review['id'];
     final int? reviewId = (rawId is int) ? rawId : int.tryParse(rawId?.toString() ?? '');
     final bool currentlyLiked = review['liked'] as bool? ?? false;
@@ -697,6 +699,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         height: 50,
         child: ElevatedButton(
           onPressed: () {
+            if (!requireAuth(context, action: 'memberi ulasan')) return;
             _showAddReviewSheet(context);
           },
           style: ElevatedButton.styleFrom(

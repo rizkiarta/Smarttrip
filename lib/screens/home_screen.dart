@@ -12,6 +12,8 @@ import '../widgets/category_badge.dart';
 import '../services/profile_service.dart';
 import '../services/destination_service.dart';
 import '../services/notification_service.dart';
+import '../services/api_service.dart';
+import '../services/auth_guard.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,19 +26,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Load fresh dashboard data, user profile & notifications from Laravel API Server
-    ProfileService.instance.fetchProfile();
+    // Dashboard data is public, profile/notifications only if logged in (guest mode)
     DestinationService.instance.fetchDashboardData();
-    NotificationService.instance.fetchNotifications();
+    if (ApiService.instance.isAuthenticated) {
+      ProfileService.instance.fetchProfile();
+      NotificationService.instance.fetchNotifications();
+    }
   }
 
 
   Future<void> _onRefresh() async {
-    await Future.wait([
-      ProfileService.instance.fetchProfile(),
+    final futures = <Future>[
       DestinationService.instance.fetchDashboardData(),
-      NotificationService.instance.fetchNotifications(),
-    ]);
+    ];
+    if (ApiService.instance.isAuthenticated) {
+      futures.addAll([
+        ProfileService.instance.fetchProfile(),
+        NotificationService.instance.fetchNotifications(),
+      ]);
+    }
+    await Future.wait(futures);
   }
 
 
@@ -151,7 +160,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Halo, ${profileData.name.isNotEmpty ? profileData.name : "Traveler"}',
+                      ApiService.instance.isAuthenticated
+                          ? 'Halo, ${profileData.name.isNotEmpty ? profileData.name : "Traveler"}'
+                          : 'Halo, Traveler',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -159,10 +170,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    const Text(
-                      'Ayo jelajahi wisata Lampung',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
+                    if (!ApiService.instance.isAuthenticated)
+                      GestureDetector(
+                        onTap: () => showLoginRequiredSheet(context, action: 'masuk ke akunmu'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withOpacity(0.5)),
+                          ),
+                          child: const Text('Masuk / Daftar', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      )
+                    else
+                      const Text(
+                        'Ayo jelajahi wisata Lampung',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
                   ],
                 ),
               ),
@@ -171,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context, unreadCount, _) {
                   return GestureDetector(
                     onTap: () {
+                      if (!requireAuth(context, action: 'membuka notifikasi')) return;
                       Navigator.push(
                         context,
                         MaterialPageRoute(

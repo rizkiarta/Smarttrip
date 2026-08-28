@@ -11,6 +11,7 @@ import '../services/profile_service.dart';
 
 import '../services/language_service.dart';
 import '../services/notification_settings_service.dart';
+import '../services/auth_guard.dart';
 import '../widgets/love_button.dart';
 import '../widgets/smart_image.dart';
 
@@ -55,14 +56,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    ProfileService.instance.fetchProfile();
-    SavedDestinationsService.instance.fetchFavorites();
-    MyReviewsService.instance.fetchMyReviews();
-    NotificationSettingsService.instance.fetchSettings();
+    if (ApiService.instance.isAuthenticated) {
+      ProfileService.instance.fetchProfile();
+      SavedDestinationsService.instance.fetchFavorites();
+      MyReviewsService.instance.fetchMyReviews();
+      NotificationSettingsService.instance.fetchSettings();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!ApiService.instance.isAuthenticated) {
+      return _buildGuestBody(context);
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -220,6 +226,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // dan avatar diposisikan pas di garis batas keduanya (setengah
   // di atas langit, setengah masuk ke kartu putih).
   // ============================================================
+
+  Widget _buildGuestBody(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).padding.top + 160,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  height: MediaQuery.of(context).padding.top + 140,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/background_header.png'), fit: BoxFit.cover)),
+                ),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 70,
+                  left: 0, right: 0,
+                  child: Column(
+                    children: [
+                      Container(width: 96, height: 96, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, border: Border.all(color: Colors.white, width: 3)), child: const Icon(Icons.person_outline, size: 48, color: AppColors.primaryBlue)),
+                      const SizedBox(height: 10),
+                      const Text('Kamu belum masuk', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
+              child: Column(
+                children: [
+                  const Text('Masuk untuk mengakses profil, favorit, dan ulasanmu.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.greyText, height: 1.4)),
+                  const SizedBox(height: 18),
+                  SizedBox(width: double.infinity, height: 46, child: ElevatedButton(onPressed: () => showLoginRequiredSheet(context, action: 'membuka profil'), style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))), child: const Text('Masuk / Daftar', style: TextStyle(fontWeight: FontWeight.bold)))),
+                  const SizedBox(height: 12),
+                  Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF7F9FB), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.fieldBorder)), child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.info_outline, size: 16, color: AppColors.greyText), SizedBox(width: 8), Expanded(child: Text('Sebagai tamu kamu tetap bisa melihat destinasi, prediksi kepadatan, dan rute.', style: TextStyle(fontSize: 11, color: AppColors.greyText, height: 1.4)))])),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   static const double _skyHeight = 170;
   static const double _avatarSize = 136;

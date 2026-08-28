@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/saved_destinations_service.dart';
+import '../services/auth_guard.dart';
 
 // ================================================================
 // LOVE BUTTON (SAVE DESTINATION)
@@ -33,6 +34,7 @@ class LoveButton extends StatelessWidget {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
+            if (!requireAuth(context, action: 'menyimpan destinasi favorit')) return;
             SavedDestinationsService.instance.toggle(destinationId);
           },
           child: Container(

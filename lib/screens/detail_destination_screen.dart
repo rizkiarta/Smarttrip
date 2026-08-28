@@ -8,6 +8,7 @@ import '../widgets/love_button.dart';
 import '../widgets/smart_image.dart';
 import '../services/profile_service.dart';
 import '../services/api_service.dart';
+import '../services/auth_guard.dart';
 
 class DetailDestinationScreen extends StatefulWidget {
   final String name;
@@ -1142,6 +1143,7 @@ class _DetailDestinationScreenState
   // ============================================================
 
   Future<void> _toggleLike(Map<String, dynamic> review) async {
+    if (!requireAuth(context, action: 'menyukai ulasan')) return;
     final dynamic rawId = review['id'];
     final int? reviewId = (rawId is int) ? rawId : int.tryParse(rawId?.toString() ?? '');
     final bool currentlyLiked = review['liked'] as bool? ?? false;

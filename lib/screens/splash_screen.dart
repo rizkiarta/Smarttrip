@@ -8,7 +8,6 @@ import '../services/profile_service.dart';
 import '../services/saved_destinations_service.dart';
 import '../services/saved_itinerary_service.dart';
 import '../theme/app_colors.dart';
-import 'login_screen.dart';
 import 'main_navigation_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -59,24 +58,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
+    // Guest mode: always go to dashboard, login only when using interactive features
     if (ApiService.instance.isAuthenticated) {
       debugPrint('✨ [PERSISTENT AUTH] Session active. Directing to MainNavigationScreen');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const MainNavigationScreen(),
-          settings: const RouteSettings(name: '/main'),
-        ),
-      );
     } else {
-      debugPrint('🔑 [PERSISTENT AUTH] No session found. Directing to LoginScreen');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
-      );
+      debugPrint('👋 [GUEST MODE] No session, directing to MainNavigationScreen as guest');
     }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const MainNavigationScreen(),
+        settings: const RouteSettings(name: '/main'),
+      ),
+    );
   }
 
   @override
