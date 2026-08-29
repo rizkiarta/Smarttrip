@@ -500,9 +500,9 @@ class _MapScreenState extends State<MapScreen> {
 
                           style:
                               const TextStyle(
-                            fontSize: 12,
+                            fontSize: 14, // CHANGED - nama lokasi jadi 14
                             fontWeight:
-                                FontWeight.w600,
+                                FontWeight.bold,
                           ),
                         ),
 

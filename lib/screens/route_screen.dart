@@ -910,11 +910,11 @@ class _RouteScreenState extends State<RouteScreen> {
                       ),
                     ),
                     Positioned(
-                      top: -3,
-                      right: -3,
+                      top: -4,
+                      right: -4,
                       child: Container(
-                        width: 17,
-                        height: 17,
+                        width: 19, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
+                        height: 19, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -928,7 +928,7 @@ class _RouteScreenState extends State<RouteScreen> {
                           '${i + 1}',
                           style: TextStyle(
                             color: pinColor,
-                            fontSize: 10,
+                            fontSize: 12, // CHANGED - font terkecil jadi 12
                             fontWeight: FontWeight.bold,
                             height: 1,
                           ),

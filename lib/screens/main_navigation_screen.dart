@@ -235,7 +235,7 @@ class _MainNavigationScreenState
             Text(
               label,
               style: TextStyle(
-                fontSize: 11, // CHANGED: sebelumnya 15 -> diperkecil jadi 11
+                fontSize: 12, 
 
                 fontWeight: isActive
                     ? FontWeight.w600

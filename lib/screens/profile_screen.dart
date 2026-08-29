@@ -740,7 +740,7 @@ class _FavoriteDestinationsScreenState extends State<FavoriteDestinationsScreen>
                       Text(
                         '${destination['rating']} (${destination['reviews']})',
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 12, // CHANGED - font terkecil jadi 12
                           color: AppColors.greyText,
                         ),
                       ),
@@ -990,7 +990,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
 
             Row(
               children: [
-                const Icon(Icons.location_on, color: AppColors.primaryBlue, size: 14),
+                const Icon(Icons.location_on, color: AppColors.primaryBlue, size: 15), // CHANGED - sedikit lebih besar mengikuti font
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -998,8 +998,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 14, // CHANGED - nama destinasi jadi 14
+                      fontWeight: FontWeight.bold,
                       color: AppColors.primaryBlue,
                     ),
                   ),
@@ -1039,7 +1039,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
 
                 Text(
                   review.time,
-                  style: const TextStyle(fontSize: 10, color: AppColors.greyText),
+                  style: const TextStyle(fontSize: 12, color: AppColors.greyText), // CHANGED - font terkecil jadi 12
                 ),
               ],
             ),
@@ -1577,7 +1577,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 12, // CHANGED - font terkecil jadi 12
                         color: AppColors.greyText,
                         height: 1.3,
                       ),

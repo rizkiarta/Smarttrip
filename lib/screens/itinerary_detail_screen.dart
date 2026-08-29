@@ -890,11 +890,11 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                     ),
 
                     Positioned(
-                      top: -3,
-                      right: -3,
+                      top: -4,
+                      right: -4,
                       child: Container(
-                        width: 18,
-                        height: 18,
+                        width: 20, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
+                        height: 20, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -908,7 +908,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                           '${i + 1}',
                           style: TextStyle(
                             color: pinColor,
-                            fontSize: 10,
+                            fontSize: 12, // CHANGED - font terkecil jadi 12
                             fontWeight: FontWeight.bold,
                             height: 1,
                           ),

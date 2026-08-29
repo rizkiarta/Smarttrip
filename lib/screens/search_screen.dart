@@ -538,7 +538,7 @@ class _SearchScreenState extends State<SearchScreen> {
       },
       child: Container(
         width: double.infinity,
-        height: 155,
+        height: 172, // CHANGED - card diperbesar tingginya supaya konten tidak overflow setelah font membesar
 
       padding: const EdgeInsets.all(7),
 
@@ -572,14 +572,14 @@ class _SearchScreenState extends State<SearchScreen> {
 
           SizedBox(
             width: 135,
-            height: 141,
+            height: 158, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
 
             child: Stack(
               children: [
                 SmartImage(
                   imagePathOrUrl: destination['image'] ?? 'assets/images/pulau_wayang.jpg',
                   width: 135,
-                  height: 141,
+                  height: 158, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
                   borderRadius: BorderRadius.circular(12),
                   fit: BoxFit.cover,
                 ),
@@ -657,7 +657,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                         style: const TextStyle(
                           color: AppColors.greyText,
-                          fontSize: 10,
+                          fontSize: 12, // CHANGED - font terkecil jadi 12
                         ),
                       ),
                     ),
@@ -680,7 +680,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                   style: const TextStyle(
                     color: AppColors.greyText,
-                    fontSize: 10,
+                    fontSize: 12, // CHANGED - font terkecil jadi 12
                     height: 1.3,
                   ),
                 ),
@@ -707,7 +707,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                       style: const TextStyle(
                         color: AppColors.darkText,
-                        fontSize: 10,
+                        fontSize: 12, // CHANGED - font terkecil jadi 12
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -719,7 +719,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                       style: const TextStyle(
                         color: AppColors.greyText,
-                        fontSize: 10,
+                        fontSize: 12, // CHANGED - font terkecil jadi 12
                       ),
                     ),
                   ],
@@ -735,7 +735,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   padding:
                       const EdgeInsets.symmetric(
                     horizontal: 9,
-                    vertical: 3,
+                    vertical: 4, // CHANGED - padding menyesuaikan font yang lebih besar
                   ),
 
                   decoration: BoxDecoration(
@@ -750,7 +750,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                     style: const TextStyle(
                       color: Color(0xFF1689D5),
-                      fontSize: 10,
+                      fontSize: 12, // CHANGED - font terkecil jadi 12
                       fontWeight: FontWeight.w500,
                     ),
                   ),

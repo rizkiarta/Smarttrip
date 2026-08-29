@@ -564,7 +564,7 @@ class _DestinationSelectionScreenState
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
-                        vertical: 2,
+                        vertical: 3, // CHANGED - padding menyesuaikan font yang lebih besar
                       ),
 
                       decoration: BoxDecoration(
@@ -579,7 +579,7 @@ class _DestinationSelectionScreenState
                         '$count',
 
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12, // CHANGED - font terkecil jadi 12
 
                           fontWeight: FontWeight.bold,
 
@@ -781,7 +781,7 @@ class _DestinationSelectionScreenState
                               reviews,
 
                               style: const TextStyle(
-                                fontSize: 10,
+                                fontSize: 12, // CHANGED - font terkecil jadi 12
                                 color: AppColors.darkText,
                               ),
                             ),

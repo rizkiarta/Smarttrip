@@ -61,6 +61,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
+  // FocusNode dipakai supaya border input bisa "menyala" biru pas lagi
+  // aktif diketik -- sama seperti di LoginScreen.
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _phoneFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+  final FocusNode _confirmPasswordFocus = FocusNode();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
@@ -75,7 +83,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // sama kaya di LoginScreen, supaya wave-nya nyampe ke ujung fisik
     // layar paling bawah tanpa sisa celah putih.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _nameFocus.addListener(_onFocusChange);
+    _emailFocus.addListener(_onFocusChange);
+    _phoneFocus.addListener(_onFocusChange);
+    _passwordFocus.addListener(_onFocusChange);
+    _confirmPasswordFocus.addListener(_onFocusChange);
   }
+
+  void _onFocusChange() => setState(() {});
 
   @override
   void dispose() {
@@ -84,6 +99,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _phoneFocus.dispose();
+    _passwordFocus.dispose();
+    _confirmPasswordFocus.dispose();
     super.dispose();
   }
 
@@ -435,6 +455,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           _buildTextField(
             controller: _nameController,
+            focusNode: _nameFocus,
             hint: 'Nama lengkap',
             icon: Icons.person_outline_rounded,
           ),
@@ -443,6 +464,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           _buildTextField(
             controller: _emailController,
+            focusNode: _emailFocus,
             hint: 'Email',
             icon: Icons.mail_outline_rounded,
             keyboardType: TextInputType.emailAddress,
@@ -452,6 +474,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           _buildTextField(
             controller: _phoneController,
+            focusNode: _phoneFocus,
             hint: 'Nomor telepon',
             icon: Icons.call_outlined,
             keyboardType: TextInputType.phone,
@@ -461,6 +484,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           _buildTextField(
             controller: _passwordController,
+            focusNode: _passwordFocus,
             hint: 'Kata sandi',
             icon: Icons.lock_outline_rounded,
             obscureText: _obscurePassword,
@@ -478,6 +502,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           _buildTextField(
             controller: _confirmPasswordController,
+            focusNode: _confirmPasswordFocus,
             hint: 'Konfirmasi kata sandi',
             icon: Icons.lock_outline_rounded,
             obscureText: _obscureConfirmPassword,
@@ -661,33 +686,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildTextField({
     required TextEditingController controller,
+    required FocusNode focusNode,
     required String hint,
     required IconData icon,
     bool obscureText = false,
     TextInputType? keyboardType,
     Widget? suffixIcon,
   }) {
-    return Container(
+    final bool isFocused = focusNode.hasFocus;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOut,
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.borderColor),
+        color: isFocused ? AppColors.lightBlue.withValues(alpha: 0.35) : Colors.white,
+        border: Border.all(
+          color: isFocused ? AppColors.primaryBlue : AppColors.borderColor,
+          width: isFocused ? 1.4 : 1,
+        ),
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
             width: 34,
             height: 34,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(color: AppColors.lightBlue, shape: BoxShape.circle),
-            child: Icon(icon, size: 18, color: AppColors.primaryBlue),
+            decoration: BoxDecoration(
+              color: isFocused ? AppColors.primaryBlue : AppColors.lightBlue,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: isFocused ? Colors.white : AppColors.primaryBlue,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               obscureText: obscureText,
               keyboardType: keyboardType,
+              cursorColor: AppColors.primaryBlue,
               style: const TextStyle(fontSize: 14, color: AppColors.darkText),
               decoration: InputDecoration(
                 hintText: hint,

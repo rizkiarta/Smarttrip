@@ -548,7 +548,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                       const Text('•', style: TextStyle(color: Colors.grey)),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4), // CHANGED - padding menyesuaikan font yang lebih besar
                         decoration: BoxDecoration(
                           color: const Color(0xFFE2F3FF),
                           borderRadius: BorderRadius.circular(10),
@@ -556,7 +556,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                         child: Text(
                           destination.category,
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 12, // CHANGED - font terkecil jadi 12
                             color: Color(0xFF1689D5),
                             fontWeight: FontWeight.w600,
                           ),

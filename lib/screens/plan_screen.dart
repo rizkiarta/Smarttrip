@@ -659,7 +659,7 @@ class _PlanScreenState extends State<PlanScreen> {
                             dateRangeText,
 
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 12, // CHANGED - font terkecil jadi 12
                               color: AppColors.greyText,
                             ),
                           ),
@@ -670,7 +670,7 @@ class _PlanScreenState extends State<PlanScreen> {
                             '$totalDestinations Destinasi',
 
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 12, // CHANGED - font terkecil jadi 12
                               color: AppColors.greyText,
                             ),
                           ),
@@ -681,7 +681,7 @@ class _PlanScreenState extends State<PlanScreen> {
                             _formatParticipants(itinerary),
 
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 12, // CHANGED - font terkecil jadi 12
                               color: AppColors.greyText,
                             ),
                           ),
@@ -710,7 +710,7 @@ class _PlanScreenState extends State<PlanScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
-                            vertical: 5,
+                            vertical: 6, // CHANGED - padding menyesuaikan font yang lebih besar
                           ),
 
                           decoration: BoxDecoration(
@@ -723,7 +723,7 @@ class _PlanScreenState extends State<PlanScreen> {
                             'Estimasi Budget:  ${itinerary.first['budget']}',
 
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 12, // CHANGED - font terkecil jadi 12
                               color: AppColors.darkBlue,
                               fontWeight: FontWeight.w500,
                             ),
@@ -850,7 +850,7 @@ class _PlanScreenState extends State<PlanScreen> {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: 6),
 
-      child: Text('•', style: TextStyle(fontSize: 10, color: AppColors.greyText)),
+      child: Text('•', style: TextStyle(fontSize: 12, color: AppColors.greyText)), // CHANGED - font terkecil jadi 12
     );
   }
 

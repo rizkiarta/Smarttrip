@@ -333,7 +333,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
       onTap: onTap,
       child: Container(
         width: 92,
-        height: 48,
+        height: 50, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
@@ -352,7 +352,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF999999)),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF999999)), // CHANGED - font terkecil jadi 12
             ),
             const SizedBox(height: 2),
             Text(
@@ -742,7 +742,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                     SizedBox(height: 2),
                     Text(
                       'Berangkat dari lokasi awal',
-                      style: TextStyle(fontSize: 10, color: AppColors.mutedText),
+                      style: TextStyle(fontSize: 12, color: AppColors.mutedText), // CHANGED - font terkecil jadi 12
                     ),
                   ],
                 ),
@@ -791,7 +791,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
               child: Text(
                 '${destinations.length} lokasi',
                 style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 12, // CHANGED - font terkecil jadi 12
                   fontWeight: FontWeight.w600,
                   color: AppColors.mediumBlue,
                 ),

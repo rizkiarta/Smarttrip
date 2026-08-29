@@ -569,7 +569,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
               Text(
                 review['time'] as String,
-                style: const TextStyle(fontSize: 10, color: AppColors.greyText),
+                style: const TextStyle(fontSize: 12, color: AppColors.greyText), // CHANGED - font terkecil jadi 12
               ),
             ],
           ),

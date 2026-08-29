@@ -359,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, destinations, _) {
                 if (isLoading && destinations.isEmpty) {
                   return const SizedBox(
-                    height: 246, // CHANGED
+                    height: 220, // CHANGED - mengikuti tinggi card baru
                     child: Center(
                       child: CircularProgressIndicator(color: AppColors.primaryBlue),
                     ),
@@ -379,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 return SizedBox(
-                  height: 246, // CHANGED
+                  height: 220, // CHANGED - mengikuti tinggi card baru
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
@@ -422,8 +422,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        width: 155,
-        height: 246, // CHANGED - tinggi total card mengikuti proporsi referensi (~1.6x lebar)
+        width: 140, // CHANGED - card dibuat sedikit lebih kecil
+        height: 220, // CHANGED - card dibuat sedikit lebih kecil
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -457,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: LoveButton(destinationId: destination.id, size: 30),
+                    child: LoveButton(destinationId: destination.id, size: 26), // CHANGED - mengikuti card yang lebih kecil
                   ),
                 ],
               ),
@@ -472,7 +472,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14, // CHANGED - nama destinasi jadi 14
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -498,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 4),
                       Text(
                         '${destination.rating.toStringAsFixed(1)} (${destination.reviewsCount} ulasan)',
-                        style: const TextStyle(fontSize: 10, color: AppColors.greyText),
+                        style: const TextStyle(fontSize: 12, color: AppColors.greyText), // CHANGED - font terkecil jadi 12
                       ),
                     ],
                   ),
@@ -640,22 +640,22 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           children: [
             SizedBox(
-              width: 80,
-              height: 80,
+              width: 88, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
+              height: 88, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
               child: Stack(
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: buildSmartImage(
                       item.mainImage,
-                      width: 80,
-                      height: 80,
+                      width: 88,
+                      height: 88,
                     ),
                   ),
                   Positioned(
                     top: 4,
                     right: 4,
-                    child: LoveButton(destinationId: item.destinationId, size: 22),
+                    child: LoveButton(destinationId: item.destinationId, size: 24), // CHANGED - sedikit lebih besar mengikuti gambar
                   ),
                 ],
               ),
@@ -680,7 +680,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // CHANGED - menyesuaikan font yang lebih besar
                         decoration: BoxDecoration(
                           color: statusBg,
                           borderRadius: BorderRadius.circular(8),
@@ -688,7 +688,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           item.status,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 12, // CHANGED - font terkecil jadi 12
                             fontWeight: FontWeight.bold,
                             color: statusColor,
                           ),
@@ -736,7 +736,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 4),
                       Text(
                         '$ratingText ($reviewsText)',
-                        style: const TextStyle(fontSize: 10, color: AppColors.greyText),
+                        style: const TextStyle(fontSize: 12, color: AppColors.greyText), // CHANGED - font terkecil jadi 12
                       ),
                     ],
                   ),

@@ -699,7 +699,7 @@ class _DetailDestinationScreenState
                           child: Text(
                             timeMarks[i],
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 12, // CHANGED - font terkecil jadi 12
                               color: AppColors.greyText,
                               fontWeight: FontWeight.w500,
                             ),
@@ -712,7 +712,7 @@ class _DetailDestinationScreenState
                         child: Text(
                           timeMarks.last,
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 12, // CHANGED - font terkecil jadi 12
                             color: AppColors.greyText,
                             fontWeight: FontWeight.w500,
                           ),
@@ -1261,7 +1261,7 @@ class _DetailDestinationScreenState
               Text(
                 timeAgo,
                 style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 12, // CHANGED - font terkecil jadi 12
                   color: AppColors.greyText,
                 ),
               ),

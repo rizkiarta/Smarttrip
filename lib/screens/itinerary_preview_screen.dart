@@ -487,8 +487,8 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                             borderRadius: BorderRadius.circular(12),
                             child: SmartImage(
                               imagePathOrUrl: image,
-                              width: 82,
-                              height: 82,
+                              width: 88, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
+                              height: 88, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -503,7 +503,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                                 Text(
                                   'Destinasi ${index + 1}',
                                   style: const TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 12, // CHANGED - font terkecil jadi 12
                                     color: AppColors.greyText,
                                   ),
                                 ),

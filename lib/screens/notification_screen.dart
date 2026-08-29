@@ -232,7 +232,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.all(13),
+        padding: const EdgeInsets.all(14), // CHANGED - padding menyesuaikan font yang lebih besar
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(17),
@@ -249,13 +249,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 44, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
+              height: 44, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
               decoration: BoxDecoration(
                 color: backgroundColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: iconColor, size: 21),
+              child: Icon(icon, color: iconColor, size: 22), // CHANGED - sedikit lebih besar mengikuti lingkaran
             ),
             const SizedBox(width: 11),
             Expanded(
@@ -271,7 +271,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14, // CHANGED - judul notifikasi jadi 14
                             fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.bold,
                             color: AppColors.darkText,
                           ),
@@ -297,7 +297,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 12, // CHANGED - font terkecil jadi 12
                       height: 1.4,
                       color: AppColors.greyText,
                     ),
@@ -306,7 +306,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   Text(
                     notification.timeAgo,
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 12, // CHANGED - font terkecil jadi 12
                       color: Color(0xFF999999),
                     ),
                   ),

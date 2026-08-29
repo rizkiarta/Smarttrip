@@ -1242,7 +1242,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                   Text(
                     subtitle,
 
-                    style: const TextStyle(fontSize: 10, color: AppColors.greyText),
+                    style: const TextStyle(fontSize: 12, color: AppColors.greyText), // CHANGED - font terkecil jadi 12
                   ),
                 ],
               ),

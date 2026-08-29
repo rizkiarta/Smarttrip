@@ -598,11 +598,11 @@ class _TripScreenState extends State<TripScreen> {
                       ),
                     ),
                     Positioned(
-                      top: -3,
-                      right: -3,
+                      top: -4,
+                      right: -4,
                       child: Container(
-                        width: 18,
-                        height: 18,
+                        width: 20, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
+                        height: 20, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -613,7 +613,7 @@ class _TripScreenState extends State<TripScreen> {
                           '${i + 1}',
                           style: TextStyle(
                             color: pinColor,
-                            fontSize: 10,
+                            fontSize: 12, // CHANGED - font terkecil jadi 12
                             fontWeight: FontWeight.bold,
                             height: 1,
                           ),
@@ -1560,14 +1560,14 @@ class _TripScreenState extends State<TripScreen> {
                             ),
                             if (isSelected)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // CHANGED - padding menyesuaikan font yang lebih besar
                                 decoration: BoxDecoration(
                                   color: AppColors.primaryBlue,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Text(
                                   'Aktif',
-                                  style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold), // CHANGED - font terkecil jadi 12
                                 ),
                               ),
                           ],

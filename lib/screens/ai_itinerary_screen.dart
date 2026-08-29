@@ -1594,7 +1594,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), // CHANGED - padding menyesuaikan font yang lebih besar
 
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -1614,7 +1614,7 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
             style: TextStyle(
               color: textColor,
-              fontSize: 10,
+              fontSize: 12, // CHANGED - font terkecil jadi 12
               fontWeight: FontWeight.bold,
             ),
           ),

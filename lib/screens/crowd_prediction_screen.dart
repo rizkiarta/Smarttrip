@@ -281,21 +281,21 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
         child: Row(
           children: [
             SizedBox(
-              width: 80,
-              height: 80,
+              width: 88, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
+              height: 88, // CHANGED - disesuaikan agar tetap pas dengan font yang lebih besar
               child: Stack(
                 children: [
                   SmartImage(
                     imagePathOrUrl: item.mainImage ?? 'assets/images/pulau_wayang.jpg',
-                    width: 80,
-                    height: 80,
+                    width: 88,
+                    height: 88,
                     borderRadius: BorderRadius.circular(12),
                     fit: BoxFit.cover,
                   ),
                   Positioned(
                     top: 4,
                     right: 4,
-                    child: LoveButton(destinationId: item.destinationId, size: 22),
+                    child: LoveButton(destinationId: item.destinationId, size: 24), // CHANGED - sedikit lebih besar mengikuti gambar
                   ),
                 ],
               ),
@@ -320,7 +320,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // CHANGED - menyesuaikan font yang lebih besar
                         decoration: BoxDecoration(
                           color: statusBg,
                           borderRadius: BorderRadius.circular(8),
@@ -328,7 +328,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                         child: Text(
                           item.status,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 12, // CHANGED - font terkecil jadi 12
                             fontWeight: FontWeight.bold,
                             color: statusColor,
                           ),
@@ -372,7 +372,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                       const SizedBox(width: 4),
                       Text(
                         '$ratingText ($reviewsText)',
-                        style: const TextStyle(fontSize: 10, color: AppColors.greyText),
+                        style: const TextStyle(fontSize: 12, color: AppColors.greyText), // CHANGED - font terkecil jadi 12
                       ),
                     ],
                   ),
