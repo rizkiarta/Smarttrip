@@ -1075,9 +1075,16 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
           _buildMapHeader(context),
 
           // EXPAND MAP BUTTON
+          //
+          // bottom digeser dari 18 ke 34 -- card putih di bawahnya
+          // sekarang numpuk 24px ke atas peta (lihat Transform.translate
+          // di build()), jadi kalau tombol ini tetap di bottom:18,
+          // bagian bawahnya kepotong/mepet banget sama batas atas card
+          // putih. Extra 16px ini kasih jarak aman supaya tombol tetap
+          // kelihatan penuh di atas peta, bukan ketutupan card putih.
           Positioned(
             right: 18,
-            bottom: 18,
+            bottom: 34,
             child: Material(
               color: Colors.white,
               elevation: 3,
@@ -1964,10 +1971,14 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
         );
 
     return Padding(
+      // Padding top dikecilin dari 20 ke 12 (dibarengi SizedBox spacer
+      // sebelum widget ini yang juga dikecilin dari 18 ke 8) supaya
+      // total jarak judul rencana ke batas atas card putih tidak
+      // terlalu jauh.
       padding:
           const EdgeInsets.fromLTRB(
         20,
-        20,
+        12,
         20,
         0,
       ),
@@ -2174,80 +2185,100 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                 physics: const BouncingScrollPhysics(),
                 slivers: [
                   // ==========================================
-                  // MAP
+                  // MAP + CONTENT (SHEET PUTIH DI BAWAH PETA)
                   // ==========================================
                   //
-                  // Sekarang jadi sliver di dalam scroll area yang
-                  // sama dengan konten di bawahnya (bukan Expanded
-                  // terpisah lagi), supaya peta ikut ke-scroll ke
-                  // atas bareng konten saat sheet-nya di-drag naik.
-                  //
-                  // ==========================================
-
-                  SliverToBoxAdapter(
-                    child: _buildMap(),
-                  ),
-
-                  // ==========================================
-                  // CONTENT (SHEET PUTIH DI BAWAH PETA)
-                  // ==========================================
-                  //
-                  // Seluruh sheet (handle + trip info + day tabs +
-                  // timeline) dibungkus SATU Container putih dengan
-                  // sudut atas rounded, supaya benar-benar terlihat
-                  // seperti bottom sheet yang menutupi peta -- bukan
-                  // cuma strip handle-nya saja yang rounded seperti
-                  // sebelumnya.
+                  // Peta & card putih DIGABUNG dalam satu Column, di
+                  // dalam SATU sliver -- sebelumnya keduanya 2
+                  // SliverToBoxAdapter terpisah, dan Transform.translate
+                  // ternyata TIDAK bisa numpuk lintas batas sliver
+                  // (kepotong rapi di batas masing-masing, makanya
+                  // lengkungannya kelihatan lurus doang). Digabung satu
+                  // Column begini, Transform.translate di card putih
+                  // beneran menggambar di atas 24px bagian bawah peta.
                   //
                   // ==========================================
 
                   SliverToBoxAdapter(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(24),
-                          topRight: Radius.circular(24),
+                    child: Column(
+                      children: [
+                        _buildMap(),
+
+                        // ==========================================
+                        // CONTENT (SHEET PUTIH DI BAWAH PETA)
+                        // ==========================================
+                        //
+                        // Seluruh sheet (handle + trip info + day tabs +
+                        // timeline) dibungkus SATU Container putih dengan
+                        // sudut atas rounded, supaya benar-benar terlihat
+                        // seperti bottom sheet yang menutupi peta -- bukan
+                        // cuma strip handle-nya saja yang rounded seperti
+                        // sebelumnya.
+                        //
+                        // Transform.translate (BUKAN margin negatif --
+                        // Container tidak boleh punya margin negatif,
+                        // bakal crash "margin.isNonNegative") menggeser
+                        // card ini naik 24px supaya SUDUTNYA numpuk ke
+                        // bawah peta, jadi yang "kesingkap" di balik
+                        // lengkungan topLeft/topRight beneran warna peta.
+                        //
+                        // ==========================================
+
+                        Transform.translate(
+                          offset: const Offset(0, -24),
+                          child: Container(
+                            width: double.infinity,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                topRight: Radius.circular(24),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                // Garis handle kecil di tengah sudah dihapus
+                                // sesuai permintaan. Diganti spacer biasa
+                                // supaya trip info tidak nempel persis di
+                                // sudut rounded -- dikecilin dari 18 ke 8
+                                // (ditambah padding top di
+                                // _buildTripInformation yang juga dikecilin)
+                                // supaya judul rencana tidak terlalu jauh
+                                // dari batas atas card putih.
+                                const SizedBox(height: 8),
+
+                                // ==============================
+                                // INFORMATION
+                                // ==============================
+
+                                _buildTripInformation(),
+
+                                const SizedBox(
+                                  height: 18,
+                                ),
+
+                                // ==============================
+                                // DAY TABS
+                                // ==============================
+
+                                _buildDayTabs(),
+
+                                // ==============================
+                                // TIMELINE
+                                // ==============================
+
+                                _buildDayTimeline(),
+
+                                const SizedBox(
+                                  height: 30,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          // Garis handle kecil di tengah sudah dihapus
-                          // sesuai permintaan. Diganti spacer biasa
-                          // supaya trip info tidak nempel persis di
-                          // sudut rounded.
-                          const SizedBox(height: 18),
-
-                          // ==============================
-                          // INFORMATION
-                          // ==============================
-
-                          _buildTripInformation(),
-
-                          const SizedBox(
-                            height: 18,
-                          ),
-
-                          // ==============================
-                          // DAY TABS
-                          // ==============================
-
-                          _buildDayTabs(),
-
-                          // ==============================
-                          // TIMELINE
-                          // ==============================
-
-                          _buildDayTimeline(),
-
-                          const SizedBox(
-                            height: 30,
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ],

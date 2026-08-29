@@ -192,25 +192,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
 
                     child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      // Bentuk disamain persis dengan _menuItem lain
+                      // (card putih, border, shadow tipis, radius 15,
+                      // icon bulat di kiri + chevron di kanan) --
+                      // cuma warna icon-nya yang dibedain jadi merah
+                      // supaya tetap kebaca sebagai aksi "Keluar".
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEB),
-                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: AppColors.borderColor),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Row(
                         children: [
-                          Text(
-                            'Keluar',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: const BoxDecoration(
+                              color: AppColors.errorBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.logout, color: AppColors.errorRed, size: 18),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          const Expanded(
+                            child: Text(
+                              'Keluar',
+                              style: TextStyle(fontSize: 12, color: AppColors.darkText),
                             ),
                           ),
-                          SizedBox(width: 6),
-                          Icon(Icons.logout, color: Colors.red, size: 17),
+
+                          const Icon(Icons.chevron_right, color: AppColors.greyText, size: 20),
                         ],
                       ),
                     ),

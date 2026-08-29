@@ -23,6 +23,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Controller buat search bar -- dibutuhkan supaya tombol "X" (clear)
+  // bisa tau kapan ada teks atau tidak, sama seperti di SearchScreen.
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ProfileService.instance.fetchProfile();
       NotificationService.instance.fetchNotifications();
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
 
@@ -279,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
+                controller: _searchController,
                 textInputAction: TextInputAction.search,
                 onSubmitted: (value) {
                   final keyword = value.trim();
@@ -298,6 +309,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 style: const TextStyle(color: AppColors.darkText, fontSize: 14),
               ),
+            ),
+
+            // ==================================================
+            // CLEAR KEYWORD -- cuma muncul kalau ada teksnya,
+            // sama seperti tombol "X" di SearchScreen.
+            // ==================================================
+
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _searchController,
+              builder: (context, value, _) {
+                if (value.text.isEmpty) {
+                  return const SizedBox();
+                }
+
+                return GestureDetector(
+                  onTap: () {
+                    _searchController.clear();
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: Icon(
+                      Icons.close,
+                      color: AppColors.greyText,
+                      size: 18,
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),

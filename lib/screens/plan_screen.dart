@@ -581,7 +581,7 @@ class _PlanScreenState extends State<PlanScreen> {
                       child: SizedBox(
                         width: double.infinity,
 
-                        height: 145,
+                        height: 128, // CHANGED - sebelumnya 145, terlalu tinggi dibanding blok teks di bawahnya (judul + baris info, ditambah budget kalau ada) sehingga card terlihat berat sebelah di bagian gambar
 
                         child: SmartImage(
                           imagePathOrUrl: _cardImagePath(itinerary),
@@ -648,44 +648,37 @@ class _PlanScreenState extends State<PlanScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 7),
+                      const SizedBox(height: 9),
 
                       // =============================================
                       // DATE + DESTINATION + PEOPLE
                       // =============================================
-                      Row(
-                        children: [
-                          Text(
-                            dateRangeText,
+                      //
+                      // Sebelumnya ketiga info ini digabung jadi satu
+                      // baris dipisah titik ("15 Jan • 3 Destinasi •
+                      // 2 Orang") -- gampang kepotong/susah dibaca kalau
+                      // teksnya panjang. Sekarang disusun ke bawah,
+                      // satu info per baris dengan ikon kecil di depan,
+                      // supaya lebih enak dipindai matanya.
+                      // =============================================
 
-                            style: const TextStyle(
-                              fontSize: 12, // CHANGED - font terkecil jadi 12
-                              color: AppColors.greyText,
-                            ),
-                          ),
+                      _buildInfoRow(
+                        icon: Icons.calendar_today_outlined,
+                        text: dateRangeText,
+                      ),
 
-                          _buildDot(),
+                      const SizedBox(height: 6),
 
-                          Text(
-                            '$totalDestinations Destinasi',
+                      _buildInfoRow(
+                        icon: Icons.place_outlined,
+                        text: '$totalDestinations Destinasi',
+                      ),
 
-                            style: const TextStyle(
-                              fontSize: 12, // CHANGED - font terkecil jadi 12
-                              color: AppColors.greyText,
-                            ),
-                          ),
+                      const SizedBox(height: 6),
 
-                          _buildDot(),
-
-                          Text(
-                            _formatParticipants(itinerary),
-
-                            style: const TextStyle(
-                              fontSize: 12, // CHANGED - font terkecil jadi 12
-                              color: AppColors.greyText,
-                            ),
-                          ),
-                        ],
+                      _buildInfoRow(
+                        icon: Icons.people_outline,
+                        text: _formatParticipants(itinerary),
                       ),
 
                       // =============================================
@@ -843,14 +836,31 @@ class _PlanScreenState extends State<PlanScreen> {
 
 
   // ============================================================
-  // SMALL DOT
+  // INFO ROW (IKON + TEKS, SATU PER BARIS DI CARD ITINERARY)
   // ============================================================
 
-  Widget _buildDot() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 6),
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String text,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.greyText),
 
-      child: Text('•', style: TextStyle(fontSize: 12, color: AppColors.greyText)), // CHANGED - font terkecil jadi 12
+        const SizedBox(width: 6),
+
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.greyText,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

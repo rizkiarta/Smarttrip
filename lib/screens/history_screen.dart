@@ -514,15 +514,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
               // ======================================================
               // THUMBNAIL
               // ======================================================
+              // CHANGED - sebelumnya 78x78, terlalu besar dibanding
+              // konten teks yang cuma 3 baris (judul + tanggal +
+              // jumlah hari/destinasi) sehingga ada banyak ruang
+              // kosong di kiri-kanan thumbnail. Diperkecil supaya
+              // proporsinya pas dengan tinggi konten teks di
+              // sebelahnya.
               SmartImage(
                 imagePathOrUrl: _cardImagePath(itinerary),
-                width: 78,
-                height: 78,
+                width: 66,
+                height: 66,
                 fit: BoxFit.cover,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
 
-              const SizedBox(width: 14),
+              const SizedBox(width: 13), // CHANGED - sedikit dirapatkan mengikuti thumbnail yang lebih kecil
 
               // ======================================================
               // TEXT INFO

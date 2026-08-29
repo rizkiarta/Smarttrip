@@ -24,8 +24,8 @@ class CategoryBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 7 : 9,
-        vertical: compact ? 2.5 : 4,
+        horizontal: compact ? 8 : 10, // CHANGED - padding menyesuaikan font yang lebih besar
+        vertical: compact ? 3.5 : 5, // CHANGED - padding menyesuaikan font yang lebih besar
       ),
       decoration: BoxDecoration(
         color: const Color(0xFFE2F3FF),
@@ -36,7 +36,7 @@ class CategoryBadge extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontSize: compact ? 9 : 10,
+          fontSize: 12, // CHANGED - font terkecil jadi 12 (sebelumnya 9/10)
           color: const Color(0xFF2486C5),
           fontWeight: FontWeight.w600,
         ),

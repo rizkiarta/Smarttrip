@@ -1023,44 +1023,48 @@ class _TripScreenState extends State<TripScreen> {
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(
-          child: _buildMapWithOverlay(
-            schedule,
-            destinations,
-            nextActivity,
-            vehicle,
-            effectiveCompletedIndex,
-          ),
-        ),
-
-        SliverToBoxAdapter(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(42),
-                topRight: Radius.circular(42),
+          // Peta & card putih DIGABUNG dalam satu Column, di dalam SATU
+          // sliver -- sebelumnya keduanya 2 SliverToBoxAdapter terpisah,
+          // dan Transform.translate ternyata TIDAK bisa numpuk lintas
+          // batas sliver (kepotong di batas masing-masing, makanya
+          // lengkungannya kemarin tetap kelihatan lurus). Digabung satu
+          // Column begini, Transform.translate di card putih beneran
+          // menggambar di atas 24px bagian bawah peta.
+          child: Column(
+            children: [
+              _buildMapWithOverlay(
+                schedule,
+                destinations,
+                nextActivity,
+                vehicle,
+                effectiveCompletedIndex,
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(top: 12, bottom: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0E0E0),
-                      borderRadius: BorderRadius.circular(10),
+
+              // Transform.translate (BUKAN margin negatif -- Container
+              // tidak boleh punya margin negatif, lihat catatan crash
+              // sebelumnya) menggeser card ini naik 24px supaya
+              // SUDUTNYA numpuk ke bawah peta, jadi yang "kesingkap" di
+              // balik lengkungan topLeft/topRight beneran warna peta.
+              Transform.translate(
+                offset: const Offset(0, -24),
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(42),
+                      topRight: Radius.circular(42),
                     ),
                   ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  const SizedBox(height: 20),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (activeTrips.length > 1)
                         _buildTripSwitcher(context, activeTrips, currentIndex),
@@ -1122,6 +1126,9 @@ class _TripScreenState extends State<TripScreen> {
             ),
           ),
         ),
+      ],
+    ),
+          ),
       ],
     );
   }
