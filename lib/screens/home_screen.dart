@@ -6,6 +6,7 @@ import 'crowd_prediction_screen.dart';
 import 'recommendation_screen.dart';
 import 'notification_screen.dart';
 import 'profile_screen.dart';
+import 'travel_information_screen.dart';
 import '../theme/app_colors.dart';
 import '../widgets/love_button.dart';
 import '../widgets/category_badge.dart';
@@ -123,6 +124,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildRecommendationSection(context),
+                            const SizedBox(height: 26),
+                            _buildPlanTripBanner(context),
                             const SizedBox(height: 26),
                             _buildCrowdSection(context),
                             const SizedBox(height: 20),
@@ -553,6 +556,135 @@ class _HomeScreenState extends State<HomeScreen> {
   // ============================================================
   // CROWD PREDICTION SECTION (SERVER DRIVEN)
   // ============================================================
+
+  // ============================================================
+  // BANNER "WAKTUNYA ATUR PERJALANANMU!"
+  // ============================================================
+  //
+  // Ditaruh di antara section Rekomendasi & Prediksi Kepadatan, ajakan
+  // buat itinerary lewat TravelInformationScreen (alur yang sama
+  // dengan tombol "Rencana Perjalanan" di TripScreen).
+  //
+  // CATATAN ASET: ilustrasi peta+kalender di kanan bawah banner belum
+  // ditaruh di assets/images/ dan belum didaftarkan di pubspec.yaml,
+  // jadi PASTIKAN 2 hal ini sebelum run:
+  //   1. Copy file ilustrasinya ke assets/images/plan_trip_illustration.png
+  //      (atau ganti nama path di bawah sesuai file kamu).
+  //   2. Daftarkan path itu di pubspec.yaml, bagian flutter -> assets.
+  // Sebelum itu dilakukan, errorBuilder di bawah bikin banner tetap
+  // tampil rapi (tanpa area ilustrasi) alih-alih layar merah error.
+  //
+  // ============================================================
+
+  Widget _buildPlanTripBanner(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: AppColors.lightBlue,
+        ),
+        // FIXED - layout diubah dari Stack (teks & ilustrasi saling
+        // tumpuk) jadi Row: teks di Expanded kiri (biar tombol gak
+        // overflow), ilustrasi diberi jatah lebar tetap di kanan
+        // supaya tidak lagi menimpa teks/tombol.
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 0, 16), // CHANGED - dirapatkan dari (20, 22, 0, 22)
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Waktunya atur perjalananmu!',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: AppColors.darkBlue,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 6), // CHANGED - dirapatkan dari 8
+                    const Text(
+                      'Buat itinerary sesuai destinasi & waktu yang kamu inginkan.',
+                      style: TextStyle(
+                        fontSize: 12, // CHANGED
+                        color: AppColors.greyText,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10), // CHANGED - dirapatkan dari 14
+                    GestureDetector(
+                      onTap: () {
+                        if (!requireAuth(context, action: 'membuat rencana perjalanan')) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TravelInformationScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Ayo Buat Rencana!',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12, // CHANGED
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.darkBlue,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(Icons.arrow_forward, size: 14, color: AppColors.darkBlue),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ILUSTRASI -- diberi jatah lebar tetap di sisi kanan Row
+            // (bukan Positioned di atas teks lagi), jadi ukurannya
+            // dikecilkan ke 110 supaya proporsional dan gak makan
+            // ruang tombol.
+            Padding(
+              padding: const EdgeInsets.only(right: 16), // CHANGED - dirapatkan dari 20
+              child: Image.asset(
+                'assets/images/plan_trip_illustration.png',
+                width: 110, // CHANGED - dari 190 (Stack) jadi 110 (Row, sejajar teks)
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox(width: 110, height: 110),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildCrowdSection(BuildContext context) {
     return Padding(
