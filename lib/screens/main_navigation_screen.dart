@@ -138,7 +138,7 @@ class _MainNavigationScreenState
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          height: 68, // CHANGED: sebelumnya 86 -> diperkecil jadi 68
+          height: 68, 
           padding: const EdgeInsets.symmetric(horizontal: 20), 
           decoration: BoxDecoration(
             color: Colors.white,
@@ -224,7 +224,7 @@ class _MainNavigationScreenState
 
               colorFilter: ColorFilter.mode(
                 isActive
-                    ? const Color(0xFF5CB8F2)
+                    ? const Color(0xFF5CB3FF)
                     : const Color(0xFF6D5555),
                 BlendMode.srcIn,
               ),
@@ -242,7 +242,7 @@ class _MainNavigationScreenState
                     : FontWeight.w500,
 
                 color: isActive
-                    ? const Color(0xFF5CB8F2)
+                    ? const Color(0xFF5CB3FF)
                     : const Color(0xFF6D5555),
               ),
             ),

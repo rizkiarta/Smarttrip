@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Sumber warna terpusat SmartTrip. Import ini di semua screen,
-/// ganti pemakaian warna lokal dengan AppColors.xxx.
 class AppColors {
   AppColors._();
 
   // Brand
-  static const Color primaryBlue = Color(0xFF55B8F4);
+  static const Color primaryBlue = Color(0xFF5CB3FF);
   static const Color darkBlue = Color(0xFF164B9B); // dulu ada juga 0xFF06459B di beberapa file, disatukan ke sini
   static const Color mediumBlue = Color(0xFF42B5F5);
 

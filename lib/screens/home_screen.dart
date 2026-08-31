@@ -86,10 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 425,
                   width: double.infinity,
                   decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/background_header.png'),
-                      fit: BoxFit.cover,
-                    ),
+                    color: Color(0xFF5CB3FF), // CHANGED - dari gambar jadi warna solid biru tengah (Ocean Breeze)
                   ),
                 ),
 
