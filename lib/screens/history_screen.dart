@@ -197,7 +197,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       backgroundColor: Colors.white,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          final headerStop = (320 / constraints.maxHeight).clamp(0.05, 0.55);
           return Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -254,7 +254,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          final headerStop = (320 / constraints.maxHeight).clamp(0.05, 0.55);
           return Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -271,42 +271,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ======================================================
-                  // HEADER TEXT + TOMBOL FILTER (sejajar judul)
+                  // HEADER TEXT + CHIP SORT (di bawah judul & subjudul)
                   // ======================================================
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
 
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        const Text(
+                          'Riwayat',
 
-                            children: [
-                              Text(
-                                'Riwayat',
-
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 25,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-
-                              SizedBox(height: 2),
-
-                              Text(
-                                'Lihat semua itinerary yang pernah kamu buat',
-
-                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                              ),
-                            ],
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
 
-                        const SizedBox(width: 12),
+                        const SizedBox(height: 2),
+
+                        const Text(
+                          'Lihat semua itinerary yang pernah kamu buat',
+
+                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+
+                        const SizedBox(height: 14),
 
                         _buildFilterMenuButton(),
                       ],
@@ -330,7 +322,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           return SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
 
-                            padding: const EdgeInsets.fromLTRB(20, 32, 20, 110),
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
 
                             child: Column(
                               children: [
@@ -353,36 +345,37 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ================================================================
-  // TOMBOL FILTER (SEJAJAR JUDUL "Riwayat")
+  // CHIP SORT (DI BAWAH JUDUL "Riwayat")
   // ================================================================
   //
-  // Tombol bulat putih di ujung kanan header, sejajar sama judul.
-  // Ditekan bakal buka menu popup (background putih, sudut bulat)
-  // buat milih urutan tanggal: Terbaru dulu atau Terlama dulu.
-  // Milihnya cuma ubah state _sortOrder -- proses sort-nya sendiri
-  // ada di _sortedItineraries, dipanggil ulang tiap build.
+  // Pill/chip semi-transparan di bawah judul & subjudul, nampilin
+  // label urutan yang lagi aktif (mis. "Tanggal terbaru") plus ikon
+  // kalender + panah kecil. Ditekan bakal buka menu popup (background
+  // putih, sudut bulat) buat milih urutan tanggal: Terbaru dulu atau
+  // Terlama dulu. Milihnya cuma ubah state _sortOrder -- proses
+  // sort-nya sendiri ada di _sortedItineraries, dipanggil ulang tiap
+  // build.
   // ================================================================
 
   Widget _buildFilterMenuButton() {
+    final String currentLabel = _sortOrder == _HistorySortOrder.newestFirst
+        ? 'Tanggal terbaru'
+        : 'Tanggal terlama';
+
     return Container(
-      width: 44,
-      height: 44,
       decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.35),
+          width: 1,
+        ),
       ),
       child: PopupMenuButton<_HistorySortOrder>(
         tooltip: 'Urutkan berdasarkan tanggal',
-        icon: const Icon(Icons.filter_list, color: AppColors.primaryBlue, size: 22),
         padding: EdgeInsets.zero,
         color: Colors.white,
+        offset: const Offset(0, 42),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         onSelected: (value) {
           setState(() {
@@ -399,6 +392,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
             label: 'Tanggal terlama',
           ),
         ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.filter_list_alt,
+                color: Colors.white,
+                size: 16,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                currentLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -452,7 +473,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       backgroundColor: Colors.white,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          final headerStop = (320 / constraints.maxHeight).clamp(0.05, 0.55);
           return Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -618,6 +639,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
     }
 
+    final String cityText = _cityOf(itinerary);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
 
@@ -637,127 +660,259 @@ class _HistoryScreenState extends State<HistoryScreen> {
           );
         },
 
-        child: Container(
-          width: double.infinity,
+        // Dibungkus Stack supaya menu titik-tiga bisa "mengambang" di
+        // pojok kanan atas kartu, lepas dari alur Row konten utama.
+        child: Stack(
+          children: [
+            Container(
+              width: double.infinity,
 
-          padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
 
-          decoration: BoxDecoration(
-            color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.white,
 
-            borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
 
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-
-            children: [
-              // ======================================================
-              // THUMBNAIL
-              // ======================================================
-              // CHANGED - sebelumnya 78x78, terlalu besar dibanding
-              // konten teks yang cuma 3 baris (judul + tanggal +
-              // jumlah hari/destinasi) sehingga ada banyak ruang
-              // kosong di kiri-kanan thumbnail. Diperkecil supaya
-              // proporsinya pas dengan tinggi konten teks di
-              // sebelahnya.
-              SmartImage(
-                imagePathOrUrl: _cardImagePath(itinerary),
-                width: 66,
-                height: 66,
-                fit: BoxFit.cover,
-                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
 
-              const SizedBox(width: 13), // CHANGED - sedikit dirapatkan mengikuti thumbnail yang lebih kecil
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
 
-              // ======================================================
-              // TEXT INFO
-              // ======================================================
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ======================================================
+                  // THUMBNAIL (GAMBAR DESTINASI)
+                  // ======================================================
+                  SmartImage(
+                    imagePathOrUrl: _cardImagePath(itinerary),
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
 
-                  children: [
-                    Text(
-                      _tripTitle(itinerary),
+                  const SizedBox(width: 14),
 
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  // ======================================================
+                  // TEXT INFO
+                  // ======================================================
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-
-                    const SizedBox(height: 7),
-
-                    Row(
                       children: [
-                        const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 12,
-                          color: AppColors.greyText,
+                        // Kasih jarak kanan biar teks judul nggak
+                        // ketiban ikon titik-tiga yang sekarang
+                        // posisinya absolute di pojok kanan atas.
+                        Padding(
+                          padding: const EdgeInsets.only(right: 18),
+                          child: Text(
+                            _tripTitle(itinerary),
+
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkText,
+                            ),
+                          ),
                         ),
 
-                        const SizedBox(width: 5),
+                        if (cityText.isNotEmpty) ...[
+                          const SizedBox(height: 3),
 
-                        Text(
-                          dateRangeText,
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.place_outlined,
+                                size: 13,
+                                color: AppColors.greyText,
+                              ),
 
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.greyText,
+                              const SizedBox(width: 5),
+
+                              Expanded(
+                                child: Text(
+                                  cityText,
+
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.greyText,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                        ],
+
+                        const SizedBox(height: 6),
+
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 13,
+                              color: AppColors.greyText,
+                            ),
+
+                            const SizedBox(width: 5),
+
+                            Expanded(
+                              child: Text(
+                                dateRangeText,
+
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.greyText,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // Info hari & destinasi ditampilkan sebagai chip
+                        // kecil biar lebih rapi & mudah dipindai matanya
+                        // dibanding teks polos dengan pemisah "•".
+                        Row(
+                          children: [
+                            _buildInfoChip(
+                              Icons.access_time_rounded,
+                              '$totalDays Hari',
+                            ),
+                            const SizedBox(width: 6),
+                            _buildInfoChip(
+                              Icons.place_outlined,
+                              '$totalDestinations Destinasi',
+                            ),
+                          ],
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 6),
-
-                    Text(
-                      '$totalDays Hari  •  $totalDestinations Destinasi',
-
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.greyText,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
-              // ======================================================
-              // THREE DOT MENU
-              // ======================================================
-              GestureDetector(
+            // ======================================================
+            // THREE DOT MENU -- pojok kanan atas, dibuat lebih tipis
+            // (ukuran lebih kecil & warna lebih soft) dari sebelumnya
+            // ======================================================
+            Positioned(
+              top: 6,
+              right: 6,
+              child: GestureDetector(
                 onTap: () {
                   _showItineraryMenu(context, savedItinerary);
                 },
 
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 4),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
 
                   child: Icon(
                     Icons.more_vert,
-                    color: AppColors.greyText,
-                    size: 22,
+                    color: AppColors.greyText.withValues(alpha: 0.55),
+                    size: 20,
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  // ================================================================
+  // KOTA TUJUAN -- ikut destinasi pertama di itinerary (sama polanya
+  // dengan _cardImagePath). Kalau data destinasi punya field kota
+  // (city/kota/location), field itu yang dipakai; kalau tidak ada,
+  // baris kota disembunyikan (lihat `if (cityText.isNotEmpty)` di
+  // _buildHistoryCard).
+  //
+  // CATATAN: nama field belum dicek langsung ke destinations_data.dart
+  // (file itu tidak ikut di-upload) -- kalau field aslinya beda nama,
+  // tinggal tambahkan ke daftar `keys` di bawah.
+  // ================================================================
+
+  String _cityOf(List<Map<String, dynamic>> itinerary) {
+    for (final day in itinerary) {
+      final dynamic destinations = day['destinations'];
+      if (destinations is List) {
+        for (final dest in destinations) {
+          if (dest is Map) {
+            for (final key in ['city', 'kota', 'city_name', 'location']) {
+              final val = dest[key]?.toString().trim();
+              if (val != null && val.isNotEmpty && val != 'null') {
+                return val;
+              }
+            }
+            final String destId = dest['id']?.toString() ?? '';
+            final String destName = dest['name']?.toString() ?? '';
+            final liveDest = findDestinationById(destId) ?? findDestinationByName(destName);
+            if (liveDest != null) {
+              for (final key in ['city', 'kota', 'city_name', 'location']) {
+                final val = liveDest[key]?.trim();
+                if (val != null && val.isNotEmpty) {
+                  return val;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return '';
+  }
+
+  // ================================================================
+  // CHIP KECIL UNTUK INFO "X Hari" / "Y Destinasi" DI KARTU RIWAYAT
+  // ================================================================
+
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+
+      decoration: BoxDecoration(
+        color: AppColors.primaryBlue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          Icon(icon, size: 13, color: AppColors.primaryBlue),
+
+          const SizedBox(width: 4),
+
+          Text(
+            label,
+
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -846,22 +1001,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     if (startDt == null || endDt == null) {
-      return '20–21 Juli 2026';
+      return '20–21 Jul 2026';
     }
 
+    // Bulan disingkat 3 huruf biar baris tanggal di kartu riwayat
+    // nggak makan tempat terlalu banyak.
     const months = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
       'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
 
     final String start = '${startDt.day} ${months[startDt.month - 1]}';

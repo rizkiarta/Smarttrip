@@ -104,7 +104,36 @@ class _DetailDestinationScreenState
     'Minggu': [0, 0, 1, 2, 2, 1, 0],
   };
 
-  String _selectedDay = 'Minggu';
+  late String _selectedDay = _todayName();
+
+  // Index batang chart yang sedang dipencet (null = tidak ada
+  // tooltip yang tampil).
+  int? _tappedBarIndex;
+
+  // ============================================================
+  // TODAY HELPER
+  // ============================================================
+  //
+  // DateTime.weekday: 1 = Senin ... 7 = Minggu, urutannya sudah
+  // sama persis dengan _dayOptions jadi tinggal (weekday - 1).
+  // ============================================================
+
+  static String _todayName() {
+    final int todayIndex = DateTime.now().weekday - 1;
+    return _dayOptions[todayIndex];
+  }
+
+  // ============================================================
+  // ROLLING DAY OPTIONS (hari ini selalu di paling kiri)
+  // ============================================================
+
+  List<String> _rollingDayOptions() {
+    final int todayIndex = DateTime.now().weekday - 1;
+    return List.generate(
+      _dayOptions.length,
+      (i) => _dayOptions[(todayIndex + i) % _dayOptions.length],
+    );
+  }
 
   // State dynamic dari Laravel Backend DB
   String? _openHour;
@@ -195,6 +224,42 @@ class _DetailDestinationScreenState
       }).toList();
     }
     return _crowdData[day] ?? [0, 0, 1, 1, 1, 0, 0];
+  }
+
+  // ============================================================
+  // CROWD LEVEL LABEL & COLOR (dipakai untuk tooltip batang)
+  // ============================================================
+
+  String _statusLabelForLevel(int level) {
+    switch (level) {
+      case 2:
+        return 'ramai';
+      case 1:
+        return 'sedang';
+      default:
+        return 'sepi';
+    }
+  }
+
+  Color _colorForCrowdLevel(int level) {
+    switch (level) {
+      case 2:
+        return Colors.red;
+      case 1:
+        return AppColors.warningYellow;
+      default:
+        return Colors.green;
+    }
+  }
+
+  // Teks tooltip untuk batang ke-`index`, contoh:
+  // "06.00 - 08.00 diperkirakan sepi"
+  String _tooltipTextForBar(int index, List<int> levels) {
+    final String status = _statusLabelForLevel(levels[index]);
+    final String rangeText = (index < _timeLabels.length - 1)
+        ? '${_timeLabels[index]} - ${_timeLabels[index + 1]}'
+        : 'Sekitar jam ${_timeLabels[index]}';
+    return '$rangeText diperkirakan $status';
   }
 
   @override
@@ -290,8 +355,8 @@ class _DetailDestinationScreenState
                       ),
                     ),
                     padding: const EdgeInsets.only(
-                      top: 42,
-                      bottom: 35,
+                      top: 32,
+                      bottom: 28,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +367,7 @@ class _DetailDestinationScreenState
 
                         _buildDestinationHeader(),
 
-                        const SizedBox(height: 25),
+                        const SizedBox(height: 20),
 
                         // ==================================================
                         // DESCRIPTION
@@ -310,7 +375,7 @@ class _DetailDestinationScreenState
 
                         _buildDescription(),
 
-                        const SizedBox(height: 25),
+                        const SizedBox(height: 20),
 
                         // ==================================================
                         // GALLERY
@@ -318,7 +383,7 @@ class _DetailDestinationScreenState
 
                         _buildGallery(context),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
 
                         // ==================================================
                         // CROWD PREDICTION
@@ -326,15 +391,7 @@ class _DetailDestinationScreenState
 
                         _buildCrowdPrediction(),
 
-                        const SizedBox(height: 18),
-
-                        // ==================================================
-                        // RECOMMENDED TIME
-                        // ==================================================
-
-                        _buildRecommendedTime(),
-
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
 
                         // ==================================================
                         // ROUTE BUTTON
@@ -342,7 +399,7 @@ class _DetailDestinationScreenState
 
                         _buildRouteButton(context),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
 
                         // ==================================================
                         // REVIEWS
@@ -570,12 +627,7 @@ class _DetailDestinationScreenState
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        22,
-      ),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -596,9 +648,9 @@ class _DetailDestinationScreenState
           // TITLE + DROPDOWN
           // ==================================================
 
-          Row(
+          const Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Prediksi Kepadatan',
                   style: TextStyle(
@@ -608,12 +660,18 @@ class _DetailDestinationScreenState
                   ),
                 ),
               ),
-
-              _buildDaySelector(),
             ],
           ),
 
-          const SizedBox(height: 25),
+          const SizedBox(height: 16),
+
+          // ==================================================
+          // DAY SELECTOR (SCROLLABLE)
+          // ==================================================
+
+          _buildDaySelector(),
+
+          const SizedBox(height: 16),
 
           // ==================================================
           // GRAPH
@@ -637,15 +695,18 @@ class _DetailDestinationScreenState
                 final double graphWidth =
                     constraints.maxWidth - graphLeft - graphRight;
 
-                const List<String> timeMarks = [
-                  '06.00',
-                  '09.00',
-                  '12.00',
-                  '18.00',
-                ];
+                // Label jam sekarang mengikuti data asli
+                // (06.00 - 18.00, 7 titik) supaya posisinya
+                // selalu tepat di bawah setiap batang.
+                final int barCount = levels.length;
+                final double slotWidth =
+                    barCount == 0 ? 0 : graphWidth / barCount;
 
                 return CustomPaint(
-                  painter: _CrowdChartPainter(levels: levels),
+                  painter: _CrowdChartPainter(
+                    levels: levels,
+                    pressedIndex: _tappedBarIndex,
+                  ),
                   child: Stack(
                     children: [
                       // RAMAI
@@ -690,118 +751,214 @@ class _DetailDestinationScreenState
                         ),
                       ),
 
-                      // TIMES (0, 1/3, 2/3 dari graphWidth: rata kiri;
-                      // titik terakhir (1.0): rata kanan ke tepi grafik)
-                      for (int i = 0; i < timeMarks.length - 1; i++)
+                      // TIMES (satu label persis di bawah tiap
+                      // batang, format singkat: 06, 08, 10, ...)
+                      for (int i = 0; i < barCount; i++)
                         Positioned(
-                          left: graphLeft + (graphWidth / 3) * i,
+                          left: graphLeft + slotWidth * i,
                           bottom: 0,
+                          width: slotWidth,
                           child: Text(
-                            timeMarks[i],
+                            i < _timeLabels.length
+                                ? _timeLabels[i].split('.').first
+                                : '',
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
-                              fontSize: 12, // CHANGED - font terkecil jadi 12
+                              fontSize: 10,
                               color: AppColors.greyText,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
 
-                      Positioned(
-                        right: graphRight,
-                        bottom: 0,
-                        child: Text(
-                          timeMarks.last,
-                          style: const TextStyle(
-                            fontSize: 12, // CHANGED - font terkecil jadi 12
-                            color: AppColors.greyText,
-                            fontWeight: FontWeight.w500,
+                      // ==========================================
+                      // TAP ZONES (satu per batang, area penuh
+                      // dari atas sampai bawah grafik)
+                      // ==========================================
+
+                      for (int i = 0; i < barCount; i++)
+                        Positioned(
+                          left: graphLeft + slotWidth * i,
+                          top: 0,
+                          bottom: 0,
+                          width: slotWidth,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTapDown: (_) {
+                              setState(() {
+                                _tappedBarIndex = i;
+                              });
+                            },
+                            onTapUp: (_) {
+                              setState(() {
+                                _tappedBarIndex = null;
+                              });
+                            },
+                            onTapCancel: () {
+                              setState(() {
+                                _tappedBarIndex = null;
+                              });
+                            },
                           ),
                         ),
-                      ),
+
+                      // ==========================================
+                      // TOOLTIP (muncul di atas batang yang dipencet)
+                      // ==========================================
+
+                      if (_tappedBarIndex != null &&
+                          _tappedBarIndex! < barCount)
+                        Positioned(
+                          top: 0,
+                          left: graphLeft,
+                          right: graphRight,
+                          child: Align(
+                            alignment: Alignment(
+                              (((_tappedBarIndex! + 0.5) / barCount) * 2 - 1)
+                                  .clamp(-1.0, 1.0),
+                              -1,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _colorForCrowdLevel(
+                                    levels[_tappedBarIndex!],
+                                  ),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                _tooltipTextForBar(_tappedBarIndex!, levels),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: _colorForCrowdLevel(
+                                    levels[_tappedBarIndex!],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 );
               },
             ),
           ),
+
+          const SizedBox(height: 16),
+
+          // ==================================================
+          // RECOMMENDED TIME (di dalam kotak yang sama)
+          // ==================================================
+
+          _buildRecommendedTime(),
         ],
       ),
     );
   }
 
   // ============================================================
-  // DAY SELECTOR (DROPDOWN)
+  // DAY SELECTOR (SCROLLABLE CHIPS)
+  // ============================================================
+  //
+  // Diganti dari dropdown (PopupMenuButton) menjadi daftar hari
+  // yang bisa digeser horizontal. Tap salah satu chip akan
+  // langsung mengganti chart kepadatan sesuai hari yang dipilih.
   // ============================================================
 
   Widget _buildDaySelector() {
-    return PopupMenuButton<String>(
-      initialValue: _selectedDay,
-      offset: const Offset(0, 42),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-      onSelected: (value) {
-        setState(() {
-          _selectedDay = value;
-        });
-      },
-      itemBuilder: (context) {
-        return _dayOptions.map((day) {
-          final bool active = day == _selectedDay;
+    final List<String> orderedDays = _rollingDayOptions();
+    final String todayName = _todayName();
 
-          return PopupMenuItem<String>(
-            value: day,
-            child: Text(
-              day,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight:
-                    active ? FontWeight.bold : FontWeight.w500,
-                color: active ? AppColors.primaryBlue : AppColors.darkText,
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: orderedDays.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final String day = orderedDays[index];
+          final bool active = day == _selectedDay;
+          final bool isToday = day == todayName;
+
+          return GestureDetector(
+            onTap: () {
+              if (_selectedDay == day) return;
+              setState(() {
+                _selectedDay = day;
+                _tappedBarIndex = null;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: active ? AppColors.primaryBlue : Colors.white,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(
+                  color: active
+                      ? AppColors.primaryBlue
+                      : AppColors.borderColor,
+                ),
+                boxShadow: active
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 5,
+                        ),
+                      ],
+              ),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    day,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: active ? FontWeight.bold : FontWeight.w600,
+                      color: active ? Colors.white : AppColors.greyText,
+                    ),
+                  ),
+
+                  if (isToday)
+                    Text(
+                      'Hari ini',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: active
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : AppColors.primaryBlue,
+                      ),
+                    ),
+                ],
               ),
             ),
           );
-        }).toList();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(
-            color:  AppColors.borderColor,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 5,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _selectedDay,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.greyText,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            const Icon(
-              Icons.keyboard_arrow_down,
-              color: AppColors.greyText,
-              size: 20,
-            ),
-          ],
-        ),
+        },
       ),
     );
   }
@@ -815,10 +972,10 @@ class _DetailDestinationScreenState
         _summaryFor(_getCrowdLevelsForDay(_selectedDay));
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(
-        horizontal: 30,
-        vertical: 18,
+        horizontal: 20,
+        vertical: 16,
       ),
       decoration: BoxDecoration(
         color: summary.containerBackground,
@@ -992,7 +1149,7 @@ class _DetailDestinationScreenState
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryBlue,
-            foregroundColor: AppColors.darkBlue,
+            foregroundColor: AppColors.whiteText,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
@@ -1089,7 +1246,7 @@ class _DetailDestinationScreenState
             ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           if (_dbReviews.isNotEmpty)
             ..._dbReviews.take(3).map((rev) {
@@ -1546,8 +1703,9 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
 
 class _CrowdChartPainter extends CustomPainter {
   final List<int> levels;
+  final int? pressedIndex;
 
-  _CrowdChartPainter({required this.levels});
+  _CrowdChartPainter({required this.levels, this.pressedIndex});
 
   static const Color _greenColor = Colors.green;
   static const Color _yellowColor = AppColors.warningYellow;
@@ -1562,6 +1720,12 @@ class _CrowdChartPainter extends CustomPainter {
       default:
         return _greenColor;
     }
+  }
+
+  // Versi lebih muda dari warna batang, dipakai saat batang
+  // sedang ditekan (dicampur ke arah putih).
+  Color _lightenColor(Color color) {
+    return Color.lerp(color, Colors.white, 0.55) ?? color;
   }
 
   @override
@@ -1583,7 +1747,7 @@ class _CrowdChartPainter extends CustomPainter {
     final double graphHeight = size.height - top - bottom;
 
     // ============================================================
-    // HORIZONTAL GRID
+    // HORIZONTAL GRID (garis Ramai / Sedang / Sepi)
     // ============================================================
 
     for (int i = 0; i < 3; i++) {
@@ -1596,82 +1760,53 @@ class _CrowdChartPainter extends CustomPainter {
       );
     }
 
-    // ============================================================
-    // VERTICAL GRID
-    // ============================================================
-
-    for (int i = 0; i < 4; i++) {
-      final double x = left + (graphWidth / 3) * i;
-
-      canvas.drawLine(
-        Offset(x, top),
-        Offset(x, size.height - bottom),
-        gridPaint,
-      );
-    }
-
     if (levels.isEmpty) return;
 
     // ============================================================
-    // DATA POINTS (level 0 = bawah/Sepi, level 2 = atas/Ramai)
+    // BATANG (level 0 = pendek/Sepi, level 2 = penuh/Ramai)
     // ============================================================
 
     final int n = levels.length;
+    final double slotWidth = graphWidth / n;
 
-    final List<Offset> points = List.generate(n, (i) {
-      final double x = n == 1 ? left : left + graphWidth * (i / (n - 1));
-      final double fraction = 1 - (levels[i] / 2);
-      final double y = top + graphHeight * fraction;
-      return Offset(x, y);
-    });
-
-    // ============================================================
-    // SMOOTH SEGMENTED LINE (warna mengikuti level tertinggi
-    // di antara dua titik yang dihubungkan)
-    // ============================================================
-
-    for (int i = 0; i < n - 1; i++) {
-      final Offset p1 = points[i];
-      final Offset p2 = points[i + 1];
-
-      final double dx = (p2.dx - p1.dx) / 3;
-
-      final Path segmentPath = Path()
-        ..moveTo(p1.dx, p1.dy)
-        ..cubicTo(
-          p1.dx + dx,
-          p1.dy,
-          p2.dx - dx,
-          p2.dy,
-          p2.dx,
-          p2.dy,
-        );
-
-      final int segmentLevel =
-          levels[i] > levels[i + 1] ? levels[i] : levels[i + 1];
-
-      final Paint segmentPaint = Paint()
-        ..color = _colorForLevel(segmentLevel)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawPath(segmentPath, segmentPaint);
-    }
-
-    // ============================================================
-    // POINTS
-    // ============================================================
+    const double barWidthFraction = 0.5;
+    const double minBarHeight = 6;
+    const double barRadius = 5;
 
     for (int i = 0; i < n; i++) {
-      final Paint pointPaint = Paint()..color = _colorForLevel(levels[i]);
+      final double xCenter = left + slotWidth * (i + 0.5);
+      final double barWidth = slotWidth * barWidthFraction;
 
-      canvas.drawCircle(points[i], 3, pointPaint);
+      final double rawHeight = graphHeight * (levels[i] / 2);
+      final double barHeight =
+          rawHeight < minBarHeight ? minBarHeight : rawHeight;
+
+      final double barBottom = top + graphHeight;
+      final double barTop = barBottom - barHeight;
+
+      final RRect barRect = RRect.fromRectAndCorners(
+        Rect.fromLTRB(
+          xCenter - barWidth / 2,
+          barTop,
+          xCenter + barWidth / 2,
+          barBottom,
+        ),
+        topLeft: const Radius.circular(barRadius),
+        topRight: const Radius.circular(barRadius),
+      );
+
+      final Paint barPaint = Paint()
+        ..color = (i == pressedIndex)
+            ? _lightenColor(_colorForLevel(levels[i]))
+            : _colorForLevel(levels[i]);
+
+      canvas.drawRRect(barRect, barPaint);
     }
   }
 
   @override
   bool shouldRepaint(covariant _CrowdChartPainter oldDelegate) {
-    return oldDelegate.levels.join(',') != levels.join(',');
+    return oldDelegate.levels.join(',') != levels.join(',') ||
+        oldDelegate.pressedIndex != pressedIndex;
   }
 }

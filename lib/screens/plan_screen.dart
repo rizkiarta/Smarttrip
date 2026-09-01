@@ -713,7 +713,7 @@ class _PlanScreenState extends State<PlanScreen> {
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
       ],
     );
   }
