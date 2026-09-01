@@ -34,7 +34,25 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
+// ================================================================
+// URUTAN SORT UNTUK RIWAYAT (dipakai oleh menu filter di sebelah
+// judul "Riwayat")
+// ================================================================
+
+enum _HistorySortOrder { newestFirst, oldestFirst }
+
 class _HistoryScreenState extends State<HistoryScreen> {
+  // ================================================================
+  // SORT STATE
+  // ================================================================
+  //
+  // _sortOrder -- dipakai menu filter di sebelah judul buat ngurutin
+  // riwayat berdasarkan tanggal mulai (startDate), terbaru atau
+  // terlama duluan.
+  // ================================================================
+
+  _HistorySortOrder _sortOrder = _HistorySortOrder.newestFirst;
+
   // ================================================================
   // FILTER: HANYA ITINERARY YANG SUDAH SELESAI
   // ================================================================
@@ -95,6 +113,52 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ================================================================
+  // SORT (TANGGAL) UNTUK RIWAYAT
+  // ================================================================
+  //
+  // Dipanggil di dalam _buildScaffold, di atas list finishedItineraries
+  // yang sudah difilter "selesai". Ngurutin berdasarkan startDate
+  // hari pertama tiap itinerary sesuai _sortOrder yang dipilih lewat
+  // menu filter di sebelah judul.
+  // ================================================================
+
+  DateTime? _startDateOf(List<Map<String, dynamic>> itinerary) {
+    if (itinerary.isEmpty) return null;
+
+    final dynamic start = itinerary.first['startDate'];
+
+    if (start is DateTime) return start;
+
+    if (start is String) return DateTime.tryParse(start);
+
+    return null;
+  }
+
+  List<List<Map<String, dynamic>>> _sortedItineraries(
+    List<List<Map<String, dynamic>>> finishedItineraries,
+  ) {
+    final List<List<Map<String, dynamic>>> result =
+        List<List<Map<String, dynamic>>>.from(finishedItineraries);
+
+    result.sort((a, b) {
+      final DateTime? dateA = _startDateOf(a);
+      final DateTime? dateB = _startDateOf(b);
+
+      // Itinerary tanpa startDate valid ditaruh paling belakang,
+      // apapun urutan yang dipilih.
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+
+      return _sortOrder == _HistorySortOrder.newestFirst
+          ? dateB.compareTo(dateA)
+          : dateA.compareTo(dateB);
+    });
+
+    return result;
+  }
+
+  // ================================================================
   // BUILD
   // ================================================================
 
@@ -125,20 +189,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildGuestState(BuildContext context) {
+    // Background disamain PERSIS dengan PlanScreen: satu Container
+    // gradient biru->putih yang stop-nya dihitung dinamis dari tinggi
+    // layar (headerStop), bukan lagi gradient tinggi tetap 285 + kotak
+    // putih rounded 42 terpisah kayak sebelumnya.
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Container(height: 285, width: double.infinity, decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/background_header.png'), fit: BoxFit.cover))),
-          SafeArea(
-            child: Column(
-              children: [
-                Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(25, 30, 25, 0), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Riwayat', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('Lihat semua itinerary yang pernah kamu buat', style: TextStyle(color: Colors.white, fontSize: 12))])),
-                const SizedBox(height: 35),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(42), topRight: Radius.circular(42))),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          return Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [AppColors.primaryBlue, Colors.white],
+                stops: [0.0, headerStop],
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 16), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Riwayat', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w800)), SizedBox(height: 2), Text('Lihat semua itinerary yang pernah kamu buat', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))])),
+                  Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36),
                       child: Column(
@@ -156,11 +232,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -169,104 +245,186 @@ class _HistoryScreenState extends State<HistoryScreen> {
     BuildContext context,
     List<List<Map<String, dynamic>>> savedItineraries,
   ) {
+    // Background disamain PERSIS dengan PlanScreen: satu Container
+    // gradient biru->putih yang stop-nya dihitung dinamis dari tinggi
+    // layar (headerStop), bukan lagi gradient tinggi tetap 285 + kotak
+    // putih rounded 42 terpisah kayak sebelumnya.
     return Scaffold(
       backgroundColor: Colors.white,
 
-      body: Stack(
-        children: [
-          // ==========================================================
-          // BLUE HEADER
-          // ==========================================================
-          Container(
-            height: 285,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          return Container(
             width: double.infinity,
-
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/background_header.png'),
-                fit: BoxFit.cover,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [AppColors.primaryBlue, Colors.white],
+                stops: [0.0, headerStop],
               ),
             ),
-          ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ======================================================
+                  // HEADER TEXT + TOMBOL FILTER (sejajar judul)
+                  // ======================================================
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
 
-          // ==========================================================
-          // MAIN CONTENT
-          // ==========================================================
-          SafeArea(
-            child: Column(
-              children: [
-                // ======================================================
-                // HEADER TEXT
-                // ======================================================
-                Container(
-                  width: double.infinity,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
 
-                  padding: const EdgeInsets.fromLTRB(25, 30, 25, 0),
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
 
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Riwayat',
 
-                    children: [
-                      Text(
-                        'Riwayat',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
 
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
+                              SizedBox(height: 2),
+
+                              Text(
+                                'Lihat semua itinerary yang pernah kamu buat',
+
+                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      SizedBox(height: 5),
+                        const SizedBox(width: 12),
 
-                      Text(
-                        'Lihat semua itinerary yang pernah kamu buat',
-
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 35),
-
-                // ======================================================
-                // WHITE CONTENT (ROUNDED TOP)
-                // ======================================================
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(42),
-                        topRight: Radius.circular(42),
-                      ),
+                        _buildFilterMenuButton(),
+                      ],
                     ),
+                  ),
 
+                  // ======================================================
+                  // CONTENT
+                  // ======================================================
+                  Expanded(
                     child: RefreshIndicator(
                       onRefresh: () async {
                         await SavedItineraryService.instance.fetchItineraries();
                       },
                       color: AppColors.primaryBlue,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                      child: Builder(
+                        builder: (context) {
+                          final List<List<Map<String, dynamic>>> sortedItineraries =
+                              _sortedItineraries(savedItineraries);
 
-                        padding: const EdgeInsets.fromLTRB(20, 32, 20, 110),
+                          return SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
 
-                        child: Column(
-                          children: [
-                            for (final savedItinerary in savedItineraries)
-                              _buildHistoryCard(context, savedItinerary),
-                          ],
-                        ),
+                            padding: const EdgeInsets.fromLTRB(20, 32, 20, 110),
+
+                            child: Column(
+                              children: [
+                                for (final savedItinerary in sortedItineraries)
+                                  _buildHistoryCard(context, savedItinerary),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ================================================================
+  // TOMBOL FILTER (SEJAJAR JUDUL "Riwayat")
+  // ================================================================
+  //
+  // Tombol bulat putih di ujung kanan header, sejajar sama judul.
+  // Ditekan bakal buka menu popup (background putih, sudut bulat)
+  // buat milih urutan tanggal: Terbaru dulu atau Terlama dulu.
+  // Milihnya cuma ubah state _sortOrder -- proses sort-nya sendiri
+  // ada di _sortedItineraries, dipanggil ulang tiap build.
+  // ================================================================
+
+  Widget _buildFilterMenuButton() {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: PopupMenuButton<_HistorySortOrder>(
+        tooltip: 'Urutkan berdasarkan tanggal',
+        icon: const Icon(Icons.filter_list, color: AppColors.primaryBlue, size: 22),
+        padding: EdgeInsets.zero,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        onSelected: (value) {
+          setState(() {
+            _sortOrder = value;
+          });
+        },
+        itemBuilder: (context) => [
+          _buildSortMenuItem(
+            value: _HistorySortOrder.newestFirst,
+            label: 'Tanggal terbaru',
+          ),
+          _buildSortMenuItem(
+            value: _HistorySortOrder.oldestFirst,
+            label: 'Tanggal terlama',
+          ),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<_HistorySortOrder> _buildSortMenuItem({
+    required _HistorySortOrder value,
+    required String label,
+  }) {
+    final bool isSelected = _sortOrder == value;
+
+    return PopupMenuItem<_HistorySortOrder>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(
+            Icons.check,
+            size: 16,
+            color: isSelected ? AppColors.primaryBlue : Colors.transparent,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.darkText,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ],
@@ -286,68 +444,59 @@ class _HistoryScreenState extends State<HistoryScreen> {
   // ================================================================
 
   Widget _buildEmptyState(BuildContext context) {
+    // Background disamain PERSIS dengan PlanScreen: satu Container
+    // gradient biru->putih yang stop-nya dihitung dinamis dari tinggi
+    // layar (headerStop), bukan lagi gradient tinggi tetap 285 + kotak
+    // putih rounded 42 terpisah kayak sebelumnya.
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // ======================================================
-          // BLUE HEADER (sama persis dengan TripScreen/PlanScreen)
-          // ======================================================
-          Container(
-            height: 285,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          return Container(
             width: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/background_header.png'),
-                fit: BoxFit.cover,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [AppColors.primaryBlue, Colors.white],
+                stops: [0.0, headerStop],
               ),
             ),
-          ),
-
-          SafeArea(
-            child: Column(
-              children: [
-                // ==================================================
-                // HEADER TEXT
-                // ==================================================
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(25, 30, 25, 0),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Riwayat',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ==================================================
+                  // HEADER TEXT
+                  // ==================================================
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Riwayat',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 5),
-                      Text(
-                        'Lihat semua itinerary yang pernah kamu buat',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 35),
-
-                // ==================================================
-                // WHITE CONTENT (rounded 42, sama dengan TripScreen)
-                // ==================================================
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(42),
-                        topRight: Radius.circular(42),
-                      ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Lihat semua itinerary yang pernah kamu buat',
+                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
+                  ),
+
+                  // ==================================================
+                  // CONTENT
+                  // ==================================================
+                  Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36),
                       child: Column(
@@ -431,11 +580,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

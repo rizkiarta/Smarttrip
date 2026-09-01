@@ -308,13 +308,13 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
         height: 22,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: enabled ? const Color(0xFFF1F8FE) : const Color(0xFFF5F5F5),
+          color: enabled ? AppColors.lightBlue : AppColors.lightGrey,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Icon(
           icon,
           size: 18,
-          color: enabled ?  AppColors.mediumBlue : const Color(0xFFCCCCCC),
+          color: enabled ? AppColors.primaryBlue : AppColors.doneGrey,
         ),
       ),
     );
@@ -338,7 +338,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE3E3E3)),
+          border: Border.all(color: AppColors.fieldBorder),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -352,7 +352,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF999999)), // CHANGED - font terkecil jadi 12
+              style: const TextStyle(fontSize: 12, color: AppColors.mutedText), // CHANGED - font terkecil jadi 12
             ),
             const SizedBox(height: 2),
             Text(
@@ -360,7 +360,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
+                color: AppColors.darkText,
               ),
             ),
           ],
@@ -379,7 +379,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color:  AppColors.borderColor),
+        border: Border.all(color: AppColors.borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -394,12 +394,12 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F5FD),
+              color: AppColors.imagePlaceholderBg,
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.location_on,
-              color: AppColors.mediumBlue,
+              color: AppColors.primaryBlue,
               size: 27,
             ),
           ),
@@ -424,7 +424,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF222222),
+                    color: AppColors.darkText,
                   ),
                 ),
               ],
@@ -462,7 +462,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color:  AppColors.borderColorLight),
+        border: Border.all(color: AppColors.borderColorLight),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -502,7 +502,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF222222),
+                    color: AppColors.darkText,
                   ),
                 ),
               ),
@@ -624,8 +624,8 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: isSelected
-                    ?  AppColors.mediumBlue
-                    :  AppColors.lightGrey,
+                    ? AppColors.primaryBlue
+                    : AppColors.lightGrey,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Text(
@@ -633,7 +633,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white :  AppColors.greyText,
+                  color: isSelected ? Colors.white : AppColors.greyText,
                 ),
               ),
             ),
@@ -669,7 +669,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF222222),
+            color: AppColors.darkText,
           ),
         ),
 
@@ -690,7 +690,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF222222),
+            color: AppColors.darkText,
           ),
         ),
 
@@ -706,7 +706,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color:  AppColors.lightBlue,
+            color: AppColors.lightBlue,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -720,7 +720,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 ),
                 child: const Icon(
                   Icons.directions_car,
-                  color: AppColors.mediumBlue,
+                  color: AppColors.primaryBlue,
                   size: 21,
                 ),
               ),
@@ -736,7 +736,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF555555),
+                        color: AppColors.darkText,
                       ),
                     ),
                     SizedBox(height: 2),
@@ -777,7 +777,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF222222),
+                  color: AppColors.darkText,
                 ),
               ),
             ),
@@ -785,7 +785,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color:  AppColors.lightBlue,
+                color: AppColors.lightBlue,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -793,7 +793,7 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 style: const TextStyle(
                   fontSize: 12, // CHANGED - font terkecil jadi 12
                   fontWeight: FontWeight.w600,
-                  color: AppColors.mediumBlue,
+                  color: AppColors.primaryBlue,
                 ),
               ),
             ),
@@ -813,18 +813,18 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color:  AppColors.borderColorLight),
+              border: Border.all(color: AppColors.borderColorLight),
             ),
             child: const Column(
               children: [
-                Icon(Icons.location_off, size: 32, color: Color(0xFFAAAAAA)),
+                Icon(Icons.location_off, size: 32, color: AppColors.mutedText),
                 SizedBox(height: 8),
                 Text(
                   'Belum ada destinasi',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF555555),
+                    color: AppColors.darkText,
                   ),
                 ),
               ],
@@ -1222,7 +1222,7 @@ if (result != null) {
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
-            color: Color(0xFF333333),
+            color: AppColors.darkText,
             size: 20,
           ),
           onPressed: () {
@@ -1235,7 +1235,7 @@ if (result != null) {
         title: const Text(
           'Atur Waktu Perjalanan',
           style: TextStyle(
-            color: Color(0xFF333333),
+            color: AppColors.darkText,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -1280,7 +1280,7 @@ if (result != null) {
                       child: ElevatedButton(
                         onPressed: _handlePreview,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:  AppColors.mediumBlue,
+                          backgroundColor: AppColors.primaryBlue,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -1323,7 +1323,7 @@ if (result != null) {
               ),
               child: const Icon(
                 Icons.location_off,
-                color: AppColors.mediumBlue,
+                color: AppColors.primaryBlue,
                 size: 34,
               ),
             ),
@@ -1335,7 +1335,7 @@ if (result != null) {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF222222),
+                color: AppColors.darkText,
               ),
             ),
 
@@ -1356,7 +1356,7 @@ if (result != null) {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:  AppColors.mediumBlue,
+                  backgroundColor: AppColors.primaryBlue,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(

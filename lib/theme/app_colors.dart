@@ -4,14 +4,14 @@ class AppColors {
   AppColors._();
 
   // Brand
-  static const Color primaryBlue = Color(0xFF5CB3FF);
-  static const Color darkBlue = Color(0xFF164B9B); // dulu ada juga 0xFF06459B di beberapa file, disatukan ke sini
-  static const Color mediumBlue = Color(0xFF42B5F5);
+  static const Color primaryBlue = Color.fromARGB(255, 88, 174, 255);
+  static const Color darkBlue = Color(0xFF164B9B); 
 
   // Teks
-  static const Color darkText = Color(0xFF111111); // dulu ada juga 0xFF222222 & 0xFF555555, disatukan ke sini
-  static const Color greyText = Color(0xFF666666); // dulu ada juga 0xFF777777, disatukan ke sini
+  static const Color darkText = Color(0xFF111111); 
+  static const Color greyText = Color(0xFF666666); 
   static const Color mutedText = Color(0xFF888888);
+  static const Color whiteText = Color.fromARGB(255, 254, 255, 255);
 
   // Border
   static const Color borderColor = Color(0xFFE8E8E8);

@@ -6,7 +6,6 @@ import 'crowd_prediction_screen.dart';
 import 'recommendation_screen.dart';
 import 'notification_screen.dart';
 import 'profile_screen.dart';
-import 'travel_information_screen.dart';
 import '../theme/app_colors.dart';
 import '../widgets/love_button.dart';
 import '../widgets/category_badge.dart';
@@ -66,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light, // CHANGED - jadi terang karena sekarang di atas gradasi biru
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
         systemNavigationBarDividerColor: Colors.white,
@@ -78,61 +77,88 @@ class _HomeScreenState extends State<HomeScreen> {
           color: AppColors.primaryBlue,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-            child: Stack(
-              clipBehavior: Clip.none,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // BACKGROUND HEADER
+                // HEADER GRADASI + SAPAAN + SEARCH BAR + NOTIFIKASI + BANNER
                 Container(
-                  height: 425,
                   width: double.infinity,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF5CB3FF), // CHANGED - dari gambar jadi warna solid biru tengah (Ocean Breeze)
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppColors.primaryBlue, Colors.white],
+                    ),
                   ),
-                ),
-
-                // HEADER + SEARCH
-                SafeArea(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 10),
-                      _buildHeader(context),
-                      const SizedBox(height: 22),
-                      _buildSearchBar(context),
-                    ],
-                  ),
-                ),
-
-                // WHITE CONTENT
-                Column(
-                  children: [
-                    const SizedBox(height: 255),
-                    Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(42),
-                          topRight: Radius.circular(42),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 40, bottom: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildRecommendationSection(context),
-                            const SizedBox(height: 26),
-                            _buildPlanTripBanner(context),
-                            const SizedBox(height: 26),
-                            _buildCrowdSection(context),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 8), // CHANGED - kiri/kanan disamakan jadi 20
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: _buildSearchBar(context)),
+                              const SizedBox(width: 12),
+                              _buildNotificationButton(context),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildPromoBanner(context),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
+
+                const SizedBox(height: 24),
+
+                // WHITE CONTENT -- langsung menyambung di bawah banner
+                // (Column biasa, bukan Stack dengan spacer tebak-tebakan
+                // lagi, supaya tidak akan pernah nimpa banner). Lengkung
+                // di bagian atas card juga sudah dihapus.
+                _buildRecommendationSection(context),
+                const SizedBox(height: 24),
+                _buildCrowdSection(context),
+                const SizedBox(height: 24),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // PROMO BANNER -- section berdiri sendiri, ditaruh tepat di
+  // bawah search bar (bukan bagian dari section Rekomendasi).
+  // Shadow-nya sengaja dibuat setipis mungkin supaya cuma kasih
+  // kesan "terangkat" halus, bukan shadow tebal seperti card lain.
+  // ============================================================
+
+  Widget _buildPromoBanner(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04), // super tipis
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: AspectRatio(
+          aspectRatio: 343 / 140, // sesuaikan dengan rasio asli banner_1.png
+          child: Image.asset(
+            'assets/images/banner_1.png',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: AppColors.imagePlaceholderBg,
+              child: const Icon(Icons.image_outlined, color: AppColors.primaryBlue, size: 30),
             ),
           ),
         ),
@@ -144,116 +170,54 @@ class _HomeScreenState extends State<HomeScreen> {
   // HEADER
   // ============================================================
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-      child: ValueListenableBuilder<ProfileData>(
-        valueListenable: ProfileService.instance.profile,
-        builder: (context, profileData, _) {
-          return Row(
+  Widget _buildNotificationButton(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: NotificationService.instance.unreadCount,
+      builder: (context, unreadCount, _) {
+        return GestureDetector(
+          onTap: () {
+            if (!requireAuth(context, action: 'membuka notifikasi')) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const NotificationScreen(),
+              ),
+            );
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
               Container(
-                width: 45,
-                height: 45,
-                decoration: BoxDecoration(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1),
                 ),
-                child: buildAvatarImage(
-                  profileData.photoPath,
-                  size: 45,
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppColors.primaryBlue,
+                  size: 26,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ApiService.instance.isAuthenticated
-                          ? 'Halo, ${profileData.name.isNotEmpty ? profileData.name : "Traveler"}'
-                          : 'Halo, Traveler',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+              if (unreadCount > 0)
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.2),
                     ),
-                    const SizedBox(height: 3),
-                    if (!ApiService.instance.isAuthenticated)
-                      GestureDetector(
-                        onTap: () => showLoginRequiredSheet(context, action: 'masuk ke akunmu'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withOpacity(0.5)),
-                          ),
-                          child: const Text('Masuk / Daftar', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                        ),
-                      )
-                    else
-                      const Text(
-                        'Ayo jelajahi wisata Lampung',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
-              ValueListenableBuilder<int>(
-                valueListenable: NotificationService.instance.unreadCount,
-                builder: (context, unreadCount, _) {
-                  return GestureDetector(
-                    onTap: () {
-                      if (!requireAuth(context, action: 'membuka notifikasi')) return;
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationScreen(),
-                        ),
-                      );
-                    },
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 45,
-                          height: 45,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.notifications_none_rounded,
-                            color: AppColors.primaryBlue,
-                            size: 24,
-                          ),
-                        ),
-                        if (unreadCount > 0)
-                          Positioned(
-                            top: 6,
-                            right: 6,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -262,84 +226,83 @@ class _HomeScreenState extends State<HomeScreen> {
   // ============================================================
 
   Widget _buildSearchBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      child: Container(
-        height: 50,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: const Color(0xFFEFEFEF)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.search_rounded,
-              color: AppColors.greyText,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (value) {
-                  final keyword = value.trim();
-                  if (keyword.isEmpty) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SearchScreen(keyword: keyword),
-                    ),
-                  );
-                },
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  hintText: 'Cari destinasi wisata...',
-                  hintStyle: TextStyle(color: Colors.black45, fontSize: 14),
-                ),
-                style: const TextStyle(color: AppColors.darkText, fontSize: 14),
-              ),
-            ),
-
-            // ==================================================
-            // CLEAR KEYWORD -- cuma muncul kalau ada teksnya,
-            // sama seperti tombol "X" di SearchScreen.
-            // ==================================================
-
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _searchController,
-              builder: (context, value, _) {
-                if (value.text.isEmpty) {
-                  return const SizedBox();
-                }
-
-                return GestureDetector(
-                  onTap: () {
-                    _searchController.clear();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.only(left: 6),
-                    child: Icon(
-                      Icons.close,
-                      color: AppColors.greyText,
-                      size: 18,
-                    ),
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFEFEFEF)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.search_rounded,
+            color: AppColors.greyText,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (value) {
+                final keyword = value.trim();
+                if (keyword.isEmpty) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SearchScreen(keyword: keyword),
                   ),
                 );
               },
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isCollapsed: true,
+                hintText: 'Cari destinasi wisata...',
+                hintStyle: TextStyle(color: Colors.black45, fontSize: 14),
+              ),
+              style: const TextStyle(color: AppColors.darkText, fontSize: 14),
             ),
-          ],
-        ),
+          ),
+
+          // ==================================================
+          // CANCEL / CLEAR -- muncul kalau ada teksnya, dan
+          // selain menghapus teks juga membatalkan pencarian
+          // (menutup keyboard / keluar dari mode mengetik).
+          // ==================================================
+
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _searchController,
+            builder: (context, value, _) {
+              if (value.text.isEmpty) {
+                return const SizedBox();
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  _searchController.clear();
+                  FocusScope.of(context).unfocus();
+                },
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Icon(
+                    Icons.close,
+                    color: AppColors.greyText,
+                    size: 18,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -353,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
               const Expanded(
@@ -422,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.only(left: 15, right: 15),
+                    padding: const EdgeInsets.only(left: 20, right: 20),
                     itemCount: destinations.length,
                     itemBuilder: (context, index) {
                       final item = destinations[index];
@@ -554,138 +517,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // CROWD PREDICTION SECTION (SERVER DRIVEN)
   // ============================================================
 
-  // ============================================================
-  // BANNER "WAKTUNYA ATUR PERJALANANMU!"
-  // ============================================================
-  //
-  // Ditaruh di antara section Rekomendasi & Prediksi Kepadatan, ajakan
-  // buat itinerary lewat TravelInformationScreen (alur yang sama
-  // dengan tombol "Rencana Perjalanan" di TripScreen).
-  //
-  // CATATAN ASET: ilustrasi peta+kalender di kanan bawah banner belum
-  // ditaruh di assets/images/ dan belum didaftarkan di pubspec.yaml,
-  // jadi PASTIKAN 2 hal ini sebelum run:
-  //   1. Copy file ilustrasinya ke assets/images/plan_trip_illustration.png
-  //      (atau ganti nama path di bawah sesuai file kamu).
-  //   2. Daftarkan path itu di pubspec.yaml, bagian flutter -> assets.
-  // Sebelum itu dilakukan, errorBuilder di bawah bikin banner tetap
-  // tampil rapi (tanpa area ilustrasi) alih-alih layar merah error.
-  //
-  // ============================================================
-
-  Widget _buildPlanTripBanner(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      child: Container(
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: AppColors.lightBlue,
-        ),
-        // FIXED - layout diubah dari Stack (teks & ilustrasi saling
-        // tumpuk) jadi Row: teks di Expanded kiri (biar tombol gak
-        // overflow), ilustrasi diberi jatah lebar tetap di kanan
-        // supaya tidak lagi menimpa teks/tombol.
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 0, 16), // CHANGED - dirapatkan dari (20, 22, 0, 22)
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Waktunya atur perjalananmu!',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: AppColors.darkBlue,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 6), // CHANGED - dirapatkan dari 8
-                    const Text(
-                      'Buat itinerary sesuai destinasi & waktu yang kamu inginkan.',
-                      style: TextStyle(
-                        fontSize: 12, // CHANGED
-                        color: AppColors.greyText,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 10), // CHANGED - dirapatkan dari 14
-                    GestureDetector(
-                      onTap: () {
-                        if (!requireAuth(context, action: 'membuat rencana perjalanan')) return;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const TravelInformationScreen(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                'Ayo Buat Rencana!',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12, // CHANGED
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkBlue,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 6),
-                            Icon(Icons.arrow_forward, size: 14, color: AppColors.darkBlue),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ILUSTRASI -- diberi jatah lebar tetap di sisi kanan Row
-            // (bukan Positioned di atas teks lagi), jadi ukurannya
-            // dikecilkan ke 110 supaya proporsional dan gak makan
-            // ruang tombol.
-            Padding(
-              padding: const EdgeInsets.only(right: 16), // CHANGED - dirapatkan dari 20
-              child: Image.asset(
-                'assets/images/plan_trip_illustration.png',
-                width: 110, // CHANGED - dari 190 (Stack) jadi 110 (Row, sejajar teks)
-                errorBuilder: (context, error, stackTrace) =>
-                    const SizedBox(width: 110, height: 110),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCrowdSection(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 20), // CHANGED - disamakan jadi 20
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -723,7 +557,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           ValueListenableBuilder<List<CrowdPredictionModel>>(
             valueListenable: DestinationService.instance.crowdPredictions,
             builder: (context, predictions, _) {

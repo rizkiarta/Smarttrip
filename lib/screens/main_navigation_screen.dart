@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../theme/app_colors.dart';
 
 import 'home_screen.dart';
 import 'plan_screen.dart';
@@ -224,8 +225,8 @@ class _MainNavigationScreenState
 
               colorFilter: ColorFilter.mode(
                 isActive
-                    ? const Color(0xFF5CB3FF)
-                    : const Color(0xFF6D5555),
+                    ? AppColors.primaryBlue
+                    : AppColors.darkText,
                 BlendMode.srcIn,
               ),
             ),
@@ -242,8 +243,8 @@ class _MainNavigationScreenState
                     : FontWeight.w500,
 
                 color: isActive
-                    ? const Color(0xFF5CB3FF)
-                    : const Color(0xFF6D5555),
+                    ? AppColors.primaryBlue
+                    : AppColors.darkText,
               ),
             ),
           ],

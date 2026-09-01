@@ -54,35 +54,41 @@ class _PlanScreenState extends State<PlanScreen> {
   Widget _buildGuestScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Container(
-            height: 285,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // CHANGED - gradient & konten sekarang jadi SATU Container.
+          // Pakai `stops` biar warna birunya "selesai" jadi putih di
+          // sekitar tinggi header aja (~220px), lalu tetap putih rata
+          // sampai bawah -- bukan 2 kotak (biru + putih) yang ditumpuk
+          // terpisah kayak sebelumnya.
+          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45); // CHANGED - diperbesar dari 160 biar gradasinya turun sedikit lebih ke bawah
+          return Container(
             width: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(image: AssetImage('assets/images/background_header.png'), fit: BoxFit.cover),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [AppColors.primaryBlue, Colors.white],
+                stops: [0.0, headerStop],
+              ),
             ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(25, 30, 25, 0),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Rencana', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 5),
-                      Text('Kelola semua itinerary perjalananmu di Lampung', style: TextStyle(color: Colors.white, fontSize: 12)),
-                    ],
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch, // FIX - biar Padding header full width, ga di-center Column luar
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16), // CHANGED - disamain PERSIS 20 kaya padding horizontal list card
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Rencana', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w800)), // CHANGED - balik jadi putih
+                        SizedBox(height: 2),
+                        Text('Kelola semua itinerary perjalananmu di Lampung', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)), // CHANGED - balik jadi putih
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 35),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(42), topRight: Radius.circular(42))),
+                  Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36),
                       child: Column(
@@ -111,11 +117,11 @@ class _PlanScreenState extends State<PlanScreen> {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -131,155 +137,131 @@ class _PlanScreenState extends State<PlanScreen> {
       // ==========================================================
       // BODY
       // ==========================================================
-      body: Stack(
-        children: [
-          // ======================================================
-          // BLUE HEADER
-          // ======================================================
-
-          Container(
-            height: 285,
-            width: double.infinity,
-
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/background_header.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-
-          // ======================================================
-          // MAIN CONTENT
-          // ======================================================
-          SafeArea(
-            child: Column(
-              children: [
-                // ==================================================
-                // HEADER
-                // ==================================================
-
-                Container(
-                  width: double.infinity,
-
-                  padding: const EdgeInsets.fromLTRB(25, 30, 25, 0),
-
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // CHANGED - gradient & konten sekarang jadi SATU Container
+          // (pakai `stops` biar warna birunya "selesai" jadi putih di
+          // sekitar tinggi header aja, lalu tetap putih rata sampai
+          // bawah) -- bukan 2 kotak biru+putih yang ditumpuk terpisah.
+          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45); // CHANGED - diperbesar dari 160 biar gradasinya turun sedikit lebih ke bawah
+          return Stack(
+            children: [
+              // ======================================================
+              // BLUE HEADER + WHITE CONTENT (satu Container gradient)
+              // ======================================================
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: const [AppColors.primaryBlue, Colors.white],
+                    stops: [0.0, headerStop],
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch, // FIX - biar Padding header full width, ga di-center Column luar
                     children: [
-                      Text(
-                        'Rencana',
-
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
+                      // ==============================================
+                      // HEADER TEXT
+                      // ==============================================
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16), // CHANGED - disamain PERSIS 20 kaya padding horizontal list card
+                        child: const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Rencana',
+                              style: TextStyle(
+                                color: Colors.white, // CHANGED - balik jadi putih
+                                fontSize: 25,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Kelola semua itinerary perjalananmu di Lampung',
+                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600), // CHANGED - balik jadi putih
+                            ),
+                          ],
                         ),
                       ),
 
-                      SizedBox(height: 5),
-
-                      Text(
-                        'Kelola semua itinerary perjalananmu di Lampung',
-
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      // ==============================================
+                      // CONTENT
+                      // ==============================================
+                      //
+                      // Kalau belum ada itinerary, konten dibangun langsung
+                      // sebagai Expanded (bukan SingleChildScrollView) supaya
+                      // bisa pakai Spacer buat naruh isi di tengah -- persis
+                      // seperti TripScreen._buildEmptyState. Kalau sudah ada
+                      // isinya, tetap pakai SingleChildScrollView seperti
+                      // sebelumnya karena daftar itinerary bisa panjang dan
+                      // perlu bisa di-scroll.
+                      //
+                      // ==============================================
+                      Expanded(
+                        child: !hasItinerary
+                            ? _buildEmptyState(context)
+                            : SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(20, 16, 20, 90), // CHANGED - dikasih ruang lagi karena tombol tambah balik ngambang di bawah
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildItineraryList(context, savedItineraries),
+                                  ],
+                                ),
+                              ),
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 35),
-
-                // ==================================================
-                // WHITE CONTENT
-                // ==================================================
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(42),
-                        topRight: Radius.circular(42),
-                      ),
-                    ),
-
-                    // ==================================================
-                    // CONDITION
-                    // ==================================================
-                    //
-                    // Kalau belum ada itinerary, konten dibangun langsung
-                    // sebagai Expanded (bukan SingleChildScrollView) supaya
-                    // bisa pakai Spacer buat naruh isi di tengah -- persis
-                    // seperti TripScreen._buildEmptyState. Kalau sudah ada
-                    // isinya, tetap pakai SingleChildScrollView seperti
-                    // sebelumnya karena daftar itinerary bisa panjang dan
-                    // perlu bisa di-scroll.
-                    //
-                    // ==================================================
-                    child: !hasItinerary
-                        ? _buildEmptyState(context)
-                        : SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-
-                            padding: const EdgeInsets.fromLTRB(20, 32, 20, 110),
-
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-
-                              children: [
-                                _buildItineraryList(context, savedItineraries),
-                              ],
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ======================================================
-          // FLOATING ADD BUTTON
-          // ======================================================
-          if (hasItinerary)
-            Positioned(
-              right: 22,
-              bottom: 88,
-
-              child: GestureDetector(
-                onTap: () {
-                  if (!requireAuth(context, action: 'membuat itinerary baru')) return;
-                  _openTravelInformation(context);
-                },
-
-                child: Container(
-                  width: 48,
-                  height: 48,
-
-                  decoration: BoxDecoration(
-                    color: AppColors.darkBlue,
-
-                    shape: BoxShape.circle,
-
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-
-                        blurRadius: 8,
-
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-
-                  child: const Icon(Icons.add, color: Colors.white, size: 32),
                 ),
               ),
-            ),
-        ],
+
+              // ======================================================
+              // ADD BUTTON - balik ke posisi semula (kanan bawah)
+              // ======================================================
+              if (hasItinerary)
+                Positioned(
+                  right: 22,
+                  bottom: 22,
+
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!requireAuth(context, action: 'membuat itinerary baru')) return;
+                      _openTravelInformation(context);
+                    },
+
+                    child: Container(
+                      width: 48,
+                      height: 48,
+
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue,
+
+                        shape: BoxShape.circle,
+
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+
+                            blurRadius: 8,
+
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+
+                      child: const Icon(Icons.add, color: Colors.white, size: 26),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
 
       // ==========================================================

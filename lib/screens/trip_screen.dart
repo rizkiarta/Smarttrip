@@ -722,77 +722,61 @@ class _TripScreenState extends State<TripScreen> {
   // ============================================================
 
   Widget _buildEmptyState(BuildContext context) {
-    // Shell (header foto biru + judul/subjudul + sudut rounded 42)
-    // disamakan PERSIS dengan PlanScreen._buildScaffold, sesuai
-    // permintaan -- sebelumnya layar ini polos putih tanpa header
-    // sama sekali. Isi di dalamnya (icon, judul, deskripsi, tombol)
-    // tetap konten aslinya trip screen, cuma dibungkus shell yang
-    // sama.
+    // Background disamain PERSIS dengan PlanScreen: satu Container
+    // gradient biru->putih yang stop-nya dihitung dinamis dari tinggi
+    // layar (headerStop), bukan lagi foto header tinggi 285 + kotak
+    // putih rounded 42 terpisah kayak sebelumnya.
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // ======================================================
-          // BLUE HEADER (sama persis dengan PlanScreen)
-          // ======================================================
-
-          Container(
-            height: 285,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          return Container(
             width: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/background_header.png'),
-                fit: BoxFit.cover,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [AppColors.primaryBlue, Colors.white],
+                stops: [0.0, headerStop],
               ),
             ),
-          ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ==================================================
+                  // HEADER TEXT
+                  // ==================================================
 
-          SafeArea(
-            child: Column(
-              children: [
-                // ==================================================
-                // HEADER TEXT
-                // ==================================================
-
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(25, 30, 25, 0),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Trip',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Trip',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 5),
-                      Text(
-                        'Pantau perjalananmu yang sedang berlangsung',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 35),
-
-                // ==================================================
-                // WHITE CONTENT (rounded 42, sama dengan PlanScreen)
-                // ==================================================
-
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(42),
-                        topRight: Radius.circular(42),
-                      ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Pantau perjalananmu yang sedang berlangsung',
+                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
+                  ),
+
+                  // ==================================================
+                  // CONTENT
+                  // ==================================================
+
+                  Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36),
                       child: Column(
@@ -874,11 +858,11 @@ class _TripScreenState extends State<TripScreen> {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -886,18 +870,26 @@ class _TripScreenState extends State<TripScreen> {
   Widget _buildGuestState(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Container(height: 285, width: double.infinity, decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/background_header.png'), fit: BoxFit.cover))),
-          SafeArea(
-            child: Column(
-              children: [
-                Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(25, 30, 25, 0), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Trip', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('Pantau perjalananmu yang sedang berlangsung', style: TextStyle(color: Colors.white, fontSize: 12))])),
-                const SizedBox(height: 35),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(42), topRight: Radius.circular(42))),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final headerStop = (220 / constraints.maxHeight).clamp(0.05, 0.45);
+          return Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [AppColors.primaryBlue, Colors.white],
+                stops: [0.0, headerStop],
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 16), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Trip', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w800)), SizedBox(height: 2), Text('Pantau perjalananmu yang sedang berlangsung', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))])),
+                  Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36),
                       child: Column(
@@ -915,11 +907,11 @@ class _TripScreenState extends State<TripScreen> {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
