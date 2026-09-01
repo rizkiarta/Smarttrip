@@ -503,6 +503,13 @@ class _PlanScreenState extends State<PlanScreen> {
       }
     }
 
+    // "X Hari" -- disamakan dengan HistoryScreen: setiap elemen list
+    // itinerary = satu hari.
+    final int totalDays = itinerary.length;
+
+    // Kota tujuan -- disamakan dengan HistoryScreen._cityOf.
+    final String cityText = _cityOf(itinerary);
+
     return Column(
       children: [
         // ======================================================
@@ -633,78 +640,45 @@ class _PlanScreenState extends State<PlanScreen> {
                       const SizedBox(height: 9),
 
                       // =============================================
-                      // DATE + DESTINATION + PEOPLE
+                      // KOTA TUJUAN + TANGGAL + CHIP HARI/DESTINASI
                       // =============================================
                       //
-                      // Sebelumnya ketiga info ini digabung jadi satu
-                      // baris dipisah titik ("15 Jan • 3 Destinasi •
-                      // 2 Orang") -- gampang kepotong/susah dibaca kalau
-                      // teksnya panjang. Sekarang disusun ke bawah,
-                      // satu info per baris dengan ikon kecil di depan,
-                      // supaya lebih enak dipindai matanya.
+                      // Disamakan dengan HistoryScreen._buildHistoryCard
+                      // supaya info yang ditampilkan konsisten di kedua
+                      // tab (Rencana & Riwayat) -- bentuk card ini
+                      // sendiri (gambar besar di atas, dst) tidak
+                      // diubah, cuma kontennya yang disamakan.
                       // =============================================
+
+                      if (cityText.isNotEmpty) ...[
+                        _buildInfoRow(
+                          icon: Icons.place_outlined,
+                          text: cityText,
+                        ),
+
+                        const SizedBox(height: 6),
+                      ],
 
                       _buildInfoRow(
                         icon: Icons.calendar_today_outlined,
                         text: dateRangeText,
                       ),
 
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
 
-                      _buildInfoRow(
-                        icon: Icons.place_outlined,
-                        text: '$totalDestinations Destinasi',
+                      Row(
+                        children: [
+                          _buildInfoChip(
+                            Icons.access_time_rounded,
+                            '$totalDays Hari',
+                          ),
+                          const SizedBox(width: 6),
+                          _buildInfoChip(
+                            Icons.place_outlined,
+                            '$totalDestinations Destinasi',
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 6),
-
-                      _buildInfoRow(
-                        icon: Icons.people_outline,
-                        text: _formatParticipants(itinerary),
-                      ),
-
-                      // =============================================
-                      // BUDGET
-                      // =============================================
-                      //
-                      // Field 'budget' sebenarnya TIDAK PERNAH diisi di
-                      // manapun sepanjang alur (TravelInformationScreen
-                      // -> ManualScheduleScreen/AIItineraryScreen), dan
-                      // destinations_data.dart juga tidak punya data
-                      // harga apa pun untuk dihitung. Sebelumnya box ini
-                      // selalu menampilkan angka hardcode 'Rp. 5.100.000'
-                      // yang sama sekali tidak sesuai itinerary yang
-                      // sebenarnya -- jadi sekarang box ini disembunyikan
-                      // kalau memang belum ada data budget beneran,
-                      // daripada menampilkan angka yang salah/palsu.
-                      if (itinerary.isNotEmpty &&
-                          itinerary.first['budget'] != null &&
-                          itinerary.first['budget'].toString().trim().isNotEmpty) ...[
-                        const SizedBox(height: 10),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6, // CHANGED - padding menyesuaikan font yang lebih besar
-                          ),
-
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE5F4FF),
-
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-
-                          child: Text(
-                            'Estimasi Budget:  ${itinerary.first['budget']}',
-
-                            style: const TextStyle(
-                              fontSize: 12, // CHANGED - font terkecil jadi 12
-                              color: AppColors.darkBlue,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -843,6 +817,79 @@ class _PlanScreenState extends State<PlanScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ================================================================
+  // KOTA TUJUAN -- ikut destinasi pertama di itinerary. Disamakan
+  // persis dengan HistoryScreen._cityOf supaya info kota yang tampil
+  // di kartu Rencana konsisten dengan kartu Riwayat.
+  // ================================================================
+
+  String _cityOf(List<Map<String, dynamic>> itinerary) {
+    for (final day in itinerary) {
+      final dynamic destinations = day['destinations'];
+      if (destinations is List) {
+        for (final dest in destinations) {
+          if (dest is Map) {
+            for (final key in ['city', 'kota', 'city_name', 'location']) {
+              final val = dest[key]?.toString().trim();
+              if (val != null && val.isNotEmpty && val != 'null') {
+                return val;
+              }
+            }
+            final String destId = dest['id']?.toString() ?? '';
+            final String destName = dest['name']?.toString() ?? '';
+            final liveDest = findDestinationById(destId) ?? findDestinationByName(destName);
+            if (liveDest != null) {
+              for (final key in ['city', 'kota', 'city_name', 'location']) {
+                final val = liveDest[key]?.trim();
+                if (val != null && val.isNotEmpty) {
+                  return val;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return '';
+  }
+
+  // ================================================================
+  // CHIP KECIL UNTUK INFO "X Hari" / "Y Destinasi" -- disamakan persis
+  // dengan HistoryScreen._buildInfoChip.
+  // ================================================================
+
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+
+      decoration: BoxDecoration(
+        color: AppColors.primaryBlue.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          Icon(icon, size: 13, color: AppColors.primaryBlue),
+
+          const SizedBox(width: 4),
+
+          Text(
+            label,
+
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -36,4 +36,7 @@ class AppColors {
 
   // Netral lain
   static const Color doneGrey = Color(0xFFBFBFBF);
+
+  // Rating
+  static const Color starGold = Color(0xFFFFB300);
 }

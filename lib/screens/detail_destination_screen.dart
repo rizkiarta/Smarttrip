@@ -20,26 +20,10 @@ class DetailDestinationScreen extends StatefulWidget {
   final double? latitude;
   final double? longitude;
 
-  // ============================================================
-  // GALLERY IMAGES (opsional)
-  //
-  // Kalau destinasi punya lebih dari 1 foto, isi list ini saat
-  // memanggil DetailDestinationScreen, contoh:
-  //   galleryImages: [
-  //     'assets/images/danau_ranau.jpg',
-  //     'assets/images/danau_ranau_2.jpg',
-  //   ]
-  // ============================================================
-
+  // Daftar foto tambahan jika destinasi punya lebih dari 1 gambar.
   final List<String>? galleryImages;
 
-  // ============================================================
-  // DESTINATION ID (opsional)
-  //
-  // Dipakai supaya LoveButton & backend API mencatat favorit dengan ID
-  // yang konsisten.
-  // ============================================================
-
+  // Dipakai LoveButton & backend API untuk mencatat favorit secara konsisten.
   final String? destinationId;
 
   const DetailDestinationScreen({
@@ -63,16 +47,11 @@ class DetailDestinationScreen extends StatefulWidget {
 
 class _DetailDestinationScreenState
     extends State<DetailDestinationScreen> {
-  // ============================================================
-  // FALLBACK COORDINATE (pusat Lampung, dipakai jika destinasi
-  // belum punya koordinat sendiri)
-  // ============================================================
+  // Pusat Lampung, dipakai jika destinasi belum punya koordinat sendiri.
 
   static const LatLng _fallbackLocation = LatLng(-5.3971, 105.2668);
 
-  // ============================================================
   // CROWD PREDICTION DATA (per hari)
-  // ============================================================
 
   static const List<String> _dayOptions = [
     'Senin',
@@ -110,22 +89,14 @@ class _DetailDestinationScreenState
   // tooltip yang tampil).
   int? _tappedBarIndex;
 
-  // ============================================================
-  // TODAY HELPER
-  // ============================================================
-  //
-  // DateTime.weekday: 1 = Senin ... 7 = Minggu, urutannya sudah
-  // sama persis dengan _dayOptions jadi tinggal (weekday - 1).
-  // ============================================================
+  // DateTime.weekday: 1 = Senin ... 7 = Minggu, sama urutannya dengan _dayOptions.
 
   static String _todayName() {
     final int todayIndex = DateTime.now().weekday - 1;
     return _dayOptions[todayIndex];
   }
 
-  // ============================================================
   // ROLLING DAY OPTIONS (hari ini selalu di paling kiri)
-  // ============================================================
 
   List<String> _rollingDayOptions() {
     final int todayIndex = DateTime.now().weekday - 1;
@@ -144,17 +115,7 @@ class _DetailDestinationScreenState
   List<Map<String, dynamic>> _dbReviews = [];
   Map<String, dynamic>? _crowdPredictionData;
 
-  // ============================================================
-  // RESOLVED DESTINATION ID
-  // ============================================================
-  //
-  // Prioritas: widget.destinationId (kalau pemanggil sudah kirim)
-  // -> cari lewat findDestinationByName(widget.name) sebagai
-  // fallback -> kalau tetap tidak ketemu, pakai widget.name apa
-  // adanya supaya LoveButton tetap bisa dipakai (statusnya cuma
-  // tidak akan sinkron dengan data pusat kalau sampai ke sini).
-  // ============================================================
-
+  // Prioritas: destinationId dari pemanggil -> cari via findDestinationByName -> fallback ke nama.
   late final String _destinationId =
       widget.destinationId ??
       findDestinationByName(widget.name)?['id'] ??
@@ -164,6 +125,7 @@ class _DetailDestinationScreenState
   void initState() {
     super.initState();
     _fetchDestinationBackendDetails();
+    _fetchDestinationReviews();
   }
 
   Future<void> _fetchDestinationBackendDetails() async {
@@ -181,11 +143,6 @@ class _DetailDestinationScreenState
             if (data['gallery'] is List) {
               _galleryImages = (data['gallery'] as List).map((e) => e.toString()).toList();
             }
-            if (data['reviews'] is List) {
-              _dbReviews = (data['reviews'] as List)
-                  .map((e) => Map<String, dynamic>.from(e as Map))
-                  .toList();
-            }
           });
         }
       }
@@ -202,6 +159,33 @@ class _DetailDestinationScreenState
       debugPrint('Fetch destination details error: $e');
     }
   }
+
+  // Ambil ulasan dari endpoint khusus (sama seperti ReviewScreen) agar
+  // data likes/liked konsisten dan tombol like berfungsi dengan benar.
+  Future<void> _fetchDestinationReviews() async {
+    try {
+      final String safeId = Uri.encodeComponent(_destinationId);
+      final res = await ApiService.instance.get('destinations/$safeId/reviews');
+      if (res['data'] is List) {
+        final list = (res['data'] as List).map(_mapReview).toList();
+        if (mounted) setState(() => _dbReviews = list);
+      }
+    } catch (e) {
+      debugPrint('Fetch destination reviews error: $e');
+    }
+  }
+
+  Map<String, dynamic> _mapReview(dynamic r) => {
+    'id': r['id'],
+    'avatar': r['user_avatar'],
+    'name': r['user_name'] ?? 'Pengguna SmartTrip',
+    'rating': (r['rating'] as num?)?.toDouble() ?? 5.0,
+    'time': r['created_at'] ?? 'Baru saja',
+    'text': r['review_text'] ?? '',
+    'likes': (r['likes_count'] ?? 0).toString(),
+    'liked': r['liked'] == true,
+    'photos': r['photos'] is List ? List<String>.from(r['photos']) : <String>[],
+  };
 
   List<int> _getCrowdLevelsForDay(String day) {
     if (_crowdPredictionData != null) {
@@ -226,9 +210,7 @@ class _DetailDestinationScreenState
     return _crowdData[day] ?? [0, 0, 1, 1, 1, 0, 0];
   }
 
-  // ============================================================
   // CROWD LEVEL LABEL & COLOR (dipakai untuk tooltip batang)
-  // ============================================================
 
   String _statusLabelForLevel(int level) {
     switch (level) {
@@ -267,23 +249,17 @@ class _DetailDestinationScreenState
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // ========================================================
       // BODY
-      // ========================================================
 
       body: Stack(
         children: [
-          // ====================================================
           // MAIN SCROLL
-          // ====================================================
 
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
-                // ==================================================
                 // HERO IMAGE
-                // ==================================================
 
                 Stack(
                   children: [
@@ -297,9 +273,7 @@ class _DetailDestinationScreenState
                     ),
 
 
-                    // ==================================================
                     // BACK BUTTON
-                    // ==================================================
 
                     Positioned(
                       top: 50,
@@ -324,9 +298,7 @@ class _DetailDestinationScreenState
                       ),
                     ),
 
-                    // ==================================================
                     // LOVE BUTTON (SIMPAN DESTINASI)
-                    // ==================================================
 
                     Positioned(
                       top: 50,
@@ -339,9 +311,7 @@ class _DetailDestinationScreenState
                   ],
                 ),
 
-                // ==================================================
                 // WHITE CONTENT
-                // ==================================================
 
                 Transform.translate(
                   offset: const Offset(0, -45),
@@ -361,49 +331,37 @@ class _DetailDestinationScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ==================================================
                         // DESTINATION INFORMATION
-                        // ==================================================
 
                         _buildDestinationHeader(),
 
                         const SizedBox(height: 20),
 
-                        // ==================================================
                         // DESCRIPTION
-                        // ==================================================
 
                         _buildDescription(),
 
                         const SizedBox(height: 20),
 
-                        // ==================================================
                         // GALLERY
-                        // ==================================================
 
                         _buildGallery(context),
 
                         const SizedBox(height: 20),
 
-                        // ==================================================
                         // CROWD PREDICTION
-                        // ==================================================
 
                         _buildCrowdPrediction(),
 
                         const SizedBox(height: 20),
 
-                        // ==================================================
                         // ROUTE BUTTON
-                        // ==================================================
 
                         _buildRouteButton(context),
 
                         const SizedBox(height: 20),
 
-                        // ==================================================
                         // REVIEWS
-                        // ==================================================
 
                         _buildReviews(context),
                       ],
@@ -418,9 +376,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // DESTINATION HEADER
-  // ============================================================
 
   Widget _buildDestinationHeader() {
     return Padding(
@@ -447,7 +403,7 @@ class _DetailDestinationScreenState
                 children: [
                   const Icon(
                     Icons.star,
-                    color: AppColors.darkBlue,
+                    color: AppColors.starGold,
                     size: 18,
                   ),
 
@@ -513,9 +469,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // DESCRIPTION
-  // ============================================================
 
   Widget _buildDescription() {
     return Padding(
@@ -535,9 +489,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // GALLERY
-  // ============================================================
 
   Widget _buildGallery(BuildContext context) {
     final List<String> galleryImages = _galleryImages.isNotEmpty
@@ -568,9 +520,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // GALLERY IMAGE
-  // ============================================================
 
   Widget _buildGalleryImage(
     BuildContext context,
@@ -597,9 +547,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // SHOW GALLERY PREVIEW
-  // ============================================================
 
   void _showGalleryPreview(
     BuildContext context,
@@ -618,9 +566,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // CROWD PREDICTION
-  // ============================================================
 
   Widget _buildCrowdPrediction() {
     final List<int> levels = _getCrowdLevelsForDay(_selectedDay);
@@ -644,9 +590,7 @@ class _DetailDestinationScreenState
       ),
       child: Column(
         children: [
-          // ==================================================
           // TITLE + DROPDOWN
-          // ==================================================
 
           const Row(
             children: [
@@ -665,29 +609,19 @@ class _DetailDestinationScreenState
 
           const SizedBox(height: 16),
 
-          // ==================================================
           // DAY SELECTOR (SCROLLABLE)
-          // ==================================================
 
           _buildDaySelector(),
 
           const SizedBox(height: 16),
 
-          // ==================================================
           // GRAPH
-          // ==================================================
 
           SizedBox(
             height: 180,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // ==========================================
-                // Posisi label jam dihitung dari lebar asli
-                // widget (bukan angka tebakan), supaya tidak
-                // pernah bertabrakan di lebar layar berapa pun.
-                // Nilainya harus selaras dengan konstanta
-                // left/right pada _CrowdChartPainter.
-                // ==========================================
+                // Posisi label jam dihitung dari lebar widget asli, harus selaras dengan konstanta left/right di _CrowdChartPainter.
 
                 const double graphLeft = 85;
                 const double graphRight = 5;
@@ -771,10 +705,7 @@ class _DetailDestinationScreenState
                           ),
                         ),
 
-                      // ==========================================
-                      // TAP ZONES (satu per batang, area penuh
-                      // dari atas sampai bawah grafik)
-                      // ==========================================
+                      // TAP ZONES: satu per batang, area penuh dari atas sampai bawah grafik
 
                       for (int i = 0; i < barCount; i++)
                         Positioned(
@@ -802,9 +733,7 @@ class _DetailDestinationScreenState
                           ),
                         ),
 
-                      // ==========================================
                       // TOOLTIP (muncul di atas batang yang dipencet)
-                      // ==========================================
 
                       if (_tappedBarIndex != null &&
                           _tappedBarIndex! < barCount)
@@ -863,9 +792,7 @@ class _DetailDestinationScreenState
 
           const SizedBox(height: 16),
 
-          // ==================================================
           // RECOMMENDED TIME (di dalam kotak yang sama)
-          // ==================================================
 
           _buildRecommendedTime(),
         ],
@@ -873,14 +800,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
-  // DAY SELECTOR (SCROLLABLE CHIPS)
-  // ============================================================
-  //
-  // Diganti dari dropdown (PopupMenuButton) menjadi daftar hari
-  // yang bisa digeser horizontal. Tap salah satu chip akan
-  // langsung mengganti chart kepadatan sesuai hari yang dipilih.
-  // ============================================================
+  // Chip hari yang bisa digeser horizontal, menggantikan dropdown lama.
 
   Widget _buildDaySelector() {
     final List<String> orderedDays = _rollingDayOptions();
@@ -963,9 +883,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // RECOMMENDED TIME
-  // ============================================================
 
   Widget _buildRecommendedTime() {
     final _CrowdSummary summary =
@@ -1049,9 +967,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // CROWD SUMMARY (untuk badge + saran waktu, mengikuti hari terpilih)
-  // ============================================================
 
   _CrowdSummary _summaryFor(List<int> levels) {
     final List<int> ramaiIndices = [];
@@ -1104,9 +1020,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // ROUTE BUTTON
-  // ============================================================
 
   Widget _buildRouteButton(BuildContext context) {
     return Padding(
@@ -1179,11 +1093,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // REVIEWS
-  // ============================================================
-
-  final List<Map<String, dynamic>> _mockReviews = [];
 
   Widget _buildReviews(BuildContext context) {
     return Padding(
@@ -1249,20 +1159,10 @@ class _DetailDestinationScreenState
           const SizedBox(height: 16),
 
           if (_dbReviews.isNotEmpty)
-            ..._dbReviews.take(3).map((rev) {
+            ..._dbReviews.take(2).map((rev) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _buildReviewCard({
-                  'id': rev['id'],
-                  'avatar': rev['user_avatar'],
-                  'name': rev['user_name'] ?? 'Pengguna SmartTrip',
-                  'rating': (rev['rating'] as num?)?.toDouble() ?? 5.0,
-                  'time': rev['created_at'] ?? 'Baru saja',
-                  'text': rev['review_text'] ?? '',
-                  'likes': (rev['likes_count'] ?? 0).toString(),
-                  'liked': rev['liked'] == true,
-                  'photos': rev['photos'] is List ? List<String>.from(rev['photos']) : <String>[],
-                }),
+                child: _buildReviewCard(rev),
               );
             })
           else
@@ -1295,9 +1195,7 @@ class _DetailDestinationScreenState
     );
   }
 
-  // ============================================================
   // REVIEW CARD
-  // ============================================================
 
   Future<void> _toggleLike(Map<String, dynamic> review) async {
     if (!requireAuth(context, action: 'menyukai ulasan')) return;
@@ -1331,6 +1229,32 @@ class _DetailDestinationScreenState
     }
   }
 
+  Widget _buildPhotoImage(String path) {
+    return SmartImage(
+      imagePathOrUrl: path,
+      fit: BoxFit.cover,
+    );
+  }
+
+  void _openPhotoPreview(List<String> photos, int initialIndex) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return FadeTransition(
+            opacity: animation,
+            child: PhotoPreviewScreen(
+              photos: photos,
+              initialIndex: initialIndex,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildReviewCard(Map<String, dynamic> review) {
     final double rating = (review['rating'] as num?)?.toDouble() ?? 5.0;
     final String? avatarUrl = review['avatar'] as String?;
@@ -1339,36 +1263,35 @@ class _DetailDestinationScreenState
     final String text = review['text'] as String? ?? '';
     final String likes = review['likes']?.toString() ?? '0';
     final bool liked = review['liked'] as bool? ?? false;
+    final List<String> photos = review['photos'] is List
+        ? List<String>.from(review['photos'] as List)
+        : <String>[];
     final int fullStars = rating.floor();
     final bool hasHalfStar = (rating - fullStars) >= 0.5;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color:  AppColors.borderColor,
-        ),
+        border: Border.all(color: const Color(0xFFEAEAEA)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 7,
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         children: [
-          // ==================================================
           // USER
-          // ==================================================
 
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              buildAvatarImage(avatarUrl, size: 45),
-
+              buildAvatarImage(avatarUrl, size: 42),
 
               const SizedBox(width: 12),
 
@@ -1381,6 +1304,7 @@ class _DetailDestinationScreenState
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
                       ),
                     ),
 
@@ -1391,23 +1315,23 @@ class _DetailDestinationScreenState
                         if (index < fullStars) {
                           return const Icon(
                             Icons.star,
-                            color: AppColors.darkBlue,
-                            size: 16,
+                            color: AppColors.starGold,
+                            size: 15,
                           );
                         }
 
                         if (index == fullStars && hasHalfStar) {
                           return const Icon(
                             Icons.star_half,
-                            color: AppColors.darkBlue,
-                            size: 16,
+                            color: AppColors.starGold,
+                            size: 15,
                           );
                         }
 
                         return const Icon(
                           Icons.star_border,
-                          color: AppColors.darkBlue,
-                          size: 16,
+                          color: AppColors.starGold,
+                          size: 15,
                         );
                       }),
                     ),
@@ -1417,19 +1341,14 @@ class _DetailDestinationScreenState
 
               Text(
                 timeAgo,
-                style: const TextStyle(
-                  fontSize: 12, // CHANGED - font terkecil jadi 12
-                  color: AppColors.greyText,
-                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.greyText),
               ),
             ],
           ),
 
-          const SizedBox(height: 15),
+          const SizedBox(height: 12),
 
-          // ==================================================
           // REVIEW TEXT
-          // ==================================================
 
           Align(
             alignment: Alignment.centerLeft,
@@ -1443,15 +1362,43 @@ class _DetailDestinationScreenState
             ),
           ),
 
-          const SizedBox(height: 15),
+          // PHOTOS + LIKE (satu baris, foto kiri - like kanan)
 
-          // ==================================================
-          // LIKE
-          // ==================================================
+          const SizedBox(height: 12),
 
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              if (photos.isNotEmpty)
+                Expanded(
+                  child: SizedBox(
+                    height: 64,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      shrinkWrap: true,
+                      itemCount: photos.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () => _openPhotoPreview(photos, index),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: SizedBox(
+                              width: 64,
+                              height: 64,
+                              child: _buildPhotoImage(photos[index]),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+
+              const SizedBox(width: 10),
+
               GestureDetector(
                 onTap: () => _toggleLike(review),
                 behavior: HitTestBehavior.opaque,
@@ -1459,31 +1406,19 @@ class _DetailDestinationScreenState
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 38,
-                      height: 38,
+                      width: 34,
+                      height: 34,
                       decoration: BoxDecoration(
-                        color: liked
-                            ? AppColors.primaryBlue.withValues(alpha: 0.12)
-                            : Colors.white,
+                        color: Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: liked
-                              ? AppColors.primaryBlue
-                              :  AppColors.borderColor,
+                          color: AppColors.borderColor,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: 0.04,
-                            ),
-                            blurRadius: 5,
-                          ),
-                        ],
                       ),
                       child: Icon(
                         liked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                        color: liked ? AppColors.primaryBlue : AppColors.darkBlue,
-                        size: 18,
+                        color: liked ? AppColors.primaryBlue : AppColors.mutedText,
+                        size: 16,
                       ),
                     ),
 
@@ -1495,7 +1430,7 @@ class _DetailDestinationScreenState
                         fontSize: 12,
                         fontWeight:
                             liked ? FontWeight.w700 : FontWeight.normal,
-                        color: liked ? AppColors.primaryBlue : AppColors.greyText,
+                        color: AppColors.greyText,
                       ),
                     ),
                   ],
@@ -1509,9 +1444,7 @@ class _DetailDestinationScreenState
   }
 }
 
-// ================================================================
 // CROWD SUMMARY (helper data class)
-// ================================================================
 
 class _CrowdSummary {
   final String rangeText;
@@ -1533,9 +1466,7 @@ class _CrowdSummary {
   });
 }
 
-// ================================================================
 // GALLERY PREVIEW
-// ================================================================
 
 class _GalleryPreview extends StatefulWidget {
   final List<String> images;
@@ -1577,9 +1508,7 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
       color: Colors.transparent,
       child: Stack(
         children: [
-          // ======================================================
           // FULLSCREEN IMAGE
-          // ======================================================
 
           PageView.builder(
             controller: _pageController,
@@ -1604,9 +1533,7 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
             },
           ),
 
-          // ======================================================
           // CLOSE BUTTON
-          // ======================================================
 
           Positioned(
             top: 45,
@@ -1631,9 +1558,7 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
             ),
           ),
 
-          // ======================================================
           // IMAGE COUNTER
-          // ======================================================
 
           Positioned(
             top: 52,
@@ -1658,9 +1583,7 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
             ),
           ),
 
-          // ======================================================
           // BOTTOM DOT INDICATOR
-          // ======================================================
 
           Positioned(
             bottom: 35,
@@ -1697,9 +1620,7 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
   }
 }
 
-// ================================================================
 // CROWD CHART PAINTER
-// ================================================================
 
 class _CrowdChartPainter extends CustomPainter {
   final List<int> levels;
@@ -1734,9 +1655,7 @@ class _CrowdChartPainter extends CustomPainter {
       ..color =  AppColors.fieldBorder
       ..strokeWidth = 1;
 
-    // ============================================================
     // GRAPH AREA
-    // ============================================================
 
     const double left = 85;
     const double right = 5;
@@ -1746,9 +1665,7 @@ class _CrowdChartPainter extends CustomPainter {
     final double graphWidth = size.width - left - right;
     final double graphHeight = size.height - top - bottom;
 
-    // ============================================================
     // HORIZONTAL GRID (garis Ramai / Sedang / Sepi)
-    // ============================================================
 
     for (int i = 0; i < 3; i++) {
       final double y = top + (graphHeight / 2) * i;
@@ -1762,9 +1679,7 @@ class _CrowdChartPainter extends CustomPainter {
 
     if (levels.isEmpty) return;
 
-    // ============================================================
     // BATANG (level 0 = pendek/Sepi, level 2 = penuh/Ramai)
-    // ============================================================
 
     final int n = levels.length;
     final double slotWidth = graphWidth / n;

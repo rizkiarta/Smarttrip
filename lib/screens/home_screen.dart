@@ -195,9 +195,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.notifications_none_rounded,
+                  Icons.notifications_outlined,
                   color: AppColors.primaryBlue,
-                  size: 26,
+                  size: 22,
                 ),
               ),
               if (unreadCount > 0)
@@ -496,7 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: AppColors.darkBlue, size: 15),
+                      const Icon(Icons.star, color: AppColors.starGold, size: 15),
                       const SizedBox(width: 4),
                       Text(
                         '${destination.rating.toStringAsFixed(1)} (${destination.reviewsCount} ulasan)',
@@ -734,7 +734,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: AppColors.darkBlue, size: 15),
+                      const Icon(Icons.star, color: AppColors.starGold, size: 15),
                       const SizedBox(width: 4),
                       Text(
                         '$ratingText ($reviewsText)',

@@ -106,6 +106,25 @@ class _ReviewScreenState extends State<ReviewScreen> {
     );
   }
 
+  void _openPhotoPreview(List<String> photos, int initialIndex) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return FadeTransition(
+            opacity: animation,
+            child: PhotoPreviewScreen(
+              photos: photos,
+              initialIndex: initialIndex,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
 
   List<Map<String, dynamic>> get _allReviews =>
       _serverReviews.isNotEmpty ? _serverReviews : _reviews;
@@ -275,7 +294,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
                   return Padding(
                     padding: const EdgeInsets.only(right: 2),
-                    child: Icon(icon, color: AppColors.primaryBlue, size: 18),
+                    child: Icon(icon, color: AppColors.starGold, size: 18),
                   );
                 }),
               ),
@@ -393,10 +412,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? AppColors.primaryBlue : Colors.white,
+          color: active ? AppColors.lightBlue : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: active ? AppColors.primaryBlue : const Color(0xFFE0E0E0),
+            color: const Color(0xFFE0E0E0),
           ),
         ),
         child: Row(
@@ -406,7 +425,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               Icon(
                 icon,
                 size: 14,
-                color: active ? Colors.white : AppColors.primaryBlue,
+                color: AppColors.starGold,
               ),
               const SizedBox(width: 4),
             ],
@@ -415,7 +434,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.darkText,
+                color: active ? AppColors.primaryBlue : AppColors.darkText,
               ),
             ),
           ],
@@ -517,6 +536,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           // ==================================================
 
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               buildAvatarImage(review['avatar'] as String?, size: 42),
 
@@ -543,7 +563,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         if (index < fullStars) {
                           return const Icon(
                             Icons.star,
-                            color: AppColors.darkBlue,
+                            color: AppColors.starGold,
                             size: 15,
                           );
                         }
@@ -551,14 +571,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         if (index == fullStars && hasHalfStar) {
                           return const Icon(
                             Icons.star_half,
-                            color: AppColors.darkBlue,
+                            color: AppColors.starGold,
                             size: 15,
                           );
                         }
 
                         return const Icon(
                           Icons.star_border,
-                          color: AppColors.darkBlue,
+                          color: AppColors.starGold,
                           size: 15,
                         );
                       }),
@@ -593,40 +613,44 @@ class _ReviewScreenState extends State<ReviewScreen> {
           ),
 
           // ==================================================
-          // PHOTOS (opsional)
+          // PHOTOS + LIKE (satu baris, foto kiri - like kanan)
           // ==================================================
-
-          if (photos.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: List.generate(photos.length, (index) {
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: index == photos.length - 1 ? 0 : 8,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(
-                        aspectRatio: 1.3,
-                        child: _buildPhotoImage(photos[index]),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ],
 
           const SizedBox(height: 12),
 
-          // ==================================================
-          // LIKE
-          // ==================================================
-
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              if (photos.isNotEmpty)
+                Expanded(
+                  child: SizedBox(
+                    height: 64,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      shrinkWrap: true,
+                      itemCount: photos.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () => _openPhotoPreview(photos, index),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: SizedBox(
+                              width: 64,
+                              height: 64,
+                              child: _buildPhotoImage(photos[index]),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+
+              const SizedBox(width: 10),
+
               GestureDetector(
                 onTap: () => _toggleLike(review),
                 behavior: HitTestBehavior.opaque,
@@ -637,19 +661,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: liked
-                            ? AppColors.primaryBlue.withValues(alpha: 0.12)
-                            : Colors.white,
+                        color: Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: liked
-                              ? AppColors.primaryBlue
-                              :  AppColors.borderColor,
+                          color: AppColors.borderColor,
                         ),
                       ),
                       child: Icon(
                         liked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                        color: liked ? AppColors.primaryBlue : AppColors.darkBlue,
+                        color: liked ? AppColors.primaryBlue : AppColors.mutedText,
                         size: 16,
                       ),
                     ),
@@ -662,7 +682,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         fontSize: 12,
                         fontWeight:
                             liked ? FontWeight.w700 : FontWeight.normal,
-                        color: liked ? AppColors.primaryBlue : AppColors.greyText,
+                        color: AppColors.greyText,
                       ),
                     ),
                   ],
@@ -704,7 +724,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryBlue,
-            foregroundColor: AppColors.darkBlue,
+            foregroundColor: AppColors.whiteText,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
@@ -992,7 +1012,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                               starValue <= selectedRating
                                   ? Icons.star
                                   : Icons.star_border,
-                              color: AppColors.primaryBlue,
+                              color: AppColors.starGold,
                               size: 34,
                             ),
                           ),
@@ -1019,7 +1039,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     const SizedBox(height: 18),
 
                     const Text(
-                      'Tambahkan foto (opsional)',
+                      'Tambahkan foto (opsional, maks. 5)',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -1043,10 +1063,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         onPressed: () async {
                           final String reviewText = textController.text.trim();
 
-                          if (reviewText.isEmpty && selectedPhotos.isEmpty) {
+                          // Hanya wajib isi teks ulasan. Foto bersifat opsional.
+                          if (reviewText.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Isi ulasan atau tambahkan foto terlebih dahulu.'),
+                                content: Text('Isi ulasan terlebih dahulu.'),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -1125,7 +1146,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
-                          foregroundColor: AppColors.darkBlue,
+                          foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
@@ -1147,6 +1168,113 @@ class _ReviewScreenState extends State<ReviewScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+// ============================================================
+// FULLSCREEN PHOTO PREVIEW
+// ============================================================
+
+class PhotoPreviewScreen extends StatefulWidget {
+  final List<String> photos;
+  final int initialIndex;
+
+  const PhotoPreviewScreen({
+    super.key,
+    required this.photos,
+    required this.initialIndex,
+  });
+
+  @override
+  State<PhotoPreviewScreen> createState() => _PhotoPreviewScreenState();
+}
+
+class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.photos.length,
+            onPageChanged: (index) => setState(() => _currentIndex = index),
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                minScale: 1,
+                maxScale: 4,
+                child: Center(
+                  child: SmartImage(
+                    imagePathOrUrl: widget.photos[index],
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Tombol close
+          Positioned(
+            top: 12,
+            right: 12,
+            child: SafeArea(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ),
+
+          // Indikator "2/5" kalau foto lebih dari 1
+          if (widget.photos.length > 1)
+            Positioned(
+              top: 20,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1}/${widget.photos.length}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -708,9 +708,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
-                        // Kasih jarak kanan biar teks judul nggak
-                        // ketiban ikon titik-tiga yang sekarang
-                        // posisinya absolute di pojok kanan atas.
                         Padding(
                           padding: const EdgeInsets.only(right: 18),
                           child: Text(
@@ -787,9 +784,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                         const SizedBox(height: 8),
 
-                        // Info hari & destinasi ditampilkan sebagai chip
-                        // kecil biar lebih rapi & mudah dipindai matanya
-                        // dibanding teks polos dengan pemisah "•".
                         Row(
                           children: [
                             _buildInfoChip(
@@ -839,17 +833,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ================================================================
-  // KOTA TUJUAN -- ikut destinasi pertama di itinerary (sama polanya
-  // dengan _cardImagePath). Kalau data destinasi punya field kota
-  // (city/kota/location), field itu yang dipakai; kalau tidak ada,
-  // baris kota disembunyikan (lihat `if (cityText.isNotEmpty)` di
-  // _buildHistoryCard).
-  //
-  // CATATAN: nama field belum dicek langsung ke destinations_data.dart
-  // (file itu tidak ikut di-upload) -- kalau field aslinya beda nama,
-  // tinggal tambahkan ke daftar `keys` di bawah.
-  // ================================================================
 
   String _cityOf(List<Map<String, dynamic>> itinerary) {
     for (final day in itinerary) {
@@ -882,9 +865,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '';
   }
 
-  // ================================================================
-  // CHIP KECIL UNTUK INFO "X Hari" / "Y Destinasi" DI KARTU RIWAYAT
-  // ================================================================
 
   Widget _buildInfoChip(IconData icon, String label) {
     return Container(

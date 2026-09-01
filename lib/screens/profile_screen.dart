@@ -74,183 +74,200 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // ==================================================
-          // HEADER: BACKGROUND LANGIT + AVATAR + NAME
-          // ==================================================
-          //
-          // Diambil secara dinamis dari ProfileService supaya
-          // langsung sinkron begitu user mengubah nama/bio/foto
-          // lewat EditProfileScreen. buildAvatarImage() otomatis
-          // menangani foto default (network) maupun foto hasil
-          // kamera/galeri (file lokal).
-          //
-          // Background langit pakai foto yang sama dengan header
-          // PlanScreen/TripScreen (lihat _buildHeader di bawah).
-          // ==================================================
+      body: SafeArea(
+        top: false,
+        child: ValueListenableBuilder<ProfileData>(
+          valueListenable: ProfileService.instance.profile,
+          builder: (context, profileData, _) {
+            // ==================================================
+            // SEMUA jadi SATU ListView (header ikut ke-scroll),
+            // bukan header statis + list terpisah di bawahnya
+            // seperti sebelumnya.
+            // ==================================================
+            return ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.zero,
+              children: [
+                // ==============================================
+                // HEADER: BACKGROUND GRADASI + AVATAR + NAME
+                // ==============================================
+                //
+                // Diambil secara dinamis dari ProfileService supaya
+                // langsung sinkron begitu user mengubah nama/bio/foto
+                // lewat EditProfileScreen. buildAvatarImage() otomatis
+                // menangani foto default (network) maupun foto hasil
+                // kamera/galeri (file lokal).
+                // ==============================================
+                _buildHeader(context, profileData),
 
-          ValueListenableBuilder<ProfileData>(
-            valueListenable: ProfileService.instance.profile,
-            builder: (context, profileData, _) {
-              return _buildHeader(context, profileData);
-            },
-          ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(25, _sectionGap, 25, 30),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _sectionTitle('Profil Saya'),
+                      const SizedBox(height: _itemGap),
+                      _menuItem(
+                        context: context,
+                        icon: Icons.person_outline,
+                        label: 'Edit Profil',
+                        destinationBuilder: (context) {
+                          return const EditProfileScreen();
+                        },
+                      ),
 
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(25, 20, 25, 30),
-                children: [
-                  _sectionTitle('Profil Saya'),
-                  const SizedBox(height: 10),
-                  _menuItem(
-                    context: context,
-                    icon: Icons.person_outline,
-                    label: 'Edit Profil',
-                    destinationBuilder: (context) {
-                      return const EditProfileScreen();
-                    },
-                  ),
+                      const SizedBox(height: _sectionGap),
 
-                  const SizedBox(height: 22),
+                      _sectionTitle('Perjalanan'),
+                      const SizedBox(height: _itemGap),
+                      _menuItem(
+                        context: context,
+                        icon: Icons.favorite_border,
+                        label: 'Destinasi Favorit',
+                        destinationBuilder: (context) {
+                          return const FavoriteDestinationsScreen();
+                        },
+                      ),
+                      const SizedBox(height: _itemGap),
+                      _menuItem(
+                        context: context,
+                        icon: Icons.rate_review_outlined,
+                        label: 'Ulasan Saya',
+                        destinationBuilder: (context) {
+                          return const MyReviewsScreen();
+                        },
+                      ),
 
-                  _sectionTitle('Perjalanan'),
-                  const SizedBox(height: 10),
-                  _menuItem(
-                    context: context,
-                    icon: Icons.favorite_border,
-                    label: 'Destinasi Favorit',
-                    destinationBuilder: (context) {
-                      return const FavoriteDestinationsScreen();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _menuItem(
-                    context: context,
-                    icon: Icons.rate_review_outlined,
-                    label: 'Ulasan Saya',
-                    destinationBuilder: (context) {
-                      return const MyReviewsScreen();
-                    },
-                  ),
+                      const SizedBox(height: _sectionGap),
 
-                  const SizedBox(height: 22),
+                      _sectionTitle('Pengaturan'),
+                      const SizedBox(height: _itemGap),
+                      _menuItem(
+                        context: context,
+                        icon: Icons.language,
+                        label: 'Bahasa',
+                        destinationBuilder: (context) {
+                          return const LanguageScreen();
+                        },
+                      ),
+                      const SizedBox(height: _itemGap),
+                      _menuItem(
+                        context: context,
+                        icon: Icons.notifications_none,
+                        label: 'Pengaturan Notifikasi',
+                        destinationBuilder: (context) {
+                          return const NotificationSettingsScreen();
+                        },
+                      ),
+                      const SizedBox(height: _itemGap),
+                      _menuItem(
+                        context: context,
+                        icon: Icons.help_outline,
+                        label: 'Bantuan dan Pusat Informasi',
+                        destinationBuilder: (context) {
+                          return const HelpCenterScreen();
+                        },
+                      ),
 
-                  _sectionTitle('Pengaturan'),
-                  const SizedBox(height: 10),
-                  _menuItem(
-                    context: context,
-                    icon: Icons.language,
-                    label: 'Bahasa',
-                    destinationBuilder: (context) {
-                      return const LanguageScreen();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _menuItem(
-                    context: context,
-                    icon: Icons.notifications_none,
-                    label: 'Pengaturan Notifikasi',
-                    destinationBuilder: (context) {
-                      return const NotificationSettingsScreen();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _menuItem(
-                    context: context,
-                    icon: Icons.help_outline,
-                    label: 'Bantuan dan Pusat Informasi',
-                    destinationBuilder: (context) {
-                      return const HelpCenterScreen();
-                    },
-                  ),
+                      const SizedBox(height: _sectionGap),
 
-                  const SizedBox(height: 26),
+                      // ==========================================
+                      // KELUAR
+                      // ==========================================
 
-                  // ==============================================
-                  // KELUAR
-                  // ==============================================
+                      GestureDetector(
+                        onTap: () async {
+                          // Clear all user-scoped caches so next login doesn't see previous user's data
+                          ApiService.instance.setToken(null);
+                          ProfileService.instance.profile.value = const ProfileData(name: '', bio: 'Traveler', username: '', email: '', photoPath: null);
+                          SavedDestinationsService.instance.savedIds.value = <String>{};
+                          try { MyReviewsService.instance.reviews.value = <MyReviewEntry>[]; } catch (_) {}
+                          try { NotificationService.instance.notifications.value = []; NotificationService.instance.unreadCount.value = 0; } catch (_) {}
+                          try { SavedItineraryService.instance.itineraries.value = <List<Map<String, dynamic>>>[]; } catch (_) {}
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const SplashScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
 
-                  GestureDetector(
-                    onTap: () async {
-                      // Clear all user-scoped caches so next login doesn't see previous user's data
-                      ApiService.instance.setToken(null);
-                      ProfileService.instance.profile.value = const ProfileData(name: '', bio: 'Traveler', username: '', email: '', photoPath: null);
-                      SavedDestinationsService.instance.savedIds.value = <String>{};
-                      try { MyReviewsService.instance.reviews.value = <MyReviewEntry>[]; } catch (_) {}
-                      try { NotificationService.instance.notifications.value = []; NotificationService.instance.unreadCount.value = 0; } catch (_) {}
-                      try { SavedItineraryService.instance.itineraries.value = <List<Map<String, dynamic>>>[]; } catch (_) {}
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) => const SplashScreen(),
+                        child: Container(
+                          // Bentuk disamain persis dengan _menuItem lain
+                          // (card putih, border, shadow tipis, radius 15,
+                          // icon bulat di kiri + chevron di kanan) --
+                          // cuma warna icon-nya yang dibedain jadi merah
+                          // supaya tetap kebaca sebagai aksi "Keluar".
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: AppColors.borderColor),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.errorBg,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.logout, color: AppColors.errorRed, size: 18),
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              const Expanded(
+                                child: Text(
+                                  'Keluar',
+                                  style: TextStyle(fontSize: 12, color: AppColors.darkText),
+                                ),
+                              ),
+
+                              const Icon(Icons.chevron_right, color: AppColors.greyText, size: 20),
+                            ],
+                          ),
                         ),
-                        (route) => false,
-                      );
-                    },
-
-                    child: Container(
-                      // Bentuk disamain persis dengan _menuItem lain
-                      // (card putih, border, shadow tipis, radius 15,
-                      // icon bulat di kiri + chevron di kanan) --
-                      // cuma warna icon-nya yang dibedain jadi merah
-                      // supaya tetap kebaca sebagai aksi "Keluar".
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: AppColors.borderColor),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: const BoxDecoration(
-                              color: AppColors.errorBg,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.logout, color: AppColors.errorRed, size: 18),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          const Expanded(
-                            child: Text(
-                              'Keluar',
-                              style: TextStyle(fontSize: 12, color: AppColors.darkText),
-                            ),
-                          ),
-
-                          const Icon(Icons.chevron_right, color: AppColors.greyText, size: 20),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
   // ============================================================
+  // JARAK ANTAR SECTION -- SUPAYA KONSISTEN
+  // ============================================================
+  //
+  // _sectionGap: jarak antara section satu ke section berikutnya
+  // (mis. dari "Profil Saya" ke "Perjalanan"), juga dipakai untuk
+  // jarak dari header ke konten pertama.
+  // _itemGap: jarak antar item DALAM satu section (mis. antara
+  // "Destinasi Favorit" dan "Ulasan Saya").
+  // ============================================================
+
+  static const double _sectionGap = 20;
+  static const double _itemGap = 10;
+
+  // ============================================================
   // HEADER (BACKGROUND LANGIT + AVATAR + NAMA/BIO)
   // ============================================================
   //
-  // Background langit pakai assets/images/background_header.png,
-  // sama seperti header biru di PlanScreen/TripScreen. Kartu putih
+  // Background pakai gradasi AppColors.primaryBlue -> putih,
+  // sama seperti header biru di PlanScreen. Kartu putih
   // rounded (radius 42, disamakan juga) menimpa bagian bawahnya,
   // dan avatar diposisikan pas di garis batas keduanya (setengah
   // di atas langit, setengah masuk ke kartu putih).
@@ -269,7 +286,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   height: MediaQuery.of(context).padding.top + 140,
                   width: double.infinity,
-                  decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/background_header.png'), fit: BoxFit.cover)),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppColors.primaryBlue, Colors.white],
+                    ),
+                  ),
                 ),
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 70,
@@ -307,22 +330,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const double _skyHeight = 170;
   static const double _avatarSize = 136;
   // Seberapa jauh titik tengah avatar berada DI ATAS garis batas
-  // langit/kartu putih. Semakin kecil, semakin banyak avatar yang
-  // "tenggelam" ke kartu putih di bawahnya.
-  static const double _avatarCenterAboveCardTop = 30;
+  // gradasi. Dikecilkan sedikit (70 -> 50) biar jaraknya ga
+  // terlalu jauh dari status bar, tapi fotonya tetap naik ke atas.
+  static const double _avatarCenterAboveCardTop = 50;
 
   // ============================================================
-  // TINGGI KARTU PUTIH -- DISAMAKAN DENGAN PlanScreen/TripScreen
+  // SEBERAPA JAUH GRADASI TURUN
   // ============================================================
   //
   // SENGAJA dipisah dari perhitungan avatar (avatarTop/nameTop di
-  // bawah) supaya foto profil TIDAK ikut bergeser -- yang berubah
-  // cuma titik mulai kartu putihnya. Angka ini meniru tinggi blok
-  // header teks "Rencana"/"Trip" di PlanScreen/TripScreen sebelum
-  // kartu putihnya sendiri dimulai (lihat _buildScaffold di
-  // plan_screen.dart / trip_screen.dart): padding atas 30 + judul
-  // fontSize 28 bold + jarak 5 + subjudul fontSize 12 + jarak 35
-  // sebelum kartu putih.
+  // bawah) supaya foto profil TIDAK ikut bergeser kalau angka ini
+  // diubah -- yang berubah cuma seberapa jauh gradasi birunya
+  // turun sebelum jadi putih. Dikecilkan sedikit (190 -> 150)
+  // biar jaraknya ga terlalu jauh, tapi masih lebih ke bawah
+  // dibanding versi awal (118).
   //
   // Kalau di HP kamu ternyata masih selisih beberapa piksel (beda
   // rendering font Android/iOS), tinggal disesuaikan angka
@@ -330,7 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   //
   // ============================================================
 
-  static const double _whiteCardTop = 118;
+  static const double _whiteCardTop = 150;
 
   Widget _buildHeader(BuildContext context, ProfileData profileData) {
     final double statusBarHeight = MediaQuery.of(context).padding.top;
@@ -341,57 +362,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
         (_avatarSize / 2 - _avatarCenterAboveCardTop) +
         16;
 
-    return SizedBox(
-      height: statusBarHeight + nameTop + 80,
+    final double totalHeight = statusBarHeight + nameTop + 40;
+    final double headerStop =
+        ((statusBarHeight + _whiteCardTop) / totalHeight).clamp(0.05, 0.95);
+
+    return Container(
+      height: totalHeight,
+      width: double.infinity,
+      // ==============================================
+      // BACKGROUND GRADASI
+      // ==============================================
+      //
+      // SATU Container gradient (persis kaya PlanScreen) --
+      // ga ada lagi card putih rounded yang ditumpuk terpisah,
+      // jadi ga ada lengkungan kanan-kiri di tengah header.
+      // ==============================================
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: const [AppColors.primaryBlue, Colors.white],
+          stops: [0.0, headerStop],
+        ),
+      ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // ==============================================
-          // BACKGROUND LANGIT
-          // ==============================================
-          //
-          // Disamakan dengan header biru di PlanScreen/TripScreen:
-          // pakai foto assets/images/background_header.png, bukan
-          // gradient buatan, supaya konsisten satu app.
-          // ==============================================
-          Container(
-            height: statusBarHeight + _skyHeight,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/background_header.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-
-          // ==============================================
-          // KARTU PUTIH (rounded top)
-          // ==============================================
-          //
-          // top-nya pakai _whiteCardTop (SEJAJAR dengan PlanScreen/
-          // TripScreen), BUKAN lagi dari posisi avatar seperti
-          // sebelumnya -- avatar di bawah tetap di posisi yang
-          // sama persis, cuma jadi "tenggelam" sedikit lebih
-          // banyak/sedikit ke kartu putih dibanding sebelumnya.
-          //
-          // ==============================================
-          Positioned(
-            top: statusBarHeight + _whiteCardTop,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(42),
-                  topRight: Radius.circular(42),
-                ),
-              ),
-            ),
-          ),
-
           // ==============================================
           // AVATAR
           // ==============================================
