@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -45,6 +46,15 @@ import '../theme/app_colors.dart';
 //    total (mis. app ditutup), sesuai keputusan yang diambil.
 // - Titik awal SELALU dari lokasi GPS user saat ini (Geolocator),
 //   bukan startLatitude/startLongitude statis.
+//
+// 7. AUTO-DETEKSI SAMPAI VIA GPS: stop yang sedang dituju sekarang
+//    juga bisa ditandai "Sudah Sampai" TANPA tombol manual --
+//    _startAutoArrivalDetection berlangganan stream posisi GPS
+//    (Geolocator.getPositionStream) dan otomatis memanggil
+//    _markArrived() begitu jarak user ke koordinat stop <=
+//    _arrivalRadiusMeters. Cuma aktif kalau !widget.readOnly (mode
+//    navigasi aktif, bukan preview rute) -- lihat komentar di atas
+//    fungsi tsb untuk detail.
 //
 // 4. PILIHAN MODE KENDARAAN diubah: "Jalan Kaki" DIHAPUS, diganti
 //    "Motor" dan "Bus" -- jadi sekarang ada 3 pilihan: Mobil / Motor
@@ -263,6 +273,23 @@ class _RouteScreenState extends State<RouteScreen> {
   // di atas class.
   int _currentStopIndex = 0;
 
+  // ============================================================
+  // AUTO-DETEKSI SAMPAI VIA GPS -- lihat _startAutoArrivalDetection
+  // ============================================================
+
+  // Radius (meter) dari koordinat stop yang dianggap "sudah sampai"
+  // -- dilonggarkan dari 0 supaya toleran terhadap akurasi GPS
+  // ponsel biasa (biasanya 10-50m di luar ruangan, bisa lebih besar
+  // di dalam gedung/area padat).
+  static const double _arrivalRadiusMeters = 100;
+
+  // Jarak minimal (meter) user harus bergerak dari titik terakhir
+  // sebelum Geolocator push update posisi baru -- makin besar,
+  // makin hemat baterai, tapi makin lambat auto-deteksi bereaksi.
+  static const double _positionDistanceFilterMeters = 20;
+
+  StreamSubscription<Position>? _positionSubscription;
+
   // Diisi di initState lewat _resolveInitialTravelMode -- BUKAN
   // langsung di-default ke Mobil seperti sebelumnya, supaya mode
   // aktif awal sesuai kendaraan yang sudah dipilih user untuk trip
@@ -275,6 +302,7 @@ class _RouteScreenState extends State<RouteScreen> {
     super.initState();
     _travelMode = _resolveInitialTravelMode(widget.initialVehicle);
     _loadAllLegs();
+    _startAutoArrivalDetection();
   }
 
   // ============================================================
@@ -555,6 +583,11 @@ class _RouteScreenState extends State<RouteScreen> {
   // di sini murni ganti tampilan (tombol mana yang aktif), bukan
   // mengubah rute yang ditampilkan.
   //
+  // CATATAN: sejak tombol mode selain kendaraan asli trip didisable
+  // (lihat _buildModeButton), fungsi ini praktis tidak pernah dipanggil
+  // dengan mode baru lagi -- dipertahankan (bukan dihapus) supaya
+  // gampang di-restore kalau nanti toggle manual mau diaktifkan lagi.
+  //
   // ============================================================
 
   void _changeTravelMode(_TravelMode mode) {
@@ -590,9 +623,116 @@ class _RouteScreenState extends State<RouteScreen> {
       _currentStopIndex++;
     });
 
+    // Semua stop sudah sampai -- tidak ada lagi target yang perlu
+    // dicek, hentikan stream GPS supaya hemat baterai. Berlaku sama
+    // baik ditandai lewat tombol manual di sini maupun otomatis lewat
+    // _handlePositionUpdate.
+    if (_currentStopIndex >= widget.stops.length) {
+      _positionSubscription?.cancel();
+      _positionSubscription = null;
+    }
+
     // Kasih tau parent (TripScreen) supaya progress card & timeline
     // di sana ikut gerak -- lihat komentar widget.onStopIndexChanged.
     widget.onStopIndexChanged?.call(_currentStopIndex);
+  }
+
+  // ============================================================
+  // AUTO-DETEKSI SAMPAI DI DESTINASI VIA GPS
+  // ============================================================
+  //
+  // Selain tombol manual "Tandai Sudah Sampai", stop yang sedang
+  // dituju (widget.stops[_currentStopIndex]) sekarang JUGA otomatis
+  // ditandai "Sudah Sampai" begitu GPS user terdeteksi masuk radius
+  // _arrivalRadiusMeters dari koordinat stop tsb -- user tidak wajib
+  // buka app & tekan tombol tiap kali benar-benar sampai di suatu
+  // tempat.
+  //
+  // TIDAK aktif kalau widget.readOnly (layar dipakai sebagai preview
+  // rute dari ItineraryDetailScreen, bukan navigasi trip yang sedang
+  // berjalan -- lihat komentar widget.readOnly di atas class).
+  //
+  // Dipakai Geolocator.getPositionStream (BUKAN polling manual pakai
+  // Timer) supaya baterai lebih hemat -- OS cuma push update posisi
+  // baru kalau user sudah bergerak minimal
+  // _positionDistanceFilterMeters dari titik terakhir. Permission
+  // dicek dulu (izin lokasi bisa saja belum/tidak pernah diberikan,
+  // mis. kalau _determineOriginLocation tadi juga gagal dapat GPS) --
+  // kalau ditolak, auto-deteksi cuma dilewati diam-diam, user tetap
+  // bisa pakai tombol manual seperti biasa.
+  //
+  // ============================================================
+
+  Future<void> _startAutoArrivalDetection() async {
+    if (widget.readOnly) return;
+
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      if (!mounted) return;
+
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: _positionDistanceFilterMeters.toInt(),
+        ),
+      ).listen(_handlePositionUpdate);
+    } catch (e) {
+      debugPrint('⚠️ Auto-deteksi GPS gagal diaktifkan, fallback ke tombol manual saja: $e');
+    }
+  }
+
+  // Dipanggil tiap ada update posisi baru dari stream GPS. Cek jarak
+  // ke stop yang SEDANG dituju saja (bukan semua stop sekaligus) --
+  // konsisten dengan urutan kunjungan yang sama dipakai tombol manual
+  // (_markArrived), supaya stop tidak bisa "dilompati" cuma karena
+  // kebetulan posisinya juga dekat dengan stop belakangan.
+  void _handlePositionUpdate(Position position) {
+    if (!mounted) return;
+
+    if (_currentStopIndex >= widget.stops.length) {
+      // Semua stop sudah sampai (mis. ditandai manual duluan) --
+      // tidak ada lagi yang perlu dicek, stream harusnya sudah
+      // dihentikan dari _markArrived, tapi jaga-jaga saja.
+      _positionSubscription?.cancel();
+      _positionSubscription = null;
+      return;
+    }
+
+    final RouteStop targetStop = widget.stops[_currentStopIndex];
+    final double distanceMeters = _calculateDistanceMeters(
+      LatLng(position.latitude, position.longitude),
+      targetStop.coordinate,
+    );
+
+    if (distanceMeters > _arrivalRadiusMeters) return;
+
+    final String arrivedName = targetStop.name;
+    _markArrived();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Terdeteksi sudah sampai di $arrivedName -- otomatis ditandai selesai'),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _openInGoogleMaps() async {
@@ -1274,32 +1414,50 @@ class _RouteScreenState extends State<RouteScreen> {
   }) {
     final bool active = _travelMode == mode;
 
+    // ============================================================
+    // KUNCI TOMBOL KE KENDARAAN ASLI TRIP
+    // ============================================================
+    //
+    // Mode aktif awal (_travelMode, diisi dari widget.initialVehicle
+    // lewat _resolveInitialTravelMode) TIDAK BOLEH diganti user lewat
+    // toggle ini lagi -- kendaraan yang dipakai untuk trip sudah
+    // ditentukan sejak TravelInformationScreen, jadi 2 tombol lain di
+    // luar itu didisable (abu-abu, tidak merespons tap) supaya user
+    // tidak salah kira bisa ganti kendaraan trip dari sini.
+    //
+    // ============================================================
+
+    final bool disabled = !active;
+
     return GestureDetector(
-      onTap: () => _changeTravelMode(mode),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? AppColors.primaryBlue :  AppColors.lightGrey,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: active ? Colors.white : AppColors.greyText,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+      onTap: disabled ? null : () => _changeTravelMode(mode),
+      child: Opacity(
+        opacity: disabled ? 0.4 : 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: active ? AppColors.primaryBlue :  AppColors.lightGrey,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
                 color: active ? Colors.white : AppColors.greyText,
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : AppColors.greyText,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -285,6 +285,7 @@ class _DetailDestinationScreenState
                         child: Container(
                           width: 38,
                           height: 38,
+                          alignment: Alignment.center,
                           decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
@@ -292,7 +293,7 @@ class _DetailDestinationScreenState
                           child: const Icon(
                             Icons.chevron_left,
                             color: Color(0xFF555555),
-                            size: 30,
+                            size: 27,
                           ),
                         ),
                       ),
@@ -346,6 +347,14 @@ class _DetailDestinationScreenState
                         // GALLERY
 
                         _buildGallery(context),
+
+                        const SizedBox(height: 20),
+
+                        // HARGA / TIKET (percobaan — taruh sebelum
+                        // Prediksi Kepadatan, gampang dihapus kalau
+                        // konsepnya kurang cocok)
+
+                        _buildPriceInfo(),
 
                         const SizedBox(height: 20),
 
@@ -566,6 +575,112 @@ class _DetailDestinationScreenState
     );
   }
 
+  // HARGA / TIKET
+  // Labelnya adaptif: kalau destinasinya kemungkinan cafe/resto,
+  // dipakai "Kisaran Harga" (harga menu). Selain itu dianggap
+  // destinasi wisata, dipakai "Harga Tiket Masuk". Sumber angkanya
+  // tetap dari field yang sama (_priceRange, dari backend), cuma
+  // label & ikonnya yang beda.
+
+  bool _looksLikeFoodPlace() {
+    final String text = '${widget.name} ${widget.description}'.toLowerCase();
+    const List<String> foodKeywords = [
+      'cafe',
+      'kafe',
+      'resto',
+      'restoran',
+      'warung',
+      'coffee',
+      'kedai',
+    ];
+    return foodKeywords.any((keyword) => text.contains(keyword));
+  }
+
+  Widget _buildPriceInfo() {
+    final String? rawPriceOrNull = _priceRange?.trim();
+
+    // SEMENTARA (debug tampilan): kalau data belum ada dari
+    // backend, section tetap ditampilkan pakai placeholder, biar
+    // kelihatan dulu posisinya benar atau tidak. Nanti kalau
+    // datanya sudah pasti selalu ada, baris return SizedBox.shrink()
+    // di bawah ini bisa diaktifkan lagi supaya section otomatis
+    // hilang saat data kosong.
+    final bool hasPrice = rawPriceOrNull != null && rawPriceOrNull.isNotEmpty;
+    // if (!hasPrice) return const SizedBox.shrink();
+
+    final String rawPrice = hasPrice ? rawPriceOrNull : '';
+    final bool isFree = rawPrice.toLowerCase() == 'gratis' ||
+        rawPrice == '0' ||
+        rawPrice.toLowerCase() == 'rp0';
+
+    final bool isFoodPlace = _looksLikeFoodPlace();
+    final String title = isFoodPlace ? 'Kisaran Harga' : 'Harga Tiket Masuk';
+    final IconData icon =
+        isFoodPlace ? Icons.restaurant_menu : Icons.confirmation_number_outlined;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 7,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: AppColors.primaryBlue, size: 20),
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: !hasPrice ? 13 : 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.greyText,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  !hasPrice
+                      ? 'Informasi harga belum tersedia'
+                      : (isFree ? 'Gratis' : rawPrice),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: !hasPrice ? FontWeight.w500 : FontWeight.bold,
+                    color: !hasPrice
+                        ? AppColors.greyText
+                        : (isFree ? Colors.green : AppColors.darkText),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // CROWD PREDICTION
 
   Widget _buildCrowdPrediction() {
@@ -573,7 +688,7 @@ class _DetailDestinationScreenState
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -607,13 +722,13 @@ class _DetailDestinationScreenState
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 15),
 
           // DAY SELECTOR (SCROLLABLE)
 
           _buildDaySelector(),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 15),
 
           // GRAPH
 
@@ -636,11 +751,25 @@ class _DetailDestinationScreenState
                 final double slotWidth =
                     barCount == 0 ? 0 : graphWidth / barCount;
 
-                return CustomPaint(
-                  painter: _CrowdChartPainter(
-                    levels: levels,
-                    pressedIndex: _tappedBarIndex,
+                final List<double> levelsDouble =
+                    levels.map((e) => e.toDouble()).toList();
+
+                return TweenAnimationBuilder<List<double>>(
+                  tween: _CrowdLevelsTween(
+                    begin: levelsDouble,
+                    end: levelsDouble,
                   ),
+                  duration: const Duration(milliseconds: 1000),
+                  curve: Curves.linear,
+                  builder: (context, animatedHeights, child) {
+                    return CustomPaint(
+                      painter: _CrowdChartPainter(
+                        animatedHeights: animatedHeights,
+                        pressedIndex: _tappedBarIndex,
+                      ),
+                      child: child,
+                    );
+                  },
                   child: Stack(
                     children: [
                       // RAMAI
@@ -790,7 +919,7 @@ class _DetailDestinationScreenState
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 15),
 
           // RECOMMENDED TIME (di dalam kotak yang sama)
 
@@ -857,8 +986,9 @@ class _DetailDestinationScreenState
                   Text(
                     day,
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: active ? FontWeight.bold : FontWeight.w600,
+                      fontSize: 12,
+                      fontWeight:
+                          active ? FontWeight.bold : FontWeight.normal,
                       color: active ? Colors.white : AppColors.greyText,
                     ),
                   ),
@@ -891,10 +1021,7 @@ class _DetailDestinationScreenState
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 16,
-      ),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: summary.containerBackground,
         borderRadius: BorderRadius.circular(15),
@@ -1620,32 +1747,65 @@ class _GalleryPreviewState extends State<_GalleryPreview> {
   }
 }
 
+// TWEEN untuk animasi transisi tinggi bar chart (naik/turun) saat
+// hari dipindah. Melakukan interpolasi elemen-per-elemen antara
+// level hari lama dan level hari baru.
+
+class _CrowdLevelsTween extends Tween<List<double>> {
+  _CrowdLevelsTween({required List<double> begin, required List<double> end})
+      : super(begin: begin, end: end);
+
+  // Skala maksimum data (level 0 = Sepi ... 2 = Ramai). Saat
+  // transisi, semua batang naik penuh ke titik ini dulu, baru
+  // turun menetap ke nilai target masing-masing.
+  static const double _fullScale = 2.0;
+
+  // Porsi durasi untuk fase naik vs fase turun/settle.
+  static const double _riseFraction = 0.45;
+
+  @override
+  List<double> lerp(double t) {
+    final List<double> b = begin!;
+    final List<double> e = end!;
+    return List<double>.generate(e.length, (i) {
+      final double bv = i < b.length ? b[i] : e[i];
+      final double ev = e[i];
+
+      if (t <= _riseFraction) {
+        // FASE NAIK: dari nilai sekarang naik penuh ke puncak
+        // (skala maksimum), pelan di awal & di akhir (easeInOutCubic).
+        final double localT = t / _riseFraction;
+        final double eased = Curves.easeInOutCubic.transform(localT);
+        return bv + (_fullScale - bv) * eased;
+      } else {
+        // FASE TURUN/SETTLE: dari puncak turun pelan-pelan menetap
+        // ke nilai target.
+        final double localT = (t - _riseFraction) / (1 - _riseFraction);
+        final double eased = Curves.easeInOutCubic.transform(localT);
+        return _fullScale + (ev - _fullScale) * eased;
+      }
+    });
+  }
+}
+
 // CROWD CHART PAINTER
 
 class _CrowdChartPainter extends CustomPainter {
-  final List<int> levels;
+  final List<double> animatedHeights; // nilai tinggi yang sedang dianimasikan
   final int? pressedIndex;
 
-  _CrowdChartPainter({required this.levels, this.pressedIndex});
+  _CrowdChartPainter({
+    required this.animatedHeights,
+    this.pressedIndex,
+  });
 
   static const Color _greenColor = Colors.green;
   static const Color _yellowColor = AppColors.warningYellow;
   static const Color _redColor = Colors.red;
 
-  Color _colorForLevel(int level) {
-    switch (level) {
-      case 2:
-        return _redColor;
-      case 1:
-        return _yellowColor;
-      default:
-        return _greenColor;
-    }
-  }
-
-  // Versi lebih muda dari warna batang, dipakai saat batang
-  // sedang ditekan (dicampur ke arah putih).
-  Color _lightenColor(Color color) {
+  // Versi lebih muda dari warna, dipakai saat batang sedang
+  // ditekan (dicampur ke arah putih).
+  static Color _lightenColor(Color color) {
     return Color.lerp(color, Colors.white, 0.55) ?? color;
   }
 
@@ -1665,10 +1825,13 @@ class _CrowdChartPainter extends CustomPainter {
     final double graphWidth = size.width - left - right;
     final double graphHeight = size.height - top - bottom;
 
-    // HORIZONTAL GRID (garis Ramai / Sedang / Sepi)
+    // HORIZONTAL GRID
+    // 5 garis: Ramai (0%), tengah Ramai-Sedang (25%), Sedang (50%),
+    // tengah Sedang-Sepi (75%), Sepi (100%) — supaya titik berhenti
+    // batang nggak cuma di tiga level utama.
 
-    for (int i = 0; i < 3; i++) {
-      final double y = top + (graphHeight / 2) * i;
+    for (int i = 0; i <= 4; i++) {
+      final double y = top + (graphHeight / 4) * i;
 
       canvas.drawLine(
         Offset(left, y),
@@ -1677,11 +1840,36 @@ class _CrowdChartPainter extends CustomPainter {
       );
     }
 
-    if (levels.isEmpty) return;
+    if (animatedHeights.isEmpty) return;
 
-    // BATANG (level 0 = pendek/Sepi, level 2 = penuh/Ramai)
+    // BATANG — tingginya memakai animatedHeights (nilai yang sedang
+    // dianimasikan saat transisi ganti hari). Warnanya memakai satu
+    // gradasi hijau (bawah) → kuning (tengah) → merah (atas) yang
+    // dibentangkan di sepanjang tinggi grafik, jadi batang pendek
+    // otomatis kelihatan hijau dan batang tinggi kelihatan memerah
+    // di puncaknya.
 
-    final int n = levels.length;
+    final Rect gradientRect = Rect.fromLTWH(left, top, graphWidth, graphHeight);
+
+    final Shader normalShader = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [_redColor, _yellowColor, _greenColor],
+      stops: [0.0, 0.5, 1.0],
+    ).createShader(gradientRect);
+
+    final Shader pressedShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        _lightenColor(_redColor),
+        _lightenColor(_yellowColor),
+        _lightenColor(_greenColor),
+      ],
+      stops: const [0.0, 0.5, 1.0],
+    ).createShader(gradientRect);
+
+    final int n = animatedHeights.length;
     final double slotWidth = graphWidth / n;
 
     const double barWidthFraction = 0.5;
@@ -1692,9 +1880,14 @@ class _CrowdChartPainter extends CustomPainter {
       final double xCenter = left + slotWidth * (i + 0.5);
       final double barWidth = slotWidth * barWidthFraction;
 
-      final double rawHeight = graphHeight * (levels[i] / 2);
+      final double rawHeight = graphHeight * (animatedHeights[i] / 2);
+      // Dibatasi maksimal setinggi area grafik supaya efek "naik
+      // dulu" (overshoot) tidak sampai keluar/menabrak elemen lain
+      // di atas chart.
+      final double cappedHeight =
+          rawHeight > graphHeight ? graphHeight : rawHeight;
       final double barHeight =
-          rawHeight < minBarHeight ? minBarHeight : rawHeight;
+          cappedHeight < minBarHeight ? minBarHeight : cappedHeight;
 
       final double barBottom = top + graphHeight;
       final double barTop = barBottom - barHeight;
@@ -1711,9 +1904,7 @@ class _CrowdChartPainter extends CustomPainter {
       );
 
       final Paint barPaint = Paint()
-        ..color = (i == pressedIndex)
-            ? _lightenColor(_colorForLevel(levels[i]))
-            : _colorForLevel(levels[i]);
+        ..shader = (i == pressedIndex) ? pressedShader : normalShader;
 
       canvas.drawRRect(barRect, barPaint);
     }
@@ -1721,7 +1912,8 @@ class _CrowdChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CrowdChartPainter oldDelegate) {
-    return oldDelegate.levels.join(',') != levels.join(',') ||
+    return oldDelegate.animatedHeights.join(',') !=
+            animatedHeights.join(',') ||
         oldDelegate.pressedIndex != pressedIndex;
   }
 }

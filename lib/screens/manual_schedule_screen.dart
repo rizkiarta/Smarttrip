@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:latlong2/latlong.dart';
 import 'itinerary_preview_screen.dart';
+import 'detail_destination_screen.dart';
 import '../data/destinations_data.dart';
+import '../services/route_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/smart_image.dart';
 
@@ -122,6 +125,27 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
 
   late Map<int, List<Map<String, dynamic>>> normalizedDestinations;
 
+  // ============================================================
+  // STATUS "SEDANG MENGHITUNG JAM TIBA" PER HARI
+  // ============================================================
+  //
+  // true selagi _recalculateArrivalTimes(day) menunggu hasil rute
+  // asli dari fetchRealRoute (route_service.dart) -- dipakai untuk
+  // menampilkan indikator loading di jam tiba supaya user tahu
+  // angkanya belum final, bukan cuma jam lama yang nyangkut. Lihat
+  // _buildDestinationCard.
+  //
+  // ============================================================
+
+  late Map<int, bool> isCalculatingByDay;
+
+  // Token generasi per hari -- setiap kali _recalculateArrivalTimes
+  // dipanggil ulang untuk hari yang sama (mis. user ganti jam
+  // berangkat lagi sebelum fetch sebelumnya kelar), token dinaikkan.
+  // Hasil dari pemanggilan yang lebih lama dibuang begitu selesai,
+  // supaya tidak menimpa hasil dari pemanggilan yang lebih baru.
+  final Map<int, int> _recalculateGenerationByDay = {};
+
   @override
   void initState() {
     super.initState();
@@ -134,37 +158,205 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
 
     returnTimesByDay = {};
 
+    isCalculatingByDay = {};
+
+    // ============================================================
+    // WAKTU KEBERANGKATAN DARI TRAVEL INFORMATION SCREEN
+    // ============================================================
+    //
+    // Jam keberangkatan yang sudah diisi user di TravelInformationScreen
+    // (widget.travelData['startTime']) dipakai sebagai nilai awal untuk
+    // Hari 1, supaya user tidak perlu mengisi ulang jam yang sama di
+    // sini. Hari-hari berikutnya tetap kosong seperti biasa karena
+    // TravelInformationScreen hanya menanyakan jam keberangkatan untuk
+    // hari pertama perjalanan.
+    //
+    // ============================================================
+
+    final TimeOfDay? travelStartTime =
+        widget.travelData?['startTime'] as TimeOfDay?;
+
     for (final entry in normalizedDestinations.entries) {
       final int day = entry.key;
 
       final int destinationCount = entry.value.length;
 
       // Prioritas: waktu yang sudah pernah diisi (mode edit, lihat
-      // initialDepartureTimesByDay dkk di atas). Kalau tidak ada
-      // untuk hari ini, tetap kosong seperti alur normal.
+      // initialDepartureTimesByDay dkk di atas). Kalau tidak ada,
+      // untuk Hari 1 dipakai jam keberangkatan dari Travel Information.
+      // Hari lainnya tetap kosong seperti alur normal.
 
-      departureTimesByDay[day] = widget.initialDepartureTimesByDay?[day];
-
-      final List<TimeOfDay?>? initialArrivals =
-          widget.initialArrivalTimesByDay?[day];
+      departureTimesByDay[day] = widget.initialDepartureTimesByDay?[day] ??
+          (day == 1 ? travelStartTime : null);
 
       final List<TimeOfDay?>? initialReturns =
           widget.initialReturnTimesByDay?[day];
-
-      arrivalTimesByDay[day] =
-          (initialArrivals != null && initialArrivals.length == destinationCount)
-              ? List<TimeOfDay?>.from(initialArrivals)
-              : List<TimeOfDay?>.filled(destinationCount, null);
 
       returnTimesByDay[day] =
           (initialReturns != null && initialReturns.length == destinationCount)
               ? List<TimeOfDay?>.from(initialReturns)
               : List<TimeOfDay?>.filled(destinationCount, null);
+
+      // ==========================================================
+      // WAKTU TIBA -- TIDAK LAGI DIISI MANUAL
+      // ==========================================================
+      //
+      // Waktu tiba sekarang dihitung otomatis (lihat
+      // _recalculateArrivalTimes di bawah) berdasarkan jarak tempuh
+      // riil dari titik sebelumnya (lokasi awal / destinasi
+      // sebelumnya) ke destinasi ini, dipadukan dengan jam
+      // berangkat/pulang yang berlaku. initialArrivalTimesByDay
+      // (mis. dari mode edit) sengaja tidak dipakai lagi supaya
+      // waktu tiba selalu konsisten dengan jarak & jam yang berlaku
+      // sekarang, bukan nilai lama yang mungkin sudah tidak akurat.
+      //
+      // ==========================================================
+
+      arrivalTimesByDay[day] = List<TimeOfDay?>.filled(destinationCount, null);
     }
 
     if (normalizedDestinations.isNotEmpty) {
       selectedDay = normalizedDestinations.keys.first;
     }
+
+    // ============================================================
+    // HITUNG WAKTU TIBA AWAL UNTUK SEMUA HARI
+    // ============================================================
+
+    for (final int day in normalizedDestinations.keys) {
+      _recalculateArrivalTimes(day);
+    }
+  }
+
+  // ============================================================
+  // HITUNG OTOMATIS WAKTU TIBA SETIAP DESTINASI (BERDASARKAN JARAK
+  // TEMPUH SESUAI MAPS)
+  // ============================================================
+  //
+  // Dijalankan ulang tiap kali ada yang bisa mengubah hasil hitungan:
+  // jam berangkat berubah, jam pulang salah satu destinasi berubah,
+  // atau urutan destinasi ditukar (lihat pemanggilnya masing-masing).
+  //
+  // Logikanya menyusuri destinasi satu per satu:
+  // - Destinasi pertama: waktu tiba = jam berangkat dari lokasi awal
+  //   + durasi rute ASLI (fetchRealRoute, route_service.dart -- SAMA
+  //   PERSIS dengan yang dipakai peta preview rute di RouteScreen)
+  //   dari koordinat lokasi awal ke koordinat destinasi pertama.
+  // - Destinasi berikutnya: waktu tiba = jam PULANG dari destinasi
+  //   sebelumnya + durasi rute asli dari koordinat destinasi
+  //   sebelumnya ke destinasi ini.
+  //
+  // Kalau jam pulang destinasi sebelumnya belum diisi user, rantai
+  // perhitungan berhenti di situ (destinasi berikutnya jadi '--:--'
+  // sampai jam pulang yang jadi acuannya diisi).
+  //
+  // Kalau koordinat salah satu titik tidak diketahui, dipakai waktu
+  // tempuh fallback (1 jam untuk destinasi pertama, 30 menit untuk
+  // destinasi berikutnya). Kalau koordinat diketahui tapi
+  // fetchRealRoute gagal total (offline dkk), route_service.dart
+  // sendiri yang jatuh ke estimasi garis lurus -- supaya fallback-nya
+  // konsisten dengan fallback yang dipakai RouteScreen.
+  //
+  // ASYNC karena sekarang benar-benar fetch ke backend/OSRM (bukan
+  // rumus lokal lagi) -- lihat isCalculatingByDay untuk indikator
+  // loading & _recalculateGenerationByDay untuk pengaman kalau
+  // dipanggil ulang sebelum fetch sebelumnya selesai.
+  //
+  // ============================================================
+
+  Future<void> _recalculateArrivalTimes(int day) async {
+    final List<Map<String, dynamic>> destinations =
+        normalizedDestinations[day] ?? [];
+
+    if (destinations.isEmpty) {
+      return;
+    }
+
+    final int myGeneration = (_recalculateGenerationByDay[day] ?? 0) + 1;
+    _recalculateGenerationByDay[day] = myGeneration;
+
+    if (mounted) {
+      setState(() {
+        isCalculatingByDay[day] = true;
+      });
+    }
+
+    final String? vehicle = widget.travelData?['vehicle'] as String?;
+
+    final List<TimeOfDay?> returns = returnTimesByDay[day] ??
+        List<TimeOfDay?>.filled(destinations.length, null);
+
+    final List<TimeOfDay?> arrivals =
+        List<TimeOfDay?>.filled(destinations.length, null);
+
+    LatLng? previousCoordinate = widget.startCoordinate;
+
+    TimeOfDay? previousTime = departureTimesByDay[day];
+
+    for (int i = 0; i < destinations.length; i++) {
+      if (previousTime == null) {
+        break;
+      }
+
+      final LatLng? destinationCoordinate =
+          coordinateOfDestination(destinations[i]);
+
+      Duration travelTime;
+
+      if (previousCoordinate != null && destinationCoordinate != null) {
+        final RouteResult route = await fetchRealRoute(
+          previousCoordinate,
+          destinationCoordinate,
+          vehicle: vehicle,
+        );
+
+        travelTime = route.duration;
+      } else {
+        travelTime = Duration(minutes: i == 0 ? 60 : 30);
+      }
+
+      // Sudah ada pemanggilan yang lebih baru untuk hari ini selagi
+      // fetch di atas berjalan (mis. user keburu ganti jam lagi) --
+      // buang hasil ini, biarkan pemanggilan yang lebih baru yang
+      // menang.
+      if (_recalculateGenerationByDay[day] != myGeneration) {
+        return;
+      }
+
+      arrivals[i] = _addDurationToTime(previousTime, travelTime);
+
+      previousCoordinate = destinationCoordinate;
+      previousTime = i < returns.length ? returns[i] : null;
+    }
+
+    if (_recalculateGenerationByDay[day] != myGeneration) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      arrivalTimesByDay[day] = arrivals;
+      isCalculatingByDay[day] = false;
+    });
+  }
+
+  // ============================================================
+  // TAMBAHKAN DURASI KE SEBUAH JAM (DIBUNGKUS 24 JAM)
+  // ============================================================
+
+  TimeOfDay _addDurationToTime(TimeOfDay time, Duration duration) {
+    const int minutesPerDay = 24 * 60;
+
+    final int totalMinutes = time.hour * 60 + time.minute + duration.inMinutes;
+
+    final int normalized = totalMinutes % minutesPerDay;
+
+    final int wrapped = normalized < 0 ? normalized + minutesPerDay : normalized;
+
+    return TimeOfDay(hour: wrapped ~/ 60, minute: wrapped % 60);
   }
 
   // ============================================================
@@ -225,29 +417,25 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
   // ============================================================
 
   void _swapDestination(int day, int index, int direction) {
+    final List<Map<String, dynamic>> destinations =
+        normalizedDestinations[day] ?? [];
+
+    final List<TimeOfDay?> returns = returnTimesByDay[day] ?? [];
+
+    final int targetIndex = index + direction;
+
+    if (targetIndex < 0 || targetIndex >= destinations.length) {
+      return;
+    }
+
     setState(() {
-      final List<Map<String, dynamic>> destinations =
-          normalizedDestinations[day] ?? [];
-
-      final List<TimeOfDay?> arrivals = arrivalTimesByDay[day] ?? [];
-
-      final List<TimeOfDay?> returns = returnTimesByDay[day] ?? [];
-
-      final int targetIndex = index + direction;
-
-      if (targetIndex < 0 || targetIndex >= destinations.length) {
-        return;
-      }
+      // Waktu tiba TIDAK ikut ditukar manual di sini lagi -- akan
+      // dihitung ulang dari nol oleh _recalculateArrivalTimes di
+      // bawah begitu urutan destinasinya berubah.
 
       final Map<String, dynamic> temp = destinations[index];
       destinations[index] = destinations[targetIndex];
       destinations[targetIndex] = temp;
-
-      if (index < arrivals.length && targetIndex < arrivals.length) {
-        final TimeOfDay? tempArrival = arrivals[index];
-        arrivals[index] = arrivals[targetIndex];
-        arrivals[targetIndex] = tempArrival;
-      }
 
       if (index < returns.length && targetIndex < returns.length) {
         final TimeOfDay? tempReturn = returns[index];
@@ -255,6 +443,12 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
         returns[targetIndex] = tempReturn;
       }
     });
+
+    // Urutan berubah -> jarak tempuh antar destinasi ikut berubah,
+    // jadi waktu tiba perlu dihitung ulang. Dipanggil DI LUAR
+    // setState di atas karena sekarang async (fetch rute asli) dan
+    // sudah mengatur setState-nya sendiri (lihat isCalculatingByDay).
+    _recalculateArrivalTimes(day);
   }
 
   // ============================================================
@@ -273,23 +467,241 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
   // ============================================================
   // PILIH WAKTU
   // ============================================================
+  //
+  // Tampilan & cara pilih jam di sini disamakan dengan yang dipakai
+  // di TravelInformationScreen (_selectStartTime) -- bottom sheet
+  // dengan scroll wheel jam/menit -- supaya pengalaman memilih jam
+  // konsisten di seluruh alur perencanaan perjalanan, bukan dialog
+  // jam bawaan Flutter lagi.
+  //
+  // ============================================================
 
-  Future<void> _selectTime({
+  // Return value: jam yang dipilih user, atau null kalau bottom sheet
+  // ditutup tanpa memilih (batal). Dipakai pemanggil untuk tahu kapan
+  // perlu memicu _recalculateArrivalTimes lagi -- supaya batal pilih
+  // jam tidak ikut memicu fetch rute ulang yang sia-sia.
+  Future<TimeOfDay?> _selectTime({
     required TimeOfDay? initialTime,
     required Function(TimeOfDay) onSelected,
+    String title = 'Pilih Waktu',
   }) async {
-    final TimeOfDay? picked = await showTimePicker(
+    final TimeOfDay initial = initialTime ?? const TimeOfDay(hour: 8, minute: 0);
+
+    int selectedHour = initial.hour;
+    int selectedMinute = (initial.minute ~/ 5) * 5;
+
+    final FixedExtentScrollController hourController =
+        FixedExtentScrollController(initialItem: selectedHour);
+    final FixedExtentScrollController minuteController =
+        FixedExtentScrollController(initialItem: selectedMinute ~/ 5);
+
+    final TimeOfDay? picked = await showModalBottomSheet<TimeOfDay>(
       context: context,
-      initialTime: initialTime ?? const TimeOfDay(hour: 8, minute: 0),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.borderColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkText,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: const Icon(
+                              Icons.close,
+                              color: AppColors.greyText,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Atur waktu sendiri',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.greyText,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: AppColors.lightBlue,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            IgnorePointer(
+                              child: Container(
+                                height: 40,
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    scrollController: hourController,
+                                    itemExtent: 40,
+                                    looping: true,
+                                    selectionOverlay: const SizedBox.shrink(),
+                                    onSelectedItemChanged: (index) {
+                                      setSheetState(() => selectedHour = index);
+                                    },
+                                    children: List.generate(24, (i) {
+                                      return Center(
+                                        child: Text(
+                                          i.toString().padLeft(2, '0'),
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.darkText,
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                                const Text(
+                                  ':',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkText,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    scrollController: minuteController,
+                                    itemExtent: 40,
+                                    looping: true,
+                                    selectionOverlay: const SizedBox.shrink(),
+                                    onSelectedItemChanged: (index) {
+                                      setSheetState(
+                                        () => selectedMinute = index * 5,
+                                      );
+                                    },
+                                    children: List.generate(12, (i) {
+                                      final int m = i * 5;
+                                      return Center(
+                                        child: Text(
+                                          m.toString().padLeft(2, '0'),
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.darkText,
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryBlue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(
+                              context,
+                              TimeOfDay(
+                                hour: selectedHour,
+                                minute: selectedMinute,
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Pilih Jam Ini',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
 
+    hourController.dispose();
+    minuteController.dispose();
+
     if (picked == null) {
-      return;
+      return null;
     }
 
     setState(() {
       onSelected(picked);
     });
+
+    return picked;
   }
 
   // ============================================================
@@ -370,6 +782,60 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
   }
 
   // ============================================================
+  // TIME DISPLAY (VERSI TIDAK BISA DIKETUK, UNTUK WAKTU TIBA YANG
+  // DIHITUNG OTOMATIS)
+  // ============================================================
+
+  Widget _timeDisplay({
+    required String label,
+    required TimeOfDay? time,
+    bool isCalculating = false,
+  }) {
+    return Container(
+      width: 92,
+      height: 50,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.lightGrey,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.fieldBorder),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.mutedText),
+          ),
+          const SizedBox(height: 2),
+          // ==============================================================
+          // SEDANG DIHITUNG (fetch rute asli ke backend/OSRM) -- tampilkan
+          // spinner kecil menggantikan teks jam supaya user tahu angkanya
+          // belum final, bukan sekadar '--:--' yang terlihat seperti error.
+          // ==============================================================
+          isCalculating
+              ? const SizedBox(
+                  width: 13,
+                  height: 13,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primaryBlue,
+                  ),
+                )
+              : Text(
+                  _formatTime(time),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.darkText,
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
   // LOCATION CARD
   // ============================================================
 
@@ -436,6 +902,115 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
   }
 
   // ============================================================
+  // PREDIKSI KEPADATAN (DUMMY, DETERMINISTIK PER DESTINASI)
+  // ============================================================
+  //
+  // TODO(backend): ganti dengan pemanggilan API prediksi kepadatan
+  // sungguhan. Disamakan formatnya ('Sepi'/'Sedang'/'Ramai') dan cara
+  // hitungnya (hash id/nama, bukan acak) dengan yang dipakai di
+  // AIItineraryScreen supaya konsisten -- destinasi yang sama akan
+  // selalu menunjukkan status kepadatan yang sama di layar manapun.
+  //
+  // ============================================================
+
+  static const List<String> _crowdStatusCycle = ['Sepi', 'Sedang', 'Ramai'];
+
+  String _crowdStatusFor(Map<String, dynamic> destination) {
+    final String key = destination['id']?.toString() ??
+        destination['name']?.toString() ??
+        '';
+
+    final int hash = key.hashCode.abs();
+
+    return _crowdStatusCycle[hash % _crowdStatusCycle.length];
+  }
+
+  // ============================================================
+  // BADGE TINGKAT KEPADATAN
+  // ============================================================
+  //
+  // Warnanya disamakan dengan badge status di AIItineraryScreen /
+  // CrowdPredictionScreen (Sepi = hijau, Sedang = kuning, Ramai =
+  // merah) supaya artinya konsisten di seluruh aplikasi.
+  //
+  // ============================================================
+
+  Widget _buildCrowdBadge(String status) {
+    Color textColor;
+    Color backgroundColor;
+
+    switch (status) {
+      case 'Sepi':
+        textColor = Colors.green;
+        backgroundColor = AppColors.successBg;
+        break;
+
+      case 'Sedang':
+        textColor = const Color(0xFFE0A900);
+        backgroundColor = const Color(0xFFFFF8DF);
+        break;
+
+      case 'Ramai':
+      default:
+        textColor = Colors.red;
+        backgroundColor = AppColors.errorBg;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, color: textColor, size: 6),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // BUKA DETAIL DESTINASI
+  // ============================================================
+  //
+  // Dipakai kalau kartu destinasi diketuk -- membuka layar detail
+  // yang sama dengan yang dipakai di DestinationSelectionScreen
+  // (lihat _openDetail di sana), supaya user bisa lihat info
+  // lengkap destinasi tanpa harus balik ke layar pemilihan destinasi.
+  //
+  // ============================================================
+
+  void _openDestinationDetail(Map<String, dynamic> destination) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return DetailDestinationScreen(
+            name: destination['name']?.toString() ?? 'Destinasi',
+            location: destination['location']?.toString() ?? '',
+            rating: destination['rating']?.toString() ?? '0.0',
+            reviews: destination['reviews']?.toString() ?? '0 ulasan',
+            mainImage: destination['image']?.toString() ?? '',
+            description: destination['description']?.toString() ?? '',
+          );
+        },
+      ),
+    );
+  }
+
+  // ============================================================
   // DESTINATION CARD
   // ============================================================
 
@@ -451,33 +1026,52 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
 
     final String image = destination['image']?.toString() ?? '';
 
+    final String rating = destination['rating']?.toString() ?? '0.0';
+
+    final String reviewsCount = destination['reviewsCount']?.toString() ?? '0';
+
+    final String crowdStatus = _crowdStatusFor(destination);
+
     final List<TimeOfDay?> arrivalTimes = arrivalTimesByDay[day] ?? [];
 
     final List<TimeOfDay?> returnTimes = returnTimesByDay[day] ?? [];
 
-    return Container(
-      key: key,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderColorLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return GestureDetector(
+      // ========================================================
+      // BUKA DETAIL DESTINASI KALAU KARTUNYA DIKETUK
+      // ========================================================
+      //
+      // Tombol naik/turun & tombol jam di dalam kartu ini punya
+      // GestureDetector sendiri-sendiri, jadi tetap berfungsi normal
+      // (tidak ikut membuka detail) meskipun kartunya sekarang bisa
+      // diketuk juga.
+      //
+      // ========================================================
+      onTap: () => _openDestinationDetail(destination),
+      child: Container(
+        key: key,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderColorLight),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
         children: [
           // ======================================================
           // IMAGE + NAME
           // ======================================================
 
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -495,15 +1089,53 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
               const SizedBox(width: 12),
 
               Expanded(
-                child: Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    // ==============================================
+                    // RATING + KEPADATAN
+                    // ==============================================
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              color: AppColors.starGold,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '$rating ($reviewsCount)',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.greyText,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        _buildCrowdBadge(crowdStatus),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
@@ -540,19 +1172,19 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _timeButton(
+              // ==================================================
+              // WAKTU TIBA -- DIHITUNG OTOMATIS, TIDAK BISA DIKETUK
+              // ==================================================
+              //
+              // Dihitung dari jarak tempuh sesuai maps (lihat
+              // _recalculateArrivalTimes), jadi bukan lagi input
+              // manual seperti waktu pulang di sebelahnya.
+              //
+              // ==================================================
+              _timeDisplay(
                 label: 'Tiba',
                 time: arrivalTimes.length > index ? arrivalTimes[index] : null,
-                onTap: () {
-                  _selectTime(
-                    initialTime: arrivalTimes.length > index
-                        ? arrivalTimes[index]
-                        : null,
-                    onSelected: (time) {
-                      arrivalTimesByDay[day]![index] = time;
-                    },
-                  );
-                },
+                isCalculating: isCalculatingByDay[day] ?? false,
               ),
 
               const Padding(
@@ -574,15 +1206,34 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                     initialTime: returnTimes.length > index
                         ? returnTimes[index]
                         : null,
+                    title: 'Waktu Pulang dari $name',
                     onSelected: (time) {
                       returnTimesByDay[day]![index] = time;
                     },
-                  );
+                  ).then((picked) {
+                    // Jam pulang destinasi ini jadi acuan waktu tiba
+                    // destinasi berikutnya, jadi perlu dihitung ulang
+                    // -- tapi cuma kalau user benar-benar memilih jam
+                    // (bukan batal).
+                    if (picked != null) {
+                      _recalculateArrivalTimes(day);
+                    }
+                  });
                 },
               ),
             ],
           ),
+
+          const SizedBox(height: 6),
+
+          const Center(
+            child: Text(
+              'Waktu tiba dihitung otomatis dari jarak tempuh',
+              style: TextStyle(fontSize: 10, color: AppColors.mutedText),
+            ),
+          ),
         ],
+      ),
       ),
     );
   }
@@ -661,29 +1312,13 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ========================================================
-        // TITLE
-        // ========================================================
-
-        Text(
-          'Hari $selectedDay',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
-          ),
-        ),
-
-        const SizedBox(height: 5),
-
-        Text(
-          'Atur waktu perjalanan untuk hari ini',
-          style: const TextStyle(fontSize: 12, color: AppColors.mutedText),
-        ),
-
-        const SizedBox(height: 14),
-
-        // ========================================================
         // TITIK KEBERANGKATAN
+        // ========================================================
+        //
+        // Judul "Hari X" dan subjudul "Atur waktu perjalanan untuk
+        // hari ini" sengaja dihapus dari sini -- info hari sudah ada
+        // di tab hari di atas (_buildDayTabs), jadi langsung masuk ke
+        // konten supaya tidak ada pengulangan informasi.
         // ========================================================
         const Text(
           'Titik Keberangkatan',
@@ -754,10 +1389,19 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
                 onTap: () {
                   _selectTime(
                     initialTime: departureTime,
+                    title: 'Waktu Berangkat',
                     onSelected: (time) {
                       departureTimesByDay[selectedDay] = time;
                     },
-                  );
+                  ).then((picked) {
+                    // Jam berangkat berubah -> waktu tiba destinasi
+                    // pertama (dan yang lain lewat rantai jam pulang)
+                    // perlu dihitung ulang -- tapi cuma kalau user
+                    // benar-benar memilih jam (bukan batal).
+                    if (picked != null) {
+                      _recalculateArrivalTimes(selectedDay);
+                    }
+                  });
                 },
               ),
             ],
@@ -890,13 +1534,26 @@ class _ManualScheduleScreenState extends State<ManualScheduleScreen> {
         final String name =
             destinations[index]['name']?.toString() ?? 'destinasi';
 
-        if (arrival == null || returnTime == null) {
+        if (returnTime == null) {
           setState(() {
             selectedDay = day;
           });
 
           _showMessage(
-            'Lengkapi waktu tiba dan pulang untuk $name di Hari $day.',
+            'Tentukan waktu pulang untuk $name di Hari $day.',
+          );
+
+          return;
+        }
+
+        if (arrival == null) {
+          setState(() {
+            selectedDay = day;
+          });
+
+          _showMessage(
+            'Waktu tiba $name belum bisa dihitung. Pastikan waktu berangkat '
+            'dan waktu pulang destinasi sebelumnya di Hari $day sudah diisi.',
           );
 
           return;
@@ -1210,7 +1867,7 @@ if (result != null) {
     final bool hasDestinations = normalizedDestinations.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Colors.white,
 
       // ========================================================
       // APP BAR
@@ -1219,15 +1876,29 @@ if (result != null) {
         backgroundColor: Colors.white,
         elevation: 0,
 
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: AppColors.darkText,
-            size: 20,
+        leadingWidth: 58,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 20),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.borderColor),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 17,
+                color: AppColors.greyText,
+              ),
+            ),
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
         ),
 
         centerTitle: true,
@@ -1236,7 +1907,7 @@ if (result != null) {
           'Atur Waktu Perjalanan',
           style: TextStyle(
             color: AppColors.darkText,
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

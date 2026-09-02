@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../data/destinations_data.dart';
 import '../services/api_service.dart';
 import '../services/destination_service.dart';
+import '../services/route_service.dart';
 import '../widgets/smart_image.dart';
 import 'itinerary_preview_screen.dart';
 import '../theme/app_colors.dart';
@@ -125,6 +126,30 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   // urutan yang sama terus seperti sebelumnya).
   final math.Random _shuffleRandom = math.Random();
 
+  // ============================================================
+  // SEED "AI" UNTUK JAM STAY / KAPAN PULANG DARI TIAP DESTINASI
+  // ============================================================
+  //
+  // Durasi kunjungan (jam stay) tiap destinasi sekarang ditentukan
+  // "acak oleh AI" (lihat _randomVisitDurationHours), TAPI dibuat
+  // deterministik dari hash(id destinasi + seed ini) -- BUKAN
+  // math.Random langsung -- supaya durasi tidak ikut berubah setiap
+  // kali _buildStopsForDay dipanggil ulang akibat aksi lain (hapus
+  // satu destinasi, ubah urutan, dst). Seed ini HANYA dinaikkan saat
+  // tombol "Buat Ulang" ditekan, sehingga hasil "acak"-nya baru
+  // benar-benar berubah saat itu -- konsisten dengan pola yang sudah
+  // dipakai _getCrowdPrediction/_orderByCrowdLevel di file ini.
+  //
+  // ============================================================
+
+  int _regenerateSeed = 0;
+
+  // Guard supaya rebuild jadwal satu hari (setelah hapus/reorder/
+  // tambah destinasi) yang menunggu fetchRealRoute tidak menimpa
+  // hasil dari rebuild yang lebih baru kalau pengguna sempat
+  // melakukan aksi lain sebelum fetch sebelumnya selesai.
+  final Map<int, int> _buildGenerationByDay = {};
+
   int get totalDays {
     final int? duration = widget.travelData['duration'] as int?;
 
@@ -183,9 +208,14 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
     if (!mounted) return;
 
+    _rawDestinationsByDay = result;
+
+    final Map<int, List<Map<String, dynamic>>> stops = await _buildAllDayStops();
+
+    if (!mounted) return;
+
     setState(() {
-      _rawDestinationsByDay = result;
-      itineraryByDay = _buildAllDayStops();
+      itineraryByDay = stops;
       isLoading = false;
     });
   }
@@ -204,6 +234,9 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   Future<void> _regenerateItinerary() async {
     setState(() {
       isLoading = true;
+      // Naikkan seed supaya jam stay/kapan pulang tiap destinasi ikut
+      // "diacak ulang oleh AI", bukan cuma urutan destinasinya saja.
+      _regenerateSeed++;
     });
 
     final Map<int, List<Map<String, dynamic>>> result =
@@ -211,9 +244,14 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
     if (!mounted) return;
 
+    _rawDestinationsByDay = result;
+
+    final Map<int, List<Map<String, dynamic>>> stops = await _buildAllDayStops();
+
+    if (!mounted) return;
+
     setState(() {
-      _rawDestinationsByDay = result;
-      itineraryByDay = _buildAllDayStops();
+      itineraryByDay = stops;
       isLoading = false;
     });
   }
@@ -311,20 +349,6 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   // ESTIMASI DURASI KUNJUNGAN PER KATEGORI
   // ============================================================
 
-  String _estimateDuration(String category) {
-    switch (category) {
-      case 'Kuliner':
-        return '1 jam';
-      case 'Budaya':
-        return '1.5 jam';
-      case 'Buatan':
-        return '2 jam';
-      case 'Alam':
-      default:
-        return '2.5 jam';
-    }
-  }
-
   // ============================================================
   // PREDIKSI KEPADATAN (DUMMY, DETERMINISTIK PER DESTINASI)
   // ============================================================
@@ -363,6 +387,88 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
       'peakStart': peak[0],
       'peakEnd': peak[1],
     };
+  }
+
+  // ============================================================
+  // JAM STAY / KAPAN PULANG DARI DESTINASI ("ACAK OLEH AI")
+  // ============================================================
+  //
+  // TODO(backend): ganti dengan durasi kunjungan hasil rekomendasi AI
+  // sungguhan (mis. dari histori kunjungan pengguna lain, jam padat
+  // real-time, dst). Untuk sekarang, "AI" memilih titik acak di
+  // dalam rentang jam wajar per kategori.
+  //
+  // Dibuat deterministik dari hash(id destinasi + _regenerateSeed) --
+  // BUKAN math.Random langsung -- dengan alasan yang sama seperti
+  // _getCrowdPrediction: supaya durasi destinasi lain TIDAK ikut
+  // berubah setiap kali _buildStopsForDay dipanggil ulang akibat aksi
+  // lain (hapus/reorder/tambah destinasi). Hasilnya baru benar-benar
+  // "diacak ulang" saat tombol "Buat Ulang" ditekan (_regenerateSeed
+  // naik).
+  //
+  // ============================================================
+
+  static const Map<String, List<double>> _visitDurationRangeHours = {
+    'Kuliner': [0.75, 1.5],
+    'Budaya': [1.0, 2.0],
+    'Buatan': [1.5, 2.5],
+    'Alam': [1.5, 3.0],
+  };
+
+  double _randomVisitDurationHours(String destinationKey, String category) {
+    final List<double> range =
+        _visitDurationRangeHours[category] ?? _visitDurationRangeHours['Alam']!;
+
+    final int hash = '$destinationKey#$_regenerateSeed'.hashCode.abs();
+
+    final double fraction = (hash % 1000) / 1000.0;
+
+    return range[0] + fraction * (range[1] - range[0]);
+  }
+
+  // ============================================================
+  // BATASI JUMLAH DESTINASI PER HARI (SEKITAR 3-4)
+  // ============================================================
+  //
+  // Berlaku untuk SEMUA jalur pembentukan itinerary AI: hasil dari
+  // API AI Orchestrator, hasil fallback lokal dari destinasi yang
+  // sudah dipilih user lewat "Atur dengan AI" (DestinationSelectionScreen),
+  // maupun fallback pool kategori+kota kalau user belum memilih apa-
+  // apa. Kalau destinasi yang tersedia untuk hari itu lebih dari
+  // target, DIPOTONG ke target (destinasi kelebihan tidak dipakai --
+  // urutan yang disisakan tetap ikut hasil _orderByCrowdLevel supaya
+  // yang jam padatnya lebih pagi yang diprioritaskan). Kalau
+  // destinasi yang tersedia justru LEBIH SEDIKIT dari target, dibiarkan
+  // apa adanya -- fungsi ini tidak menambah-nambah destinasi baru
+  // (itu tetap lewat tombol "Tambah Destinasi").
+  //
+  // Target (3 atau 4) dibuat deterministik dari hash(hari +
+  // _regenerateSeed) -- konsisten selama sesi ini, tapi bisa berubah
+  // (3<->4) tiap kali tombol "Buat Ulang" ditekan, sama seperti pola
+  // acak lain di file ini.
+  //
+  // ============================================================
+
+  static const int _minDestinationsPerDay = 3;
+  static const int _maxDestinationsPerDay = 4;
+
+  int _targetDestinationCountForDay(int day) {
+    final int hash = 'day$day#$_regenerateSeed'.hashCode.abs();
+
+    final int span = _maxDestinationsPerDay - _minDestinationsPerDay + 1;
+
+    return _minDestinationsPerDay + (hash % span);
+  }
+
+  List<Map<String, dynamic>> _capDestinationsForDay(
+    List<Map<String, dynamic>> destinations,
+    int day,
+  ) {
+    final int target = _targetDestinationCountForDay(day);
+
+    if (destinations.length <= target) return destinations;
+
+    return destinations.take(target).toList();
   }
 
   // ============================================================
@@ -449,6 +555,16 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   // FALLBACK: AMBIL DARI POOL KATEGORI+KOTA (KALAU TIDAK ADA
   // DESTINASI YANG DIPILIH USER)
   // ============================================================
+  //
+  // Jumlah yang diambil sekarang mengikuti _targetDestinationCountForDay
+  // (3 atau 4), BUKAN selalu 4 seperti sebelumnya. Pengambilan indeks
+  // juga diubah dari modulo-berulang (yang bisa mengulang destinasi
+  // YANG SAMA dua kali di hari yang sama kalau pool-nya lebih kecil
+  // dari jumlah yang diminta) menjadi pengambilan unik: berhenti kalau
+  // semua destinasi di pool sudah terpakai, bukan memutar ulang dari
+  // awal.
+  //
+  // ============================================================
 
   List<Map<String, dynamic>> _fallbackPoolForDay(
     List<Map<String, String>> destinationPool,
@@ -457,9 +573,12 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   }) {
     if (destinationPool.isEmpty) return [];
 
+    final int target = _targetDestinationCountForDay(day);
+    final int count = math.min(target, destinationPool.length);
+
     final List<Map<String, dynamic>> picked = [];
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < count; i++) {
       final destination = destinationPool[(i + day) % destinationPool.length];
       picked.add(Map<String, dynamic>.from(destination));
     }
@@ -598,7 +717,10 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
             }
 
             if (dayDests.isNotEmpty) {
-              apiResult[dayNum] = _orderByCrowdLevel(dayDests, randomize: randomize);
+              apiResult[dayNum] = _capDestinationsForDay(
+                _orderByCrowdLevel(dayDests, randomize: randomize),
+                dayNum,
+              );
             }
           }
 
@@ -653,7 +775,10 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
       final List<Map<String, dynamic>> dayDestinations =
           (selectedForDay != null && selectedForDay.isNotEmpty)
-              ? _orderByCrowdLevel(selectedForDay, randomize: randomize)
+              ? _capDestinationsForDay(
+                  _orderByCrowdLevel(selectedForDay, randomize: randomize),
+                  day,
+                )
               : _fallbackPoolForDay(destinationPool, day, randomize: randomize);
 
       generated[day] = dayDestinations;
@@ -669,14 +794,50 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   // WAKTU TEMPUH, & JAM OPERASIONAL)
   // ============================================================
 
-  Map<int, List<Map<String, dynamic>>> _buildAllDayStops() {
+  Future<Map<int, List<Map<String, dynamic>>>> _buildAllDayStops() async {
     final Map<int, List<Map<String, dynamic>>> result = {};
 
-    _rawDestinationsByDay.forEach((day, destinations) {
-      result[day] = _buildStopsForDay(destinations);
-    });
+    for (final entry in _rawDestinationsByDay.entries) {
+      result[entry.key] = await _buildStopsForDay(entry.key, entry.value);
+    }
 
     return result;
+  }
+
+  // ============================================================
+  // REBUILD JADWAL SATU HARI SAJA (SETELAH HAPUS/REORDER/TAMBAH
+  // DESTINASI) -- ASYNC KARENA MENUNGGU fetchRealRoute, DIJAGA
+  // DENGAN GENERATION TOKEN SUPAYA HASIL YANG SUDAH KETINGGALAN
+  // TIDAK MENIMPA HASIL TERBARU (SAMA POLA DENGAN
+  // ManualScheduleScreen._recalculateArrivalTimes).
+  // ============================================================
+
+  Future<void> _rebuildDayStops(
+    int day,
+    List<Map<String, dynamic>> destinations,
+  ) async {
+    final int myGeneration = (_buildGenerationByDay[day] ?? 0) + 1;
+    _buildGenerationByDay[day] = myGeneration;
+
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
+
+    final List<Map<String, dynamic>> stops = await _buildStopsForDay(
+      day,
+      destinations,
+    );
+
+    if (_buildGenerationByDay[day] != myGeneration || !mounted) {
+      return;
+    }
+
+    setState(() {
+      itineraryByDay[day] = stops;
+      isLoading = false;
+    });
   }
 
   // Titik tengah Bandar Lampung, dipakai kalau startCoordinate asli
@@ -687,18 +848,35 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   // BANGUN STOP SIAP TAMPIL UNTUK SATU HARI
   // ============================================================
   //
-  // Di sinilah logika "jam berangkat dihitung mundur dari jam
-  // operasional destinasi pertama dikurangi waktu tempuh" berada,
-  // plus penjadwalan tiap destinasi berikutnya yang mempertimbangkan:
-  // - waktu tempuh dari titik sebelumnya (dummy, garis lurus),
-  // - jam buka/tutup destinasi (dummy, per kategori),
-  // - jam padat destinasi (supaya kunjungan tidak jatuh pas ramai).
+  // Alur baru (disamakan dengan ManualScheduleScreen):
+  // 1. Jam berangkat MENGIKUTI input pengguna di TravelInformationScreen
+  //    (lihat _departureTimeForDay) -- bukan dihitung mundur dari jam
+  //    buka destinasi pertama lagi.
+  // 2. Jam tiba tiap destinasi dihitung dari jarak/rute ASLI
+  //    (fetchRealRoute, route_service.dart -- SAMA PERSIS dengan yang
+  //    dipakai ManualScheduleScreen & RouteScreen), bukan estimasi
+  //    garis lurus.
+  // 3. Jam stay / kapan pulang dari tiap destinasi ditentukan "acak
+  //    oleh AI" (lihat _randomVisitDurationHours) -- bukan durasi
+  //    tetap per kategori lagi.
+  // 4. Dari jam pulang itu, kalau masih ada destinasi berikutnya,
+  //    jarak/rute dihitung lagi ke destinasi tersebut untuk menentukan
+  //    jam sampainya -- persis pola loop di bawah ini.
+  //
+  // Jam buka/tutup & jam padat destinasi tetap dipertimbangkan supaya
+  // kunjungan tidak jatuh pas tutup/ramai.
+  //
+  // ASYNC karena fetchRealRoute benar-benar fetch ke backend/OSRM
+  // (bukan rumus lokal) -- lihat _rebuildDayStops untuk indikator
+  // loading & _buildGenerationByDay untuk pengaman kalau dipanggil
+  // ulang sebelum fetch sebelumnya selesai.
   //
   // ============================================================
 
-  List<Map<String, dynamic>> _buildStopsForDay(
+  Future<List<Map<String, dynamic>>> _buildStopsForDay(
+    int day,
     List<Map<String, dynamic>> destinations,
-  ) {
+  ) async {
     if (destinations.isEmpty) return [];
 
     final String? vehicle = widget.travelData['vehicle'] as String?;
@@ -709,37 +887,31 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
     final List<Map<String, dynamic>> stops = [];
 
     // ==========================================================
-    // DESTINASI PERTAMA: HITUNG JAM BERANGKAT MUNDUR DARI JAM BUKA
+    // DESTINASI PERTAMA: JAM BERANGKAT = INPUT PENGGUNA
     // ==========================================================
 
     final Map<String, dynamic> first = destinations.first;
 
     final LatLng? firstCoordinate = coordinateOfDestination(first);
 
-    final Duration travelToFirst = firstCoordinate != null
-        ? estimateTravelTime(startCoordinate, firstCoordinate, vehicle: vehicle)
-        : const Duration(hours: 1);
+    Duration travelToFirst;
 
-    final OperatingHours firstHours = operatingHoursFor(first);
+    if (firstCoordinate != null) {
+      final RouteResult route = await fetchRealRoute(
+        startCoordinate,
+        firstCoordinate,
+        vehicle: vehicle,
+      );
 
-    // Jam berangkat = jam buka destinasi pertama dikurangi waktu
-    // tempuh ke sana. Dibatasi tidak lebih pagi dari jam 03.00 supaya
-    // tidak menghasilkan jam berangkat yang tidak masuk akal kalau
-    // destinasinya sangat jauh.
-    DateTime currentTime = _timeOfDay(firstHours.openHour, 0).subtract(
-      travelToFirst,
-    );
-
-    final DateTime earliestDeparture = _timeOfDay(3, 0);
-
-    if (currentTime.isBefore(earliestDeparture)) {
-      currentTime = earliestDeparture;
+      travelToFirst = route.duration;
+    } else {
+      travelToFirst = const Duration(hours: 1);
     }
 
-    final DateTime departureTime = currentTime;
+    final DateTime departureTime = _departureTimeForDay(day);
 
     // Waktu tiba di destinasi pertama = berangkat + waktu tempuh.
-    DateTime arrivalTime = departureTime.add(travelToFirst);
+    final DateTime arrivalTime = departureTime.add(travelToFirst);
 
     stops.add({
       'time':
@@ -768,7 +940,13 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
       final String category = (destination['category'] as String?) ?? 'Alam';
 
-      final double durationHours = visitDurationHoursFor(category);
+      final String destinationKey =
+          (destination['id'] as String?) ?? (destination['name'] as String? ?? '');
+
+      final double durationHours = _randomVisitDurationHours(
+        destinationKey,
+        category,
+      );
 
       final OperatingHours hours = operatingHoursFor(destination);
 
@@ -776,15 +954,22 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
       // Waktu tempuh dari titik sebelumnya ke destinasi ini (untuk
       // destinasi pertama sudah dihitung di atas sebagai travelToFirst,
-      // untuk destinasi ke-2 dst dihitung dari destinasi sebelumnya).
+      // untuk destinasi ke-2 dst dihitung dari destinasi sebelumnya --
+      // dari rute ASLI, sama seperti alur manual).
       if (i > 0) {
-        final Duration travelHere = (destCoordinate != null)
-            ? estimateTravelTime(
-                currentCoordinate,
-                destCoordinate,
-                vehicle: vehicle,
-              )
-            : const Duration(minutes: 30);
+        Duration travelHere;
+
+        if (destCoordinate != null) {
+          final RouteResult route = await fetchRealRoute(
+            currentCoordinate,
+            destCoordinate,
+            vehicle: vehicle,
+          );
+
+          travelHere = route.duration;
+        } else {
+          travelHere = const Duration(minutes: 30);
+        }
 
         currentClock = currentClock.add(travelHere);
       }
@@ -822,27 +1007,45 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
         }
       }
 
-      // Jangan sampai jam kunjungan lewat jam tutup -- kalau kepepet,
-      // mundurkan jam mulai supaya kunjungan tetap muat sebelum tutup.
+      // Jangan sampai jam kunjungan lewat jam tutup. PENTING: yang
+      // dipotong adalah DURASI-nya, BUKAN jam mulai (visitStart) yang
+      // dimundurkan -- visitStart di sini adalah jam TIBA sebenarnya
+      // (sudah dihitung maju dari jam pulang destinasi sebelumnya +
+      // waktu tempuh asli ke sini). Versi lama memutar mundur
+      // currentClock ke "latestStart" supaya kunjungan "muat" sebelum
+      // tutup -- itu justru menyebabkan jam kunjungan destinasi ini
+      // bisa jatuh SEBELUM jam pulang destinasi sebelumnya, alias
+      // tabrakan jadwal antar destinasi.
       final DateTime closeTime = _timeOfDay(hours.closeHour, 0);
 
-      final DateTime latestStart = closeTime.subtract(
-        Duration(minutes: (durationHours * 60).round()),
-      );
-
-      if (currentClock.isAfter(latestStart) && latestStart.isAfter(openTime)) {
-        currentClock = latestStart;
-      }
-
       final DateTime visitStart = currentClock;
-      final DateTime visitEnd = visitStart.add(
-        Duration(minutes: (durationHours * 60).round()),
-      );
+
+      // Destinasi sudah tutup PAS kita tiba (jadwal hari ini
+      // kepadatan/jarak antar destinasi terlalu ketat) -- tetap
+      // dicatat di jadwal dengan durasi simbolis 15 menit supaya
+      // kelihatan jelas sebagai peringatan, bukan hilang diam-diam
+      // atau malah "tabrakan" dengan destinasi sebelumnya.
+      final bool alreadyClosedOnArrival = !visitStart.isBefore(closeTime);
+
+      final DateTime visitEnd = alreadyClosedOnArrival
+          ? visitStart.add(const Duration(minutes: 15))
+          : _earlierOf(
+              visitStart.add(Duration(minutes: (durationHours * 60).round())),
+              closeTime,
+            );
 
       stops.add({
         'time': '${_formatTime(visitStart)} - ${_formatTime(visitEnd)}',
         'title': destination['name'],
-        'subtitle': _estimateDuration(category),
+        // Ditampilkan dari durasi yang BENAR-BENAR dipakai untuk
+        // menghitung visitEnd di atas (termasuk kalau durasinya
+        // dipotong karena kepepet jam tutup) -- kalau destinasi
+        // ternyata sudah tutup pas kita tiba, subtitle memberi tahu
+        // itu secara eksplisit alih-alih diam-diam menampilkan jam
+        // yang membingungkan.
+        'subtitle': alreadyClosedOnArrival
+            ? 'Tutup saat tiba -- jadwal terlalu padat, coba atur ulang urutan destinasi'
+            : _formatDuration(visitEnd.difference(visitStart)),
         'image': destination['image'],
         'icon': null,
         'crowdStatus': crowd?['status'],
@@ -881,6 +1084,60 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
   DateTime _timeOfDay(int hour, int minute) {
     return DateTime(2000, 1, 1, hour, minute);
+  }
+
+  // Dipakai untuk memotong durasi kunjungan (bukan memundurkan jam
+  // mulai) kalau kunjungan penuh tidak muat sebelum jam tutup.
+  DateTime _earlierOf(DateTime a, DateTime b) {
+    return a.isBefore(b) ? a : b;
+  }
+
+  // ============================================================
+  // JAM BERANGKAT UNTUK SATU HARI (DARI INPUT PENGGUNA DI
+  // TravelInformationScreen)
+  // ============================================================
+  //
+  // Prioritas:
+  // 1. widget.travelData['startTimesByDay'][day] -- jam berangkat per
+  //    hari yang diisi user (TimeOfDay), format yang sama dipakai
+  //    ManualScheduleScreen.
+  // 2. widget.travelData['startTime'] -- fallback untuk Hari 1 kalau
+  //    'startTimesByDay' tidak ada (kompatibel dengan payload lama).
+  // 3. String "HH:mm"/"HH:MM" -- jaga-jaga kalau travelData datang
+  //    dari alur "Edit Itinerary" yang menyimpan jam sebagai teks,
+  //    bukan objek TimeOfDay.
+  // 4. 06:00 -- fallback terakhir kalau semuanya tidak ada, supaya
+  //    jadwal tetap bisa dihitung tanpa crash.
+  //
+  // ============================================================
+
+  DateTime _departureTimeForDay(int day) {
+    final dynamic startTimesByDayRaw = widget.travelData['startTimesByDay'];
+
+    dynamic rawForDay;
+
+    if (startTimesByDayRaw is Map) {
+      rawForDay = startTimesByDayRaw[day];
+    }
+
+    rawForDay ??= (day == 1) ? widget.travelData['startTime'] : null;
+
+    if (rawForDay is TimeOfDay) {
+      return _timeOfDay(rawForDay.hour, rawForDay.minute);
+    }
+
+    if (rawForDay is String && rawForDay.contains(':')) {
+      final List<String> parts = rawForDay.split(':');
+
+      final int? hour = int.tryParse(parts[0]);
+      final int? minute = parts.length > 1 ? int.tryParse(parts[1]) : null;
+
+      if (hour != null && minute != null) {
+        return _timeOfDay(hour, minute);
+      }
+    }
+
+    return _timeOfDay(6, 0);
   }
 
   String _formatTime(DateTime time) {
@@ -930,20 +1187,21 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
     final int destinationIndex = index - 1;
 
-    setState(() {
-      final List<Map<String, dynamic>>? dayDestinations =
-          _rawDestinationsByDay[day];
+    final List<Map<String, dynamic>>? dayDestinations =
+        _rawDestinationsByDay[day];
 
-      if (dayDestinations == null ||
-          destinationIndex < 0 ||
-          destinationIndex >= dayDestinations.length) {
-        return;
-      }
+    if (dayDestinations == null ||
+        destinationIndex < 0 ||
+        destinationIndex >= dayDestinations.length) {
+      return;
+    }
 
-      dayDestinations.removeAt(destinationIndex);
+    dayDestinations.removeAt(destinationIndex);
 
-      itineraryByDay[day] = _buildStopsForDay(dayDestinations);
-    });
+    // Jadwal dihitung ulang lewat fetchRealRoute (async), jadi tidak
+    // lagi langsung di dalam setState -- lihat _rebuildDayStops untuk
+    // indikator loading & pengaman generation token.
+    unawaited(_rebuildDayStops(day, dayDestinations));
   }
 
   // ============================================================
@@ -966,29 +1224,31 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
   // ============================================================
 
   void _reorderStop(int day, int oldIndex, int newIndex) {
-    setState(() {
-      final List<Map<String, dynamic>> dayDestinations = List.from(
-        _rawDestinationsByDay[day] ?? [],
-      );
+    final List<Map<String, dynamic>> dayDestinations = List.from(
+      _rawDestinationsByDay[day] ?? [],
+    );
 
-      if (oldIndex < newIndex) {
-        newIndex -= 1;
-      }
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
 
-      if (oldIndex < 0 ||
-          oldIndex >= dayDestinations.length ||
-          newIndex < 0 ||
-          newIndex >= dayDestinations.length) {
-        return;
-      }
+    if (oldIndex < 0 ||
+        oldIndex >= dayDestinations.length ||
+        newIndex < 0 ||
+        newIndex >= dayDestinations.length) {
+      return;
+    }
 
-      final Map<String, dynamic> moved = dayDestinations.removeAt(oldIndex);
+    final Map<String, dynamic> moved = dayDestinations.removeAt(oldIndex);
 
-      dayDestinations.insert(newIndex, moved);
+    dayDestinations.insert(newIndex, moved);
 
-      _rawDestinationsByDay[day] = dayDestinations;
-      itineraryByDay[day] = _buildStopsForDay(dayDestinations);
-    });
+    _rawDestinationsByDay[day] = dayDestinations;
+
+    // Jadwal dihitung ulang lewat fetchRealRoute (async), jadi tidak
+    // lagi langsung di dalam setState -- lihat _rebuildDayStops untuk
+    // indikator loading & pengaman generation token.
+    unawaited(_rebuildDayStops(day, dayDestinations));
   }
 
   // ============================================================
@@ -1785,23 +2045,25 @@ class _AIItineraryScreenState extends State<AIItineraryScreen> {
 
     if (picked == null) return;
 
-    setState(() {
-      final List<Map<String, dynamic>> dayDestinations = List.from(
-        _rawDestinationsByDay[selectedDay] ?? [],
-      );
+    final List<Map<String, dynamic>> dayDestinations = List.from(
+      _rawDestinationsByDay[selectedDay] ?? [],
+    );
 
-      dayDestinations.add(Map<String, dynamic>.from(picked));
+    dayDestinations.add(Map<String, dynamic>.from(picked));
 
-      // Urutkan ulang berdasarkan prediksi kepadatan supaya destinasi
-      // baru ini juga dijadwalkan menghindari jam ramai, bukan asal
-      // ditaruh di akhir.
-      final List<Map<String, dynamic>> reordered = _orderByCrowdLevel(
-        dayDestinations,
-      );
+    // Urutkan ulang berdasarkan prediksi kepadatan supaya destinasi
+    // baru ini juga dijadwalkan menghindari jam ramai, bukan asal
+    // ditaruh di akhir.
+    final List<Map<String, dynamic>> reordered = _orderByCrowdLevel(
+      dayDestinations,
+    );
 
-      _rawDestinationsByDay[selectedDay] = reordered;
-      itineraryByDay[selectedDay] = _buildStopsForDay(reordered);
-    });
+    _rawDestinationsByDay[selectedDay] = reordered;
+
+    // Jadwal dihitung ulang lewat fetchRealRoute (async) -- fungsi ini
+    // sudah async, jadi langsung di-await, sekalian menampilkan
+    // indikator loading lewat _rebuildDayStops.
+    await _rebuildDayStops(selectedDay, reordered);
   }
 }
 

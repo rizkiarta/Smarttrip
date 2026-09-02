@@ -132,6 +132,7 @@ class _DestinationSelectionScreenState
       'category': d.category,
       'rating': d.rating.toStringAsFixed(1),
       'reviews': '${d.reviewsCount} ulasan',
+      'reviewsCount': d.reviewsCount.toString(),
       'image': d.mainImage ?? 'assets/images/pulau_wayang.jpg',
       'description': d.description,
     }).toList();
@@ -257,7 +258,7 @@ class _DestinationSelectionScreenState
             if (widget.destinationCity != null &&
                 widget.destinationCity!.trim().isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                 child: Row(
                   children: [
                     const Icon(
@@ -285,21 +286,21 @@ class _DestinationSelectionScreenState
             // ==================================================
             _buildSearchBar(),
 
-            const SizedBox(height: 17),
+            const SizedBox(height: 16),
 
             // ==================================================
             // CATEGORY
             // ==================================================
             _buildCategoryFilter(),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
             // ==================================================
             // DAY SELECTOR
             // ==================================================
             _buildDaySelector(),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
             // ==================================================
             // DESTINATION LIST
@@ -338,8 +339,9 @@ class _DestinationSelectionScreenState
               },
 
               child: Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
 
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -350,7 +352,7 @@ class _DestinationSelectionScreenState
 
                 child: const Icon(
                   Icons.arrow_back_ios_new,
-                  size: 18,
+                  size: 17,
                   color: AppColors.greyText,
                 ),
               ),
@@ -564,7 +566,7 @@ class _DestinationSelectionScreenState
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
-                        vertical: 3, // CHANGED - padding menyesuaikan font yang lebih besar
+                        vertical: 3,
                       ),
 
                       decoration: BoxDecoration(
@@ -579,11 +581,11 @@ class _DestinationSelectionScreenState
                         '$count',
 
                         style: TextStyle(
-                          fontSize: 12, // CHANGED - font terkecil jadi 12
+                          fontSize: 12,
 
                           fontWeight: FontWeight.bold,
 
-                          color: isSelected ? AppColors.darkBlue : AppColors.primaryBlue,
+                          color: AppColors.primaryBlue,
                         ),
                       ),
                     ),
@@ -613,11 +615,11 @@ class _DestinationSelectionScreenState
 
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 25),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           itemCount: data.length,
           itemBuilder: (context, index) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 18),
+              padding: const EdgeInsets.only(bottom: 16),
               child: _buildDestinationCard(data[index]),
             );
           },
@@ -636,7 +638,15 @@ class _DestinationSelectionScreenState
 
     final String image = destination['image'] ?? 'assets/images/pulau_wayang.jpg';
 
-    final String reviews = destination['reviews'] ?? '0 ulasan';
+    final String location = destination['location'] ?? '';
+
+    final String category = destination['category'] ?? 'Alam';
+
+    final String rating = destination['rating'] ?? '0.0';
+
+    final String reviewsCount = destination['reviewsCount'] ?? '0';
+
+    final String description = destination['description'] ?? '';
 
 
     // ==========================================================
@@ -658,22 +668,15 @@ class _DestinationSelectionScreenState
       },
 
       child: Container(
-        width: double.infinity,
-
         decoration: BoxDecoration(
           color: Colors.white,
-
-          borderRadius: BorderRadius.circular(22),
-
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.borderColor),
-
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
-
-              blurRadius: 5,
-
-              offset: const Offset(0, 2),
+              blurRadius: 7,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -681,22 +684,20 @@ class _DestinationSelectionScreenState
         clipBehavior: Clip.antiAlias,
 
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ==================================================
-            // IMAGE
+            // IMAGE + FAVORITE BUTTON
             // ==================================================
 
             Stack(
               children: [
-                SizedBox(
+                SmartImage(
+                  imagePathOrUrl: image,
                   width: double.infinity,
-                  height: 145,
-                  child: SmartImage(
-                    imagePathOrUrl: image,
-                    fit: BoxFit.cover,
-                  ),
+                  height: 175,
+                  fit: BoxFit.cover,
                 ),
-
 
                 // ----------------------------------------------
                 // FAVORITE BUTTON
@@ -728,7 +729,7 @@ class _DestinationSelectionScreenState
                       child: Icon(
                         isFavorite ? Icons.favorite : Icons.favorite_border,
 
-                        color: isFavorite ? Colors.red : AppColors.darkBlue,
+                        color: isFavorite ? Colors.red : AppColors.greyText,
 
                         size: 21,
                       ),
@@ -741,102 +742,157 @@ class _DestinationSelectionScreenState
             // ==================================================
             // CARD INFORMATION
             // ==================================================
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 10, 12),
 
-              child: Row(
+            Padding(
+              padding: const EdgeInsets.all(16),
+
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+
                 children: [
                   // --------------------------------------------
-                  // NAME + RATING
+                  // TITLE + RATING
                   // --------------------------------------------
 
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-
-                      children: [
-                        Text(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
                           name,
-
-                          maxLines: 1,
-
-                          overflow: TextOverflow.ellipsis,
-
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: AppColors.darkText,
                           ),
                         ),
-
-                        const SizedBox(height: 7),
-
-                        Row(
-                          children: [
-                            _buildRatingStars(),
-
-                            const SizedBox(width: 8),
-
-                            Text(
-                              reviews,
-
-                              style: const TextStyle(
-                                fontSize: 12, // CHANGED - font terkecil jadi 12
-                                color: AppColors.darkText,
-                              ),
+                      ),
+                      const SizedBox(width: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: AppColors.starGold, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$rating ($reviewsCount)',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.greyText,
+                              fontWeight: FontWeight.w500,
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // --------------------------------------------
+                  // LOCATION + CATEGORY BADGE
+                  // --------------------------------------------
+
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, color: AppColors.primaryBlue, size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          location,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.greyText,
+                          ),
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        '•',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2F3FF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          category,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF1689D5),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // --------------------------------------------
+                  // DESCRIPTION
+                  // --------------------------------------------
+
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: AppColors.greyText,
                     ),
                   ),
-
-                  const SizedBox(width: 8),
+                  const SizedBox(height: 12),
 
                   // --------------------------------------------
                   // TAMBAH BUTTON
                   // --------------------------------------------
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        final Set<String> dayDestinations =
-                            selectedDestinationsByDay[selectedDay]!;
 
-                        if (isSelected) {
-                          dayDestinations.remove(name);
-                        } else {
-                          dayDestinations.add(name);
-                        }
-                      });
-                    },
+                  SizedBox(
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          final Set<String> dayDestinations =
+                              selectedDestinationsByDay[selectedDay]!;
 
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
+                          if (isSelected) {
+                            dayDestinations.remove(name);
+                          } else {
+                            dayDestinations.add(name);
+                          }
+                        });
+                      },
 
-                      width: 120,
-                      height: 38,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
 
-                      alignment: Alignment.center,
+                        height: 38,
 
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFEAF6FF) : AppColors.darkBlue,
+                        alignment: Alignment.center,
 
-                        borderRadius: BorderRadius.circular(22),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFFEAF6FF) : AppColors.primaryBlue,
 
-                        border: isSelected
-                            ? Border.all(color: AppColors.primaryBlue)
-                            : null,
-                      ),
+                          borderRadius: BorderRadius.circular(22),
 
-                      child: Text(
-                        isSelected ? 'Ditambahkan' : 'Tambah',
+                          border: isSelected
+                              ? Border.all(color: AppColors.primaryBlue)
+                              : null,
+                        ),
 
-                        style: TextStyle(
-                          fontSize: 14,
+                        child: Text(
+                          isSelected ? 'Ditambahkan' : 'Tambah',
 
-                          fontWeight: FontWeight.bold,
+                          style: TextStyle(
+                            fontSize: 14,
 
-                          color: isSelected ? AppColors.darkBlue : Colors.white,
+                            fontWeight: FontWeight.bold,
+
+                            color: isSelected ? AppColors.primaryBlue : Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -874,28 +930,6 @@ class _DestinationSelectionScreenState
   }
 
   // ============================================================
-  // RATING
-  // ============================================================
-
-  Widget _buildRatingStars() {
-    return const Row(
-      mainAxisSize: MainAxisSize.min,
-
-      children: [
-        Icon(Icons.star, size: 16, color: AppColors.darkBlue),
-
-        Icon(Icons.star, size: 16, color: AppColors.darkBlue),
-
-        Icon(Icons.star, size: 16, color: AppColors.darkBlue),
-
-        Icon(Icons.star, size: 16, color: AppColors.darkBlue),
-
-        Icon(Icons.star_half, size: 16, color: AppColors.darkBlue),
-      ],
-    );
-  }
-
-  // ============================================================
   // EMPTY STATE
   // ============================================================
 
@@ -918,7 +952,7 @@ class _DestinationSelectionScreenState
             child: const Icon(Icons.search_off, color: AppColors.primaryBlue, size: 35),
           ),
 
-          const SizedBox(height: 15),
+          const SizedBox(height: 16),
 
           const Text(
             'Destinasi tidak ditemukan',
@@ -930,7 +964,7 @@ class _DestinationSelectionScreenState
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
           const Text(
             'Coba gunakan kata kunci lainnya.',
@@ -973,9 +1007,9 @@ class _DestinationSelectionScreenState
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Colors.white,
 
-                  foregroundColor: AppColors.darkBlue,
+                  foregroundColor: AppColors.primaryBlue,
 
-                  side: const BorderSide(color: AppColors.darkBlue, width: 1),
+                  side: const BorderSide(color: AppColors.primaryBlue, width: 1),
 
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(22),
@@ -990,7 +1024,7 @@ class _DestinationSelectionScreenState
               ),
             ),
 
-            const SizedBox(height: 9),
+            const SizedBox(height: 8),
 
             // ==================================================
             // ATUR DENGAN AI
@@ -1005,7 +1039,7 @@ class _DestinationSelectionScreenState
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
 
-                  foregroundColor: AppColors.darkBlue,
+                  foregroundColor: Colors.white,
 
                   elevation: 0,
 

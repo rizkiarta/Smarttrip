@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -34,10 +35,26 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
   DateTime? startDate;
 
+  // ============================================================
+  // JAM KEBERANGKATAN PER HARI
+  // ============================================================
+  //
+  // Diisi user SATU KALI PER HARI perjalanan -- kalau durasinya 3
+  // hari, user memilih 3 jam keberangkatan (satu untuk tiap hari),
+  // bukan cuma sekali untuk keseluruhan trip. Key = nomor hari
+  // (1..travelDuration), value = jam yang sudah dipilih (null kalau
+  // belum). Selalu disinkronkan dengan travelDuration lewat
+  // _syncStartTimesByDayWithDuration() -- lihat pemanggilnya di
+  // dropdown durasi -- supaya jumlah entrinya selalu pas.
+  //
+  // ============================================================
+
+  Map<int, TimeOfDay?> startTimesByDay = {1: null};
+
   // Jumlah hari perjalanan
   int travelDuration = 1;
 
-  int participants = 2;
+  int participants = 1;
 
   // ============================================================
   // SELECTED LOCATION FROM MAP
@@ -237,9 +254,19 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
   // CATEGORIES
   // ============================================================
 
-  final List<String> categories = ['Alam', 'Budaya', 'Kuliner', 'Buatan'];
+  final List<String> categories = ['Semua', 'Alam', 'Budaya', 'Kuliner', 'Buatan'];
 
-  final Set<String> selectedCategories = {'Alam', 'Kuliner'};
+  final Set<String> selectedCategories = {'Semua'};
+
+  // Kategori asli (tanpa "Semua") yang dipakai untuk filter data
+  List<String> get _actualCategories =>
+      categories.where((c) => c != 'Semua').toList();
+
+  // Kategori yang benar-benar dipakai untuk filter destinasi.
+  // Kalau "Semua" dipilih, artinya semua kategori asli ikut dipakai.
+  Set<String> get _effectiveCategories => selectedCategories.contains('Semua')
+      ? _actualCategories.toSet()
+      : selectedCategories;
 
   // ============================================================
   // DISPOSE
@@ -324,7 +351,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     // ==========================================
                     // DURASI PERJALANAN
                     // ==========================================
-                    _buildFieldLabel('Durasi Perjalanan'),
+                    _buildFieldLabel('Durasi Liburan'),
 
                     const SizedBox(height: 9),
 
@@ -349,6 +376,17 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
                       _buildDateSummary(),
                     ],
+
+                    const SizedBox(height: 29),
+
+                    // ==========================================
+                    // JAM KEBERANGKATAN
+                    // ==========================================
+                    _buildFieldLabel('Jam Keberangkatan'),
+
+                    const SizedBox(height: 9),
+
+                    _buildStartTimeSection(),
 
                     const SizedBox(height: 29),
 
@@ -379,11 +417,11 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     // ==========================================
                     _buildFieldLabel('Kategori Destinasi'),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 9),
 
                     _buildCategorySelector(),
 
-                    const SizedBox(height: 34),
+                    const SizedBox(height: 29),
 
                     // ==========================================
                     // PILIH DESTINASI
@@ -436,8 +474,8 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                 Navigator.pop(context);
               },
               child: Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -447,7 +485,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                 child: const Icon(
                   Icons.arrow_back_ios_new,
                   color: AppColors.greyText,
-                  size: 19,
+                  size: 17,
                 ),
               ),
             ),
@@ -544,25 +582,25 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
   Widget _buildDestinationDropdown() {
     return Container(
-      height: 48,
+      height: 50,
 
       decoration: BoxDecoration(
         color: Colors.white,
 
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
 
         border: Border.all(color: AppColors.borderColor),
 
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
 
-      padding: const EdgeInsets.symmetric(horizontal: 17),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
 
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -572,22 +610,31 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
           dropdownColor: Colors.white,
 
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
 
           elevation: 4,
 
           menuMaxHeight: 300,
 
           icon: const Icon(
-            Icons.keyboard_arrow_down,
+            Icons.keyboard_arrow_down_rounded,
             color: AppColors.greyText,
             size: 22,
           ),
 
-          hint: const Text(
-            'Pilih kota/kabupaten tujuan',
-
-            style: TextStyle(fontSize: 14, color: AppColors.greyText),
+          hint: Row(
+            children: const [
+              Icon(
+                Icons.location_city_outlined,
+                size: 19,
+                color: AppColors.greyText,
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Pilih kota/kabupaten tujuan',
+                style: TextStyle(fontSize: 14, color: AppColors.greyText),
+              ),
+            ],
           ),
 
           style: const TextStyle(
@@ -601,18 +648,32 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
               return Align(
                 alignment: Alignment.centerLeft,
 
-                child: Text(
-                  destination,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.location_city_outlined,
+                      size: 19,
+                      color: AppColors.primaryBlue,
+                    ),
 
-                  maxLines: 1,
+                    const SizedBox(width: 10),
 
-                  overflow: TextOverflow.ellipsis,
+                    Expanded(
+                      child: Text(
+                        destination,
 
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.darkText,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        maxLines: 1,
+
+                        overflow: TextOverflow.ellipsis,
+
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.darkText,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               );
             }).toList();
@@ -628,16 +689,14 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                 width: double.infinity,
 
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
+                  horizontal: 12,
+                  vertical: 11,
                 ),
 
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFFEAF7FF)
-                      : Colors.transparent,
+                  color: isSelected ? AppColors.lightBlue : Colors.transparent,
 
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
 
                 child: Row(
@@ -663,7 +722,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                         style: TextStyle(
                           fontSize: 14,
 
-                          color: isSelected ? AppColors.darkBlue : AppColors.darkText,
+                          color: isSelected ? AppColors.primaryBlue : AppColors.darkText,
 
                           fontWeight: isSelected
                               ? FontWeight.w600
@@ -673,7 +732,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     ),
 
                     if (isSelected)
-                      const Icon(Icons.check, size: 18, color: AppColors.primaryBlue),
+                      const Icon(Icons.check_rounded, size: 18, color: AppColors.primaryBlue),
                   ],
                 ),
               ),
@@ -698,25 +757,25 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
   Widget _buildDurationDropdown() {
     return Container(
-      height: 48,
+      height: 50,
 
       decoration: BoxDecoration(
         color: Colors.white,
 
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
 
         border: Border.all(color: AppColors.borderColor),
 
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
 
-      padding: const EdgeInsets.symmetric(horizontal: 17),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
 
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int>(
@@ -726,14 +785,14 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
           dropdownColor: Colors.white,
 
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
 
           elevation: 4,
 
           menuMaxHeight: 300,
 
           icon: const Icon(
-            Icons.keyboard_arrow_down,
+            Icons.keyboard_arrow_down_rounded,
             color: AppColors.greyText,
             size: 22,
           ),
@@ -744,19 +803,91 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
             fontWeight: FontWeight.w500,
           ),
 
+          selectedItemBuilder: (context) {
+            return List.generate(14, (index) {
+              final int days = index + 1;
+
+              return Align(
+                alignment: Alignment.centerLeft,
+
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_month_outlined,
+                      size: 19,
+                      color: AppColors.primaryBlue,
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Text(
+                      '$days Hari',
+
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.darkText,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            });
+          },
+
           items: List.generate(14, (index) {
             final int days = index + 1;
+
+            final bool isSelected = travelDuration == days;
 
             return DropdownMenuItem<int>(
               value: days,
 
-              child: Text(
-                '$days ${days == 1 ? 'Hari' : 'Hari'}',
+              child: Container(
+                width: double.infinity,
 
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.darkText,
-                  fontWeight: FontWeight.w500,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 11,
+                ),
+
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.lightBlue : Colors.transparent,
+
+                  borderRadius: BorderRadius.circular(10),
+                ),
+
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_month_outlined,
+
+                      size: 19,
+
+                      color: isSelected ? AppColors.primaryBlue : AppColors.greyText,
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Expanded(
+                      child: Text(
+                        '$days Hari',
+
+                        style: TextStyle(
+                          fontSize: 14,
+
+                          color: isSelected ? AppColors.primaryBlue : AppColors.darkText,
+
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+
+                    if (isSelected)
+                      const Icon(Icons.check_rounded, size: 18, color: AppColors.primaryBlue),
+                  ],
                 ),
               ),
             );
@@ -767,6 +898,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
             setState(() {
               travelDuration = value;
+              _syncStartTimesByDayWithDuration();
             });
           },
         ),
@@ -775,30 +907,97 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
   }
 
   // ============================================================
+  // SINKRONKAN startTimesByDay DENGAN travelDuration
+  // ============================================================
+  //
+  // Dipanggil tiap kali travelDuration berubah supaya
+  // startTimesByDay selalu punya persis 1 entri per hari perjalanan
+  // (1..travelDuration). Jam yang sudah pernah diisi untuk hari yang
+  // masih ada tetap dipertahankan; hari baru (kalau durasi
+  // ditambah) mulai kosong; entri untuk hari yang sudah tidak ada
+  // lagi (kalau durasi dikurangi) dibuang.
+  //
+  // ============================================================
+
+  void _syncStartTimesByDayWithDuration() {
+    final Map<int, TimeOfDay?> updated = {};
+
+    for (int day = 1; day <= travelDuration; day++) {
+      updated[day] = startTimesByDay[day];
+    }
+
+    startTimesByDay = updated;
+  }
+
+  // ============================================================
+  // CEK APAKAH SEMUA HARI SUDAH PUNYA JAM KEBERANGKATAN
+  // ============================================================
+  //
+  // Dipakai sebelum lanjut ke layar berikutnya (_handleChooseDestination
+  // / _handleAIRecommendation) -- kalau durasinya 3 hari, ketiga
+  // harinya harus sudah diisi jamnya, bukan cuma Hari 1.
+  // _firstMissingStartTimeDay dipakai untuk pesan error yang lebih
+  // jelas (menyebut hari yang mana yang belum diisi).
+  //
+  // ============================================================
+
+  int? get _firstMissingStartTimeDay {
+    for (int day = 1; day <= travelDuration; day++) {
+      if (startTimesByDay[day] == null) {
+        return day;
+      }
+    }
+
+    return null;
+  }
+
+  bool get _hasAllStartTimes => _firstMissingStartTimeDay == null;
+
+  // ============================================================
   // VEHICLE DROPDOWN
   // ============================================================
 
+  // ============================================================
+  // VEHICLE ICON HELPER
+  // ============================================================
+
+  IconData _vehicleIconFor(String vehicle) {
+    switch (vehicle) {
+      case 'Mobil':
+        return Icons.directions_car_outlined;
+
+      case 'Motor':
+        return Icons.two_wheeler_outlined;
+
+      case 'Bus':
+        return Icons.directions_bus_outlined;
+
+      default:
+        return Icons.directions_car_outlined;
+    }
+  }
+
   Widget _buildVehicleDropdown() {
     return Container(
-      height: 48,
+      height: 50,
 
       decoration: BoxDecoration(
         color: Colors.white,
 
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
 
         border: Border.all(color: AppColors.borderColor),
 
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
 
-      padding: const EdgeInsets.symmetric(horizontal: 17),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
 
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -808,22 +1007,31 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
           dropdownColor: Colors.white,
 
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
 
           elevation: 4,
 
           menuMaxHeight: 220,
 
           icon: const Icon(
-            Icons.keyboard_arrow_down,
+            Icons.keyboard_arrow_down_rounded,
             color: AppColors.greyText,
             size: 22,
           ),
 
-          hint: const Text(
-            'Pilih kendaraan',
-
-            style: TextStyle(fontSize: 14, color: AppColors.greyText),
+          hint: Row(
+            children: const [
+              Icon(
+                Icons.directions_car_outlined,
+                size: 19,
+                color: AppColors.greyText,
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Pilih kendaraan',
+                style: TextStyle(fontSize: 14, color: AppColors.greyText),
+              ),
+            ],
           ),
 
           style: const TextStyle(
@@ -837,14 +1045,26 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
               return Align(
                 alignment: Alignment.centerLeft,
 
-                child: Text(
-                  vehicle,
+                child: Row(
+                  children: [
+                    Icon(
+                      _vehicleIconFor(vehicle),
+                      size: 19,
+                      color: AppColors.primaryBlue,
+                    ),
 
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.darkText,
-                    fontWeight: FontWeight.w500,
-                  ),
+                    const SizedBox(width: 10),
+
+                    Text(
+                      vehicle,
+
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.darkText,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               );
             }).toList();
@@ -853,25 +1073,6 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
           items: vehicleOptions.map((String vehicle) {
             final bool isSelected = selectedVehicle == vehicle;
 
-            IconData vehicleIcon;
-
-            switch (vehicle) {
-              case 'Mobil':
-                vehicleIcon = Icons.directions_car_outlined;
-                break;
-
-              case 'Motor':
-                vehicleIcon = Icons.two_wheeler_outlined;
-                break;
-
-              case 'Bus':
-                vehicleIcon = Icons.directions_bus_outlined;
-                break;
-
-              default:
-                vehicleIcon = Icons.directions_car_outlined;
-            }
-
             return DropdownMenuItem<String>(
               value: vehicle,
 
@@ -879,22 +1080,20 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                 width: double.infinity,
 
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
+                  horizontal: 12,
+                  vertical: 11,
                 ),
 
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFFEAF7FF)
-                      : Colors.transparent,
+                  color: isSelected ? AppColors.lightBlue : Colors.transparent,
 
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
 
                 child: Row(
                   children: [
                     Icon(
-                      vehicleIcon,
+                      _vehicleIconFor(vehicle),
 
                       size: 20,
 
@@ -910,7 +1109,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                         style: TextStyle(
                           fontSize: 14,
 
-                          color: isSelected ? AppColors.darkBlue : AppColors.darkText,
+                          color: isSelected ? AppColors.primaryBlue : AppColors.darkText,
 
                           fontWeight: isSelected
                               ? FontWeight.w600
@@ -920,7 +1119,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                     ),
 
                     if (isSelected)
-                      const Icon(Icons.check, size: 18, color: AppColors.primaryBlue),
+                      const Icon(Icons.check_rounded, size: 18, color: AppColors.primaryBlue),
                   ],
                 ),
               ),
@@ -1322,6 +1521,116 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
   }
 
   // ============================================================
+  // START TIME -- SATU BOX PER HARI PERJALANAN
+  // ============================================================
+  //
+  // Kalau durasi perjalanan cuma 1 hari, tampil satu box tanpa label
+  // hari (sama seperti sebelumnya). Kalau lebih dari 1 hari, setiap
+  // hari (Hari 1, Hari 2, dst) dapat box + label sendiri, karena tiap
+  // hari perjalanan punya jam keberangkatannya masing-masing (lihat
+  // startTimesByDay).
+  //
+  // ============================================================
+
+  Widget _buildStartTimeSection() {
+    if (travelDuration <= 1) {
+      return _buildStartTimeBox(1);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List.generate(travelDuration, (index) {
+        final int day = index + 1;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: day == travelDuration ? 0 : 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, left: 2),
+                child: Text(
+                  'Hari ke-$day',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.greyText,
+                  ),
+                ),
+              ),
+              _buildStartTimeBox(day),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildStartTimeBox(int day) {
+    final TimeOfDay? time = startTimesByDay[day];
+
+    return GestureDetector(
+      onTap: () {
+        _selectStartTime(day);
+      },
+
+      child: Container(
+        height: 48,
+
+        decoration: BoxDecoration(
+          color: Colors.white,
+
+          borderRadius: BorderRadius.circular(10),
+
+          border: Border.all(color: AppColors.borderColor),
+
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+
+        padding: const EdgeInsets.symmetric(horizontal: 17),
+
+        child: Row(
+          children: [
+            const Icon(
+              Icons.access_time_outlined,
+              color: AppColors.primaryBlue,
+              size: 19,
+            ),
+
+            const SizedBox(width: 11),
+
+            Expanded(
+              child: Text(
+                time == null
+                    ? 'Pilih jam keberangkatan'
+                    : '${_formatTime(time)} WIB',
+
+                style: TextStyle(
+                  fontSize: 14,
+
+                  color: time == null ? AppColors.greyText : AppColors.darkText,
+
+                  fontWeight: time == null
+                      ? FontWeight.w400
+                      : FontWeight.w500,
+                ),
+              ),
+            ),
+
+            const Icon(Icons.keyboard_arrow_down, color: AppColors.greyText, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
   // DATE SUMMARY
   // ============================================================
 
@@ -1425,7 +1734,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                 border: Border(right: BorderSide(color: AppColors.borderColor)),
               ),
 
-              child: const Icon(Icons.remove, color: AppColors.greyText, size: 24),
+              child: const Icon(Icons.remove, color: AppColors.greyText, size: 18),
             ),
           ),
 
@@ -1462,7 +1771,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
                 border: Border(left: BorderSide(color: AppColors.borderColor)),
               ),
 
-              child: const Icon(Icons.add, color: AppColors.greyText, size: 28),
+              child: const Icon(Icons.add, color: AppColors.greyText, size: 18),
             ),
           ),
         ],
@@ -1497,10 +1806,26 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
           return GestureDetector(
             onTap: () {
               setState(() {
-                if (isSelected) {
-                  selectedCategories.remove(category);
+                if (category == 'Semua') {
+                  // Pilih "Semua" -> reset ke hanya "Semua"
+                  selectedCategories
+                    ..clear()
+                    ..add('Semua');
                 } else {
-                  selectedCategories.add(category);
+                  // Pilih kategori spesifik -> lepas "Semua"
+                  selectedCategories.remove('Semua');
+
+                  if (isSelected) {
+                    selectedCategories.remove(category);
+                  } else {
+                    selectedCategories.add(category);
+                  }
+
+                  // Kalau tidak ada kategori spesifik yang dipilih lagi,
+                  // kembalikan ke "Semua"
+                  if (selectedCategories.isEmpty) {
+                    selectedCategories.add('Semua');
+                  }
                 }
               });
             },
@@ -1513,7 +1838,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
               alignment: Alignment.center,
 
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryBlue : const Color(0xFFF1F1F1),
+                color: isSelected ? AppColors.lightBlue : const Color(0xFFF1F1F1),
 
                 borderRadius: BorderRadius.circular(20),
 
@@ -1534,7 +1859,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
                   fontWeight: FontWeight.w600,
 
-                  color: isSelected ? Colors.white : AppColors.greyText,
+                  color: isSelected ? AppColors.primaryBlue : AppColors.greyText,
                 ),
               ),
             ),
@@ -1562,9 +1887,9 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
 
-          foregroundColor: AppColors.darkBlue,
+          foregroundColor: AppColors.primaryBlue,
 
-          side: const BorderSide(color: AppColors.darkBlue, width: 1),
+          side: const BorderSide(color: AppColors.primaryBlue, width: 1),
 
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
@@ -1598,7 +1923,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryBlue,
 
-          foregroundColor: AppColors.darkBlue,
+          foregroundColor: Colors.white,
 
           elevation: 0,
 
@@ -1632,6 +1957,8 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
       lastDate: DateTime(2035),
 
+      locale: const Locale('id', 'ID'),
+
       helpText: 'Pilih tanggal mulai perjalanan',
 
       cancelText: 'Batal',
@@ -1654,7 +1981,65 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
 
     setState(() {
       startDate = picked;
+
+      // ========================================================
+      // RESET JAM KEBERANGKATAN HARI 1 JIKA SUDAH LEWAT
+      // ========================================================
+      //
+      // Hanya relevan untuk Hari 1 (tanggalnya = startDate persis)
+      // -- hari ke-2 dst selalu jatuh di tanggal setelah startDate,
+      // jadi tidak mungkin "sudah lewat" dari sekarang. Kalau
+      // tanggal yang dipilih adalah hari ini dan jam keberangkatan
+      // Hari 1 yang sudah dipilih sebelumnya ternyata sudah lewat
+      // dari waktu sekarang, reset supaya user memilih ulang jam
+      // yang masih memungkinkan.
+      //
+      // ========================================================
+
+      final TimeOfDay? day1Time = startTimesByDay[1];
+
+      if (day1Time != null &&
+          _isToday(startDate!) &&
+          _isTimeBeforeNow(day1Time)) {
+        startTimesByDay[1] = null;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showMessage(
+              'Jam keberangkatan Hari 1 direset karena sudah lewat. Silakan pilih ulang.',
+            );
+          }
+        });
+      }
     });
+  }
+
+  // ============================================================
+  // HELPER -- CEK APAKAH TANGGAL = HARI INI
+  // ============================================================
+
+  bool _isToday(DateTime date) {
+    final DateTime now = DateTime.now();
+
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  // ============================================================
+  // HELPER -- CEK APAKAH JAM SUDAH LEWAT DARI WAKTU SEKARANG
+  // ============================================================
+  //
+  // Hanya relevan kalau tanggal keberangkatan = hari ini.
+  //
+  // ============================================================
+
+  bool _isTimeBeforeNow(TimeOfDay time) {
+    final DateTime now = DateTime.now();
+    final int nowMinutes = now.hour * 60 + now.minute;
+    final int timeMinutes = time.hour * 60 + time.minute;
+
+    return timeMinutes < nowMinutes;
   }
 
   // ============================================================
@@ -1680,6 +2065,426 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
     return '${date.day} '
         '${months[date.month - 1]} '
         '${date.year}';
+  }
+
+  // ============================================================
+  // SELECT START TIME
+  // ============================================================
+
+  Future<void> _selectStartTime(int day) async {
+    final DateTime now = DateTime.now();
+
+    // ============================================================
+    // TANGGAL SEBENARNYA UNTUK HARI KE-N INI
+    // ============================================================
+    //
+    // Hari 1 = startDate, Hari 2 = startDate + 1 hari, dst. Dipakai
+    // untuk menentukan apakah jam yang boleh dipilih perlu dibatasi
+    // tidak boleh kurang dari jam sekarang -- itu hanya relevan
+    // kalau tanggal hari ini persis jatuh di hari yang sedang
+    // dipilih jamnya (biasanya cuma Hari 1, karena hari ke-2 dst
+    // selalu di masa depan).
+    //
+    // ============================================================
+
+    final DateTime? dateForDay = startDate?.add(Duration(days: day - 1));
+
+    final bool isToday = dateForDay != null && _isToday(dateForDay);
+
+    final List<TimeOfDay> quickTimes = const [
+      TimeOfDay(hour: 6, minute: 0),
+      TimeOfDay(hour: 7, minute: 0),
+      TimeOfDay(hour: 8, minute: 0),
+      TimeOfDay(hour: 9, minute: 0),
+    ];
+
+    // ============================================================
+    // TENTUKAN NILAI AWAL JAM YANG DITAMPILKAN
+    // ============================================================
+    //
+    // - Kalau user sudah pernah memilih jam sebelumnya, pakai itu.
+    // - Kalau belum, dan keberangkatan hari ini, otomatis set ke
+    //   1 jam dari sekarang (dibulatkan ke kelipatan 5 menit).
+    // - Kalau belum, dan keberangkatan bukan hari ini, pakai
+    //   default 08:00 seperti sebelumnya.
+    //
+    // ============================================================
+
+    TimeOfDay initial;
+
+    final TimeOfDay? existing = startTimesByDay[day];
+
+    if (existing != null) {
+      initial = existing;
+    } else if (isToday) {
+      initial = _roundUpToNextFive(
+        now.add(const Duration(hours: 1)),
+      );
+    } else {
+      initial = const TimeOfDay(hour: 8, minute: 0);
+    }
+
+    int selectedHour = initial.hour;
+    int selectedMinute = (initial.minute ~/ 5) * 5;
+
+    final FixedExtentScrollController hourController =
+        FixedExtentScrollController(initialItem: selectedHour);
+    final FixedExtentScrollController minuteController =
+        FixedExtentScrollController(initialItem: selectedMinute ~/ 5);
+
+    final TimeOfDay? picked = await showModalBottomSheet<TimeOfDay>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            // ====================================================
+            // FILTER WAKTU POPULER
+            // ====================================================
+            //
+            // Kalau keberangkatan hari ini, sembunyikan jam-jam
+            // populer yang sudah lewat dari jam sekarang.
+            //
+            // ====================================================
+
+            final List<TimeOfDay> availableQuickTimes = isToday
+                ? quickTimes.where((t) => !_isTimeBeforeNow(t)).toList()
+                : quickTimes;
+
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.borderColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            travelDuration > 1
+                                ? 'Jam Keberangkatan · Hari ke-$day'
+                                : 'Jam Keberangkatan',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: const Icon(
+                              Icons.close,
+                              color: AppColors.greyText,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (isToday) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightBlue,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                size: 16,
+                                color: AppColors.primaryBlue,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Keberangkatan hari ini, jam harus setelah ${_formatTime(TimeOfDay.fromDateTime(now))}.',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.darkBlue,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (availableQuickTimes.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        const Text(
+                          'Waktu populer',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.greyText,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: availableQuickTimes.map((t) {
+                            final bool active =
+                                selectedHour == t.hour && selectedMinute == t.minute;
+                            return GestureDetector(
+                              onTap: () {
+                                setSheetState(() {
+                                  selectedHour = t.hour;
+                                  selectedMinute = t.minute;
+                                });
+                                hourController.animateToItem(
+                                  t.hour,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOut,
+                                );
+                                minuteController.animateToItem(
+                                  t.minute ~/ 5,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOut,
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 9,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: active
+                                      ? AppColors.primaryBlue
+                                      : AppColors.lightBlue,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: active
+                                        ? AppColors.primaryBlue
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: active ? Colors.white : AppColors.darkBlue,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                      const SizedBox(height: 22),
+                      const Text(
+                        'Atur waktu sendiri',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.greyText,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: AppColors.lightBlue,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            IgnorePointer(
+                              child: Container(
+                                height: 40,
+                                margin: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    scrollController: hourController,
+                                    itemExtent: 40,
+                                    looping: true,
+                                    selectionOverlay: const SizedBox.shrink(),
+                                    onSelectedItemChanged: (index) {
+                                      setSheetState(() => selectedHour = index);
+                                    },
+                                    children: List.generate(24, (i) {
+                                      return Center(
+                                        child: Text(
+                                          i.toString().padLeft(2, '0'),
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.darkText,
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                                const Text(
+                                  ':',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkText,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    scrollController: minuteController,
+                                    itemExtent: 40,
+                                    looping: true,
+                                    selectionOverlay: const SizedBox.shrink(),
+                                    onSelectedItemChanged: (index) {
+                                      setSheetState(() => selectedMinute = index * 5);
+                                    },
+                                    children: List.generate(12, (i) {
+                                      final int m = i * 5;
+                                      return Center(
+                                        child: Text(
+                                          m.toString().padLeft(2, '0'),
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.darkText,
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryBlue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: () {
+                            final TimeOfDay result =
+                                TimeOfDay(hour: selectedHour, minute: selectedMinute);
+
+                            // ============================================
+                            // VALIDASI -- JAM TIDAK BOLEH SUDAH LEWAT
+                            // ============================================
+                            //
+                            // Hanya berlaku kalau tanggal keberangkatan
+                            // adalah hari ini.
+                            //
+                            // ============================================
+
+                            if (isToday && _isTimeBeforeNow(result)) {
+                              _showMessage(
+                                'Jam keberangkatan tidak boleh kurang dari ${_formatTime(TimeOfDay.fromDateTime(now))}.',
+                              );
+                              return;
+                            }
+
+                            Navigator.pop(context, result);
+                          },
+                          child: const Text(
+                            'Pilih Jam Ini',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    hourController.dispose();
+    minuteController.dispose();
+
+    if (picked == null) {
+      return;
+    }
+
+    setState(() {
+      startTimesByDay[day] = picked;
+    });
+  }
+
+  // ============================================================
+  // BULATKAN WAKTU KE KELIPATAN 5 MENIT TERDEKAT (KE ATAS)
+  // ============================================================
+  //
+  // Dipakai supaya nilai default "atur waktu sendiri" cocok
+  // dengan pilihan menit pada CupertinoPicker (kelipatan 5).
+  //
+  // ============================================================
+
+  TimeOfDay _roundUpToNextFive(DateTime time) {
+    int hour = time.hour;
+    int minute = ((time.minute + 4) ~/ 5) * 5;
+
+    if (minute == 60) {
+      minute = 0;
+      hour = (hour + 1) % 24;
+    }
+
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  // ============================================================
+  // FORMAT TIME (format Indonesia -- 24 jam, mis. "08:30")
+  // ============================================================
+
+  String _formatTime(TimeOfDay time) {
+    final String hour = time.hour.toString().padLeft(2, '0');
+    final String minute = time.minute.toString().padLeft(2, '0');
+
+    return '$hour:$minute';
   }
 
   DateTime? _parseDate(dynamic value) {
@@ -1728,6 +2533,19 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
     }
 
     final String tripTitle = overlappingTrip['tripName'] ?? 'Perjalanan';
+
+    // ============================================================
+    // PERINGATAN TANGGAL BENTROK -- TETAP BOLEH LANJUT
+    // ============================================================
+    //
+    // User boleh tetap membuat trip baru meski tanggalnya bentrok
+    // dengan trip lain yang sudah ada -- dialog ini cuma MEMPERINGATKAN,
+    // tidak memblokir. Ada 2 opsi: "Tetap Buat Perjalanan Baru"
+    // (lanjut walau bentrok, panggil onProceed()) atau "Kembali & Ubah
+    // Tanggal" (batal, user tetap di layar ini untuk ganti tanggal
+    // sendiri lewat _selectStartDate kalau mau).
+    //
+    // ============================================================
 
     final bool? choice = await showDialog<bool>(
       context: context,
@@ -1844,6 +2662,17 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
       return;
     }
 
+    if (!_hasAllStartTimes) {
+      final int missingDay = _firstMissingStartTimeDay!;
+
+      _showMessage(
+        travelDuration > 1
+            ? 'Silakan pilih jam keberangkatan untuk Hari ke-$missingDay terlebih dahulu.'
+            : 'Silakan pilih jam keberangkatan terlebih dahulu.',
+      );
+      return;
+    }
+
     if (selectedVehicle == null) {
       _showMessage('Silakan pilih kendaraan terlebih dahulu.');
       return;
@@ -1857,6 +2686,10 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
     _checkDateOverlapAndProceed(context, () async {
       final DateTime endDate = _calculateEndDate();
 
+      // 'startTime'/'startTimeFormatted' dipertahankan sebagai jam
+      // Hari 1 (backward compatible untuk layar yang belum membaca
+      // per hari). 'startTimesByDay'/'startTimesByDayFormatted' berisi
+      // jam keberangkatan LENGKAP untuk semua hari perjalanan.
       final Map<String, dynamic> travelData = {
         'tripName': tripNameController.text.trim(),
         'startLatLng': selectedStartLocation,
@@ -1864,9 +2697,16 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
         'duration': travelDuration,
         'startDate': startDate,
         'endDate': endDate,
+        'startTime': startTimesByDay[1],
+        'startTimeFormatted': _formatTime(startTimesByDay[1]!),
+        'startTimesByDay': startTimesByDay,
+        'startTimesByDayFormatted': {
+          for (final entry in startTimesByDay.entries)
+            entry.key: entry.value != null ? _formatTime(entry.value!) : null,
+        },
         'participants': '$participants Orang',
         'vehicle': selectedVehicle,
-        'categories': selectedCategories.toList(),
+        'categories': _effectiveCategories.toList(),
       };
 
       final result = await Navigator.push(
@@ -1875,7 +2715,7 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
           settings: RouteSettings(arguments: travelData),
           builder: (context) {
             return DestinationSelectionScreen(
-              selectedCategories: selectedCategories.toSet(),
+              selectedCategories: _effectiveCategories,
               travelDuration: travelDuration,
               startLocation: selectedStartLocation,
               startLocationName: startLocationController.text,
@@ -1919,6 +2759,17 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
       return;
     }
 
+    if (!_hasAllStartTimes) {
+      final int missingDay = _firstMissingStartTimeDay!;
+
+      _showMessage(
+        travelDuration > 1
+            ? 'Silakan pilih jam keberangkatan untuk Hari ke-$missingDay terlebih dahulu.'
+            : 'Silakan pilih jam keberangkatan terlebih dahulu.',
+      );
+      return;
+    }
+
     if (selectedVehicle == null) {
       _showMessage('Silakan pilih kendaraan terlebih dahulu.');
       return;
@@ -1932,6 +2783,10 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
     _checkDateOverlapAndProceed(context, () async {
       final DateTime endDate = _calculateEndDate();
 
+      // 'startTime'/'startTimeFormatted' dipertahankan sebagai jam
+      // Hari 1 (backward compatible untuk layar yang belum membaca
+      // per hari). 'startTimesByDay'/'startTimesByDayFormatted' berisi
+      // jam keberangkatan LENGKAP untuk semua hari perjalanan.
       final Map<String, dynamic> travelData = {
         'tripName': tripNameController.text.trim(),
         'startLocation': selectedStartLocation,
@@ -1939,9 +2794,16 @@ class _TravelInformationScreenState extends State<TravelInformationScreen> {
         'duration': travelDuration,
         'startDate': startDate,
         'endDate': endDate,
+        'startTime': startTimesByDay[1],
+        'startTimeFormatted': _formatTime(startTimesByDay[1]!),
+        'startTimesByDay': startTimesByDay,
+        'startTimesByDayFormatted': {
+          for (final entry in startTimesByDay.entries)
+            entry.key: entry.value != null ? _formatTime(entry.value!) : null,
+        },
         'participants': participants,
         'vehicle': selectedVehicle,
-        'categories': selectedCategories.toList(),
+        'categories': _effectiveCategories.toList(),
       };
 
       final result = await Navigator.push(

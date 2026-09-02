@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'travel_information_screen.dart';
@@ -6,6 +8,7 @@ import '../services/saved_itinerary_service.dart';
 import '../data/destinations_data.dart';
 import 'manual_schedule_screen.dart';
 import 'ai_itinerary_screen.dart';
+import '../widgets/edit_basic_info_sheet.dart';
 import '../theme/app_colors.dart';
 import '../widgets/smart_image.dart';
 import '../services/api_service.dart';
@@ -43,7 +46,34 @@ class _PlanScreenState extends State<PlanScreen> {
     }
     return ValueListenableBuilder<List<List<Map<String, dynamic>>>>(
       valueListenable: SavedItineraryService.instance.itineraries,
-      builder: (context, savedItineraries, _) {
+      builder: (context, allItineraries, _) {
+        // ============================================================
+        // SEMBUNYIKAN ITINERARY YANG TRIPNYA SUDAH SELESAI DARI RENCANA
+        // ============================================================
+        //
+        // Begitu SEMUA hari itinerary sudah 'dayCompleted' (otomatis
+        // ditandai selesai lewat TripScreen._handleStopIndexUpdate),
+        // itinerary itu hilang dari daftar Rencana -- cukup relevan di
+        // Riwayat aja (lihat HistoryScreen.hasAnyCompletedDay). Data-nya
+        // sendiri TIDAK dihapus dari SavedItineraryService, cuma
+        // disaring di sini, jadi tetap utuh & tetap kebaca di Riwayat.
+        //
+        // Perlakuan yang SAMA berlaku kalau SEMUA destinasi di seluruh
+        // itinerary ini sudah ditandai DIBATALKAN (lihat
+        // TripScreen -- tombol "Batalkan Kunjungan" per destinasi &
+        // SavedItineraryService.isTripFullyCancelled) -- itinerary itu
+        // juga dianggap "kelar" & disembunyikan dari Rencana, cuma
+        // bedanya badge-nya di Riwayat baca "Dibatalkan", bukan
+        // "Trip Selesai" (lihat HistoryScreen._buildCompletionBadge).
+        //
+        // ============================================================
+
+        final List<List<Map<String, dynamic>>> savedItineraries = allItineraries
+            .where((itinerary) =>
+                !SavedItineraryService.instance.isTripCompleted(itinerary) &&
+                !SavedItineraryService.instance.isTripFullyCancelled(itinerary))
+            .toList();
+
         final bool hasItinerary = savedItineraries.isNotEmpty;
 
         return _buildScaffold(context, hasItinerary, savedItineraries);
@@ -581,7 +611,8 @@ class _PlanScreenState extends State<PlanScreen> {
                     ),
 
                     // =================================================
-                    // THREE DOT BUTTON
+                    // THREE DOT BUTTON -- glass effect biar lebih modern
+                    // daripada lingkaran hitam transparan polos
                     // =================================================
                     Positioned(
                       right: 10,
@@ -592,20 +623,31 @@ class _PlanScreenState extends State<PlanScreen> {
                           _showItineraryMenu(context, savedItinerary);
                         },
 
-                        child: Container(
-                          width: 34,
-                          height: 34,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(17),
 
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.45),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
 
-                            shape: BoxShape.circle,
-                          ),
+                            child: Container(
+                              width: 32,
+                              height: 32,
 
-                          child: const Icon(
-                            Icons.more_vert,
-                            color: Colors.white,
-                            size: 22,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.28),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.25),
+                                  width: 0.8,
+                                ),
+                              ),
+
+                              child: const Icon(
+                                Icons.more_vert,
+                                color: Colors.white,
+                                size: 19,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -1118,72 +1160,238 @@ class _PlanScreenState extends State<PlanScreen> {
       backgroundColor: Colors.transparent,
 
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
+        return SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
 
-          decoration: const BoxDecoration(
-            color: Colors.white,
+            decoration: const BoxDecoration(
+              color: Colors.white,
 
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(25),
+                topRight: Radius.circular(25),
+              ),
             ),
-          ),
 
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
 
-            children: [
-              // ==================================================
-              // HANDLE
-              // ==================================================
+              children: [
+                // ==================================================
+                // HANDLE
+                // ==================================================
 
-              Container(
-                width: 40,
-                height: 4,
+                Container(
+                  width: 40,
+                  height: 4,
 
-                margin: const EdgeInsets.only(bottom: 18),
+                  margin: const EdgeInsets.only(bottom: 18),
 
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD8D8D8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D8D8),
 
-                  borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
 
-              // ==================================================
-              // EDIT
-              // ==================================================
-              ListTile(
-                leading: const Icon(Icons.edit_outlined, color: AppColors.darkBlue),
+                // ==================================================
+                // TITLE
+                // ==================================================
 
-                title: const Text('Edit Itinerary'),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Kelola Itinerary',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ),
 
-                onTap: () {
-                  Navigator.pop(context);
+                const SizedBox(height: 14),
 
-                  _editItinerary(context, savedItinerary);
-                },
-              ),
+                // ==================================================
+                // EDIT -- INFO DASAR (nama & tanggal SAJA, cepat,
+                // tidak masuk ke ManualScheduleScreen/AIItineraryScreen)
+                // ==================================================
 
-              // ==================================================
-              // DELETE
-              // ==================================================
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                _buildMenuAction(
+                  icon: Icons.drive_file_rename_outline_rounded,
+                  iconColor: AppColors.darkBlue,
+                  iconBackground: AppColors.primaryBlue.withOpacity(0.1),
+                  label: 'Ubah Info Dasar',
+                  subtitle: 'Ganti nama atau tanggal perjalanan',
+                  onTap: () {
+                    Navigator.pop(context);
 
-                title: const Text('Hapus Itinerary'),
+                    showEditBasicInfoSheet(context, savedItinerary ?? []);
+                  },
+                ),
 
-                onTap: () {
-                  Navigator.pop(context);
+                const SizedBox(height: 8),
 
-                  _deleteItinerary(context, _itineraryId(savedItinerary ?? []));
-                },
-              ),
-            ],
+                // ==================================================
+                // EDIT -- DESTINASI & JADWAL (flow penuh, balik ke
+                // ManualScheduleScreen/AIItineraryScreen sesuai 'source')
+                // ==================================================
+
+                _buildMenuAction(
+                  icon: Icons.edit_outlined,
+                  iconColor: AppColors.darkBlue,
+                  iconBackground: AppColors.primaryBlue.withOpacity(0.1),
+                  label: 'Ubah Destinasi & Jadwal',
+                  subtitle: 'Susun ulang destinasi & jam kunjungan',
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    _editItinerary(context, savedItinerary);
+                  },
+                ),
+
+                const SizedBox(height: 8),
+
+                // ==================================================
+                // DELETE
+                // ==================================================
+
+                _buildMenuAction(
+                  icon: Icons.delete_outline_rounded,
+                  iconColor: Colors.red,
+                  iconBackground: AppColors.errorBg,
+                  label: 'Hapus Itinerary',
+                  subtitle: 'Rencana ini akan dihapus permanen',
+                  labelColor: Colors.red,
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    _deleteItinerary(context, _itineraryId(savedItinerary ?? []));
+                  },
+                ),
+
+                const SizedBox(height: 10),
+
+                // ==================================================
+                // BATAL
+                // ==================================================
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFFF5F6F8),
+                      foregroundColor: AppColors.darkText,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  // ============================================================
+  // BARIS AKSI DI BOTTOM SHEET MENU ITINERARY
+  // ============================================================
+  //
+  // Dipakai bareng oleh Edit & Hapus supaya bentuknya konsisten:
+  // ikon dalam lingkaran berwarna, judul + subjudul singkat, dan
+  // ripple effect pas ditekan (lebih modern dibanding ListTile
+  // polos).
+  // ============================================================
+
+  Widget _buildMenuAction({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBackground,
+    required String label,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color? labelColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderColor),
+          ),
+
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  shape: BoxShape.circle,
+                ),
+
+                child: Icon(icon, color: iconColor, size: 21),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: labelColor ?? AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.greyText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.grey.withOpacity(0.6),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

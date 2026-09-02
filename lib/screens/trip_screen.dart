@@ -122,6 +122,263 @@ class _TripScreenState extends State<TripScreen> {
   }
 
   // ============================================================
+  // UPDATE PROGRESS "SUDAH SAMPAI" -- DIPAKAI BERSAMA
+  // ============================================================
+  //
+  // Dipanggil dari DUA tempat: (1) tombol "Tandai Sudah Sampai" baru
+  // di tiap baris destinasi (_buildDestinationRow), dan (2)
+  // onStopIndexChanged dari RouteScreen (tombol "Rute" masih ada,
+  // cuma buat lihat rute -- bukan lagi satu-satunya cara menandai
+  // sampai). Disatukan di sini supaya hari otomatis ditandai selesai
+  // (tanpa konfirmasi manual lagi) TERLEPAS dari jalur mana yang
+  // dipakai user buat menandai destinasi terakhir.
+  //
+  // ============================================================
+
+  void _handleStopIndexUpdate(
+    int newCompletedIndex,
+    List<Map<String, dynamic>> itinerary,
+    int dayNumber,
+    List<Map<String, dynamic>> destinations,
+  ) {
+    setState(() {
+      _completedStopIndex = newCompletedIndex;
+    });
+
+    final int totalDestinations = destinations.length;
+    if (totalDestinations == 0) return;
+
+    // Hari dianggap SELESAI kalau SEMUA destinasi sudah "kebagian" --
+    // baik karena sudah tercatat "Sudah Sampai" (index <
+    // newCompletedIndex) MAUPUN karena memang sudah ditandai
+    // DIBATALKAN (jadi gak perlu ditunggu "Sudah Sampai"). Ini
+    // supaya destinasi yang dibatalkan di ujung jadwal tidak bikin
+    // hari itu nyangkut terus di status "belum selesai".
+    bool allHandled = true;
+    for (int i = 0; i < totalDestinations; i++) {
+      final bool handled = i < newCompletedIndex ||
+          SavedItineraryService.instance.isDestinationCancelled(destinations[i]);
+      if (!handled) {
+        allHandled = false;
+        break;
+      }
+    }
+    if (!allHandled) return;
+
+    // Semua destinasi hari ini sudah "Sudah Sampai" -- otomatis
+    // dipersist selesai, tidak perlu lagi konfirmasi manual lewat
+    // kartu "Tandai Hari Ini Selesai".
+    final String? itineraryId = SavedItineraryService.instance.itineraryIdOf(itinerary);
+    if (itineraryId == null) return;
+
+    final bool alreadyCompleted =
+        SavedItineraryService.instance.isDayCompleted(itinerary, dayNumber);
+    if (alreadyCompleted) return;
+
+    SavedItineraryService.instance.markDayCompleted(itineraryId, dayNumber);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Semua destinasi hari ini sudah dikunjungi -- hari ini otomatis ditandai selesai'),
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // BATALKAN KUNJUNGAN SATU DESTINASI (BUKAN DIHAPUS DARI RUTE)
+  // ============================================================
+  //
+  // Destinasi yang dibatalkan TETAP ada di `destinations` & tetap
+  // kelihatan di timeline hari itu (cuma dikasih gaya "Dibatalkan"
+  // lewat _buildDestinationRow) -- yang berubah cuma flag
+  // `cancelled` di datanya (lihat
+  // SavedItineraryService.setDestinationCancelled). Begitu SEMUA
+  // destinasi di SELURUH hari itinerary ini ikut dibatalkan, trip ini
+  // otomatis diperlakukan sama seperti trip yang sudah selesai --
+  // hilang dari PlanScreen, cuma tersisa di HistoryScreen dengan
+  // badge "Dibatalkan" (lihat SavedItineraryService.isTripFullyCancelled,
+  // PlanScreen & HistoryScreen).
+  //
+  // ============================================================
+
+  // Index destinasi berikutnya yang BENERAN "kena giliran" -- mulai
+  // dari fromIndex, tapi kalau destinasi di posisi itu (atau
+  // beberapa berikutnya) sudah dibatalkan, digeser terus sampai
+  // ketemu destinasi yang belum dibatalkan (atau habis). Dipakai
+  // supaya tombol "Tandai Sudah Sampai" & kartu "Aktivitas
+  // Berikutnya" gak pernah nyangkut di destinasi yang sudah
+  // dibatalkan.
+  int _nextActiveIndex(List<Map<String, dynamic>> destinations, int fromIndex) {
+    int i = fromIndex;
+    while (i < destinations.length &&
+        SavedItineraryService.instance.isDestinationCancelled(destinations[i])) {
+      i++;
+    }
+    return i;
+  }
+
+  // ==============================================================
+  // BENTUK POPUP DISAMAKAN dengan popup konfirmasi "Hapus Itinerary?"
+  // di PlanScreen/HistoryScreen: Dialog putih sudut 22, ikon lingkaran
+  // di atas, judul tebal, deskripsi abu-abu, tombol utama full-width
+  // (rounded 25), tombol teks "Batal" di bawahnya -- supaya semua
+  // popup konfirmasi di app kelihatan senada, bukan AlertDialog bawaan.
+  // ==============================================================
+
+  Future<void> _confirmCancelDestination(
+    List<Map<String, dynamic>> itinerary,
+    int dayNumber,
+    int destinationIndex,
+    String destinationName,
+  ) async {
+    final String? itineraryId = SavedItineraryService.instance.itineraryIdOf(itinerary);
+    if (itineraryId == null) return;
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ----------------------------------------------
+                // IKON
+                // ----------------------------------------------
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: warnBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.cancel_outlined,
+                    color: warnText,
+                    size: 34,
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // ----------------------------------------------
+                // JUDUL
+                // ----------------------------------------------
+                const Text(
+                  'Batalkan Kunjungan?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // ----------------------------------------------
+                // DESKRIPSI
+                // ----------------------------------------------
+                Text(
+                  '"$destinationName" akan ditandai dibatalkan. Destinasi ini tetap ada di rute hari ini, cuma gak akan dianggap dikunjungi.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: AppColors.greyText,
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
+                // ----------------------------------------------
+                // YA, BATALKAN
+                // ----------------------------------------------
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: warnText,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const Text(
+                      'Ya, Batalkan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // ----------------------------------------------
+                // BATAL
+                // ----------------------------------------------
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.greyText,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    await SavedItineraryService.instance.setDestinationCancelled(
+      itineraryId,
+      dayNumber,
+      destinationIndex,
+      true,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"$destinationName" ditandai dibatalkan')),
+      );
+    }
+  }
+
+  Future<void> _uncancelDestination(
+    List<Map<String, dynamic>> itinerary,
+    int dayNumber,
+    int destinationIndex,
+  ) async {
+    final String? itineraryId = SavedItineraryService.instance.itineraryIdOf(itinerary);
+    if (itineraryId == null) return;
+
+    await SavedItineraryService.instance.setDestinationCancelled(
+      itineraryId,
+      dayNumber,
+      destinationIndex,
+      false,
+    );
+  }
+
+  // ============================================================
   // OPSI PENYESUAIAN ITINERARY (tergantung jumlah hari trip)
   // ============================================================
   //
@@ -537,7 +794,11 @@ class _TripScreenState extends State<TripScreen> {
   // ini (completedIndex) supaya info "sudah dikunjungi / sedang
   // dituju / belum dituju" yang sudah ada sebelumnya tidak hilang --
   // abu-abu+centang untuk yang sudah dikunjungi, biru gelap besar
-  // untuk yang sedang dituju, biru muda untuk yang belum.
+  // untuk yang sedang dituju, biru muda untuk yang belum. Destinasi
+  // yang DIBATALKAN dapat gaya sendiri -- pin MERAH + ikon silang --
+  // supaya beda jelas dari yang sudah dikunjungi (abu-abu+centang),
+  // ini SENGAJA menang dari status passed/active manapun karena
+  // "dibatalkan" lebih relevan ditampilkan daripada urutan progresnya.
   //
   // ============================================================
 
@@ -551,10 +812,15 @@ class _TripScreenState extends State<TripScreen> {
       final LatLng? coordinate = coordinateOfDestination(destinations[i]);
       if (coordinate == null) continue;
 
+      final bool cancelled = SavedItineraryService.instance.isDestinationCancelled(destinations[i]);
       final bool passed = i < completedIndex;
-      final bool active = i == completedIndex;
+      final bool active = i == completedIndex && !cancelled;
 
-      final Color pinColor = passed ? AppColors.doneGrey : (active ? AppColors.darkBlue : AppColors.paleBlue);
+      final Color pinColor = cancelled
+          ? warnText
+          : (passed ? AppColors.doneGrey : (active ? AppColors.darkBlue : AppColors.paleBlue));
+      final IconData pinIcon =
+          cancelled ? Icons.close_rounded : (passed ? Icons.check_rounded : Icons.location_on);
 
       // Heatmap kepadatan -- ditambahkan SEBELUM pin nomornya (biar
       // ada di lapisan bawah), sama seperti di ItineraryDetailScreen.
@@ -592,7 +858,7 @@ class _TripScreenState extends State<TripScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        passed ? Icons.check_rounded : Icons.location_on,
+                        pinIcon,
                         color: Colors.white,
                         size: 22,
                       ),
@@ -949,9 +1215,11 @@ class _TripScreenState extends State<TripScreen> {
     // Beda dengan _completedStopIndex (state UI biasa, reset kalau
     // ganti tab hari / app ditutup), 'dayCompleted' ini DISIMPAN lewat
     // SavedItineraryService.markDayCompleted -- jadi begitu sebuah
-    // hari sudah dikonfirmasi selesai (lihat _buildFinishDayCard /
-    // _markDayFinished), badge & progress hari itu tetap kebaca
-    // "Selesai" walau user pindah-pindah tab hari atau buka-tutup app.
+    // hari otomatis ditandai selesai (lihat _handleStopIndexUpdate,
+    // dipicu begitu semua destinasi tercatat sampai baik lewat tombol
+    // "Tandai Sudah Sampai" maupun deteksi GPS di RouteScreen), badge
+    // & progress hari itu tetap kebaca "Selesai" walau user
+    // pindah-pindah tab hari atau buka-tutup app.
     //
     // Dipakai sebagai OVERRIDE: kalau hari yang ditampilkan memang
     // sudah completed, anggap semua destinasinya sudah dikunjungi
@@ -975,9 +1243,10 @@ class _TripScreenState extends State<TripScreen> {
     // "Aktivitas Berikutnya" jadi disembunyikan, lihat
     // _buildMapWithOverlay) ATAU hari ini memang sudah completed
     // (dayCompletedPersisted).
+    final int nextActiveIndex = _nextActiveIndex(destinations, effectiveCompletedIndex);
     final Map<String, dynamic>? nextActivity =
-        effectiveCompletedIndex < destinations.length
-            ? destinations[effectiveCompletedIndex]
+        nextActiveIndex < destinations.length
+            ? destinations[nextActiveIndex]
             : null;
 
     final Map<String, dynamic>? crowded = _firstCrowdedDestination(destinations);
@@ -994,22 +1263,16 @@ class _TripScreenState extends State<TripScreen> {
     // ============================================================
     //
     // Begitu nextActivity == null (semua destinasi hari ini sudah
-    // "Ditandai Sudah Sampai"), kartu "Aktivitas Berikutnya" + tombol
-    // Rute otomatis hilang dari overlay peta (lihat _buildMapWithOverlay,
-    // cuma dirender kalau nextActivity != null) -- jadi user kelihatan
-    // "mentok" tanpa aksi lanjutan. _buildFinishDayCard di bawah ngisi
-    // kekosongan itu -- SEKARANG bisa muncul di HARI MANA PUN (bukan
-    // cuma hari terakhir seperti dulu), karena statusnya per-hari,
-    // bukan per-trip. Begitu dikonfirmasi lewat _markDayFinished, kartu
-    // ini otomatis hilang lagi (diganti badge "Selesai") karena
-    // dayCompletedPersisted sudah true, jadi tidak nawarin dikonfirmasi
-    // dua kali.
+    // "Ditandai Sudah Sampai", baik manual maupun lewat deteksi GPS
+    // di RouteScreen), kartu "Aktivitas Berikutnya" + tombol Rute
+    // otomatis hilang dari overlay peta (lihat _buildMapWithOverlay,
+    // cuma dirender kalau nextActivity != null). TIDAK ADA LAGI kartu
+    // konfirmasi manual "Tandai Trip/Hari Ini Selesai" -- hari (dan
+    // trip, kalau ini hari terakhir) otomatis ditandai selesai lewat
+    // _handleStopIndexUpdate begitu destinasi terakhir tercatat sampai,
+    // tanpa perlu aksi tambahan dari user.
     //
     // ============================================================
-
-    final bool allDestinationsDoneToday =
-        destinations.isNotEmpty && nextActivity == null;
-    final bool showFinishDayCard = !dayCompletedPersisted;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -1030,6 +1293,8 @@ class _TripScreenState extends State<TripScreen> {
                 nextActivity,
                 vehicle,
                 effectiveCompletedIndex,
+                itinerary,
+                dayNumber,
               ),
 
               // Transform.translate (BUKAN margin negatif -- Container
@@ -1072,16 +1337,6 @@ class _TripScreenState extends State<TripScreen> {
 
                       _buildProgressCard(destinations, effectiveCompletedIndex),
 
-                      if (showFinishDayCard) ...[
-                        const SizedBox(height: 16),
-                        _buildFinishDayCard(
-                          itinerary,
-                          dayNumber,
-                          isLastDay: dayNumber == totalDays,
-                          allDone: allDestinationsDoneToday,
-                        ),
-                      ],
-
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -1089,7 +1344,13 @@ class _TripScreenState extends State<TripScreen> {
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildDayTimeline(schedule, destinations, effectiveCompletedIndex),
+                  child: _buildDayTimeline(
+                    schedule,
+                    destinations,
+                    effectiveCompletedIndex,
+                    itinerary,
+                    dayNumber,
+                  ),
                 ),
 
                 if (crowded != null) ...[
@@ -1135,6 +1396,8 @@ class _TripScreenState extends State<TripScreen> {
     Map<String, dynamic>? nextActivity,
     String vehicle,
     int completedIndex,
+    List<Map<String, dynamic>> itinerary,
+    int dayNumber,
   ) {
     final LatLng? startPoint = _getStartPoint(schedule);
     final List<LatLng> destinationPoints = _mapPoints(destinations);
@@ -1196,12 +1459,27 @@ class _TripScreenState extends State<TripScreen> {
             ],
           ),
 
-          if (nextActivity != null)
+          // Kartu ini SEKARANG tetap ditampilkan walau semua destinasi
+          // hari ini sudah "kebagian" (dikunjungi maupun dibatalkan) --
+          // bukan cuma waktu ada nextActivity -- supaya preview rute +
+          // tombol "Rute" tetap bisa diakses buat lihat gambaran rute,
+          // lihat _buildNextActivityCard untuk versi kontennya waktu
+          // nextActivity == null.
+          if (destinations.isNotEmpty)
             Positioned(
-              top: 16,
+              // CHANGED -- digeser turun sedikit dari 16 ke 46 (masih di
+              // atas peta, cuma gak terlalu mepet ke tepi paling atas).
+              top: 46,
               left: 16,
               right: 16,
-              child: _buildNextActivityCard(nextActivity, destinations, vehicle),
+              child: _buildNextActivityCard(
+                nextActivity,
+                destinations,
+                vehicle,
+                itinerary,
+                dayNumber,
+                completedIndex,
+              ),
             ),
         ],
       ),
@@ -1209,12 +1487,35 @@ class _TripScreenState extends State<TripScreen> {
   }
 
   Widget _buildNextActivityCard(
-    Map<String, dynamic> destination,
+    Map<String, dynamic>? destination,
     List<Map<String, dynamic>> allDestinations,
     String vehicle,
+    List<Map<String, dynamic>> itinerary,
+    int dayNumber,
+    int completedIndex,
   ) {
-    final String time = _arrivalTime(destination);
-    final String name = _destinationName(destination);
+    final bool hasNextActivity = destination != null;
+
+    // ============================================================
+    // RINGKASAN STATUS -- dipakai waktu SEMUA destinasi hari ini
+    // sudah "kebagian" (dikunjungi maupun dibatalkan), jadi gak ada
+    // lagi "Aktivitas Berikutnya" buat ditampilkan. Kartu (+ tombol
+    // "Rute") TETAP ditampilkan supaya preview rute masih bisa
+    // diakses buat referensi, cuma isinya ganti jadi ringkasan ini.
+    // ============================================================
+
+    int visitedCount = 0;
+    int cancelledCount = 0;
+    for (int i = 0; i < allDestinations.length; i++) {
+      if (SavedItineraryService.instance.isDestinationCancelled(allDestinations[i])) {
+        cancelledCount++;
+      } else if (i < completedIndex) {
+        visitedCount++;
+      }
+    }
+
+    final String time = hasNextActivity ? _arrivalTime(destination) : '';
+    final String name = hasNextActivity ? _destinationName(destination) : '';
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1238,9 +1539,9 @@ class _TripScreenState extends State<TripScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Aktivitas Berikutnya',
-                      style: TextStyle(
+                    Text(
+                      hasNextActivity ? 'Aktivitas Berikutnya' : 'Preview Rute',
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppColors.greyText,
@@ -1248,7 +1549,9 @@ class _TripScreenState extends State<TripScreen> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$time  $name',
+                      hasNextActivity
+                          ? '$time  $name'
+                          : 'Semua destinasi hari ini sudah selesai/dibatalkan',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1267,7 +1570,11 @@ class _TripScreenState extends State<TripScreen> {
               // rute multi-stop (bukan cuma satu tujuan lagi) --
               // RouteScreen yang menghitung leg lokasi user -> stop
               // 1 -> stop 2 -> dst, dan menggambar tiap leg beda
-              // gaya (on/off/sudah dilewati) sesuai progress.
+              // gaya (on/off/sudah dilewati) sesuai progress. Ini
+              // TETAP jalan walau semua destinasi sudah kebagian
+              // status (selesai/dibatalkan) -- destinasi yang
+              // dibatalkan TIDAK dihapus dari daftar stop, cuma
+              // ditandai beda di RouteScreen/preview map.
               //
               // Destinasi yang koordinatnya tidak ketemu (null)
               // DILEWATI dari daftar stop -- bukan bikin seluruh
@@ -1311,11 +1618,23 @@ class _TripScreenState extends State<TripScreen> {
                       builder: (context) => RouteScreen(
                         stops: stops,
                         initialVehicle: vehicle,
+                        // Begitu SEMUA destinasi hari ini sudah kebagian
+                        // status (dikunjungi ATAU dibatalkan -- lihat
+                        // hasNextActivity), RouteScreen dibuka dalam mode
+                        // readOnly: tombol "Tandai Sampai" disembunyikan
+                        // (cuma tersisa "Buka di Google Maps"), karena
+                        // gak ada lagi yang perlu ditandai -- ini murni
+                        // preview rute buat referensi, bukan navigasi
+                        // aktif. Lihat RouteScreen.readOnly.
+                        readOnly: !hasNextActivity,
                         onStopIndexChanged: (index) {
                           if (!mounted) return;
-                          setState(() {
-                            _completedStopIndex = index;
-                          });
+                          _handleStopIndexUpdate(
+                            index,
+                            itinerary,
+                            dayNumber,
+                            allDestinations,
+                          );
                         },
                       ),
                     ),
@@ -1342,28 +1661,57 @@ class _TripScreenState extends State<TripScreen> {
 
           // TODO(fungsi bertahap): teks statis, belum dihitung dari
           // jam sekarang vs jam keberangkatan sebenarnya.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.lightBlue,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.access_time_rounded, size: 15, color: AppColors.darkBlue),
-                SizedBox(width: 6),
-                Text(
-                  'Estimasi keberangkatan 30 menit lagi',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.darkBlue,
+          if (hasNextActivity)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.lightBlue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.access_time_rounded, size: 15, color: AppColors.darkBlue),
+                  SizedBox(width: 6),
+                  Text(
+                    'Estimasi keberangkatan 30 menit lagi',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkBlue,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            )
+          else
+            // Ringkasan singkat dikunjungi vs dibatalkan -- warnanya
+            // netral (abu-abu), beda dengan kartu info biru di atas,
+            // karena ini bukan lagi info yang "aktif ditunggu".
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F2F2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 15, color: AppColors.greyText),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '$visitedCount dikunjungi${cancelledCount > 0 ? ', $cancelledCount dibatalkan' : ''} dari ${allDestinations.length} destinasi',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.greyText,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1727,8 +2075,8 @@ class _TripScreenState extends State<TripScreen> {
   // Trip 3 hari yang baru jalan di Hari 1 seharusnya tidak bisa
   // "loncat" ke tab Hari 2/3 dan menandai destinasi di situ sebagai
   // sudah dikunjungi lewat RouteScreen -- itu bakal salah nampilin
-  // progress (dan bisa keliru memicu _buildFinishDayCard di hari
-  // yang belum benar-benar dijalani). Makanya tab hari yang tanggal
+  // progress (dan bisa keliru memicu penandaan otomatis "selesai" di
+  // hari yang belum benar-benar dijalani). Makanya tab hari yang tanggal
   // kalendernya (startDate + (day-1)) masih SETELAH hari ini dikunci:
   // dikasih gaya abu-abu + ikon gembok, dan tap-nya cuma munculin
   // SnackBar info tanggalnya, TIDAK memanggil _selectDay.
@@ -1837,7 +2185,19 @@ class _TripScreenState extends State<TripScreen> {
     int effectiveCompletedIndex,
   ) {
     final int total = destinations.length;
-    final int completed = effectiveCompletedIndex.clamp(0, total);
+
+    // Destinasi yang sudah DIBATALKAN dihitung sebagai "resolved"
+    // juga di sini (bukan cuma yang beneran "Sudah Sampai") --
+    // supaya progres 100% begitu semua destinasi hari itu sudah
+    // kebagian status, terlepas dikunjungi beneran atau dibatalkan.
+    int resolved = 0;
+    for (int i = 0; i < total; i++) {
+      if (i < effectiveCompletedIndex ||
+          SavedItineraryService.instance.isDestinationCancelled(destinations[i])) {
+        resolved++;
+      }
+    }
+    final int completed = resolved.clamp(0, total);
     final double progress = total == 0 ? 0 : completed / total;
 
     return Container(
@@ -1887,233 +2247,6 @@ class _TripScreenState extends State<TripScreen> {
   }
 
   // ============================================================
-  // KARTU "TANDAI HARI INI SELESAI"
-  // ============================================================
-  //
-  // Muncul menggantikan kartu "Aktivitas Berikutnya" yang hilang
-  // begitu semua destinasi HARI YANG SEDANG DITAMPILKAN sudah
-  // "off"/dikunjungi -- lihat showFinishDayCard di _buildActiveTrip.
-  // Sekarang bisa muncul di hari mana pun (bukan cuma hari terakhir),
-  // karena statusnya per-hari. Tombolnya memanggil _markDayFinished,
-  // yang menyimpan status selesai HANYA untuk hari ini (bukan seluruh
-  // itinerary) lewat SavedItineraryService.markDayCompleted, supaya:
-  // - Badge di _buildTripInfo berubah jadi "Selesai" untuk hari ini,
-  // - HistoryScreen.hasAnyCompletedDay ikut mengenalinya sehingga
-  //   itinerary ini langsung ikut muncul di Riwayat, TAPI
-  // - Hari-hari lain (termasuk hari berikutnya yang belum tiba
-  //   tanggalnya) TIDAK ikut ditandai -- begitu tanggalnya tiba,
-  //   TripScreen tetap menganggap itinerary ini aktif untuk hari itu
-  //   (lihat _findActiveTrip yang sudah tidak skip berdasarkan flag
-  //   apa pun di level itinerary).
-  //
-  // ============================================================
-
-  Widget _buildFinishDayCard(
-    List<Map<String, dynamic>> itinerary,
-    int dayNumber, {
-    required bool isLastDay,
-    bool allDone = false,
-  }) {
-    final String title = allDone
-        ? 'Semua destinasi hari ini sudah dikunjungi!'
-        : 'Selesaikan Perjalanan Hari Ke-$dayNumber';
-
-    final String subtitle = isLastDay
-        ? 'Tandai selesai di sini supaya trip ini pindah ke tab Riwayat.'
-        : 'Tandai hari ini selesai -- trip ini akan dicatat di Riwayat dan siap untuk hari berikutnya.';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.lightBlue,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.celebration_outlined, color: AppColors.darkBlue),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.darkBlue),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 12, color: AppColors.greyText, height: 1.4),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton(
-              onPressed: () => _markDayFinished(context, itinerary, dayNumber, isLastDay: isLastDay),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-              ),
-              child: Text(
-                isLastDay ? 'Tandai Trip Selesai' : 'Tandai Hari Ini Selesai',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _markDayFinished(
-    BuildContext context,
-    List<Map<String, dynamic>> itinerary,
-    int dayNumber, {
-    required bool isLastDay,
-  }) {
-    final String? itineraryId = SavedItineraryService.instance.itineraryIdOf(itinerary);
-
-    // ==============================================================
-    // BENTUK POPUP DISAMAKAN dengan popup "Itinerary berhasil
-    // dibuat!" di ItineraryPreviewScreen: Dialog putih sudut 22,
-    // ikon lingkaran di atas, judul tebal, tombol utama penuh
-    // (rounded 25), tombol teks di bawahnya.
-    // ==============================================================
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ----------------------------------------------
-                // IKON
-                // ----------------------------------------------
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.lightBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.flag_rounded,
-                    color: AppColors.primaryBlue,
-                    size: 34,
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                // ----------------------------------------------
-                // JUDUL
-                // ----------------------------------------------
-                Text(
-                  'Selesaikan Hari ke-$dayNumber?',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.darkText,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // ----------------------------------------------
-                // DESKRIPSI
-                // ----------------------------------------------
-                Text(
-                  isLastDay
-                      ? 'Trip ini akan ikut ditampilkan di Riwayat.'
-                      : 'Hari ke-$dayNumber akan ditandai selesai dan trip ini ikut ditampilkan di Riwayat. Hari berikutnya tetap akan aktif normal di tab Trip begitu tanggalnya tiba.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
-                    color: AppColors.greyText,
-                  ),
-                ),
-
-                const SizedBox(height: 22),
-
-                // ----------------------------------------------
-                // YA, SELESAI
-                // ----------------------------------------------
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (itineraryId != null) {
-                        SavedItineraryService.instance.markDayCompleted(itineraryId, dayNumber);
-                      }
-
-                      Navigator.pop(dialogContext);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Hari ini telah ditandai selesai dan ikut masuk ke Riwayat'),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                    ),
-                    child: const Text(
-                      'Ya, Selesai',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // ----------------------------------------------
-                // BATAL
-                // ----------------------------------------------
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text(
-                    'Batal',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.greyText,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ============================================================
   // TIMELINE HARI INI
   // ============================================================
 
@@ -2155,6 +2288,11 @@ class _TripScreenState extends State<TripScreen> {
     required Map<String, dynamic> destination,
     required bool isLast,
     required bool isDone,
+    bool isNext = false,
+    bool isCancelled = false,
+    VoidCallback? onMarkArrived,
+    VoidCallback? onCancel,
+    VoidCallback? onUncancel,
   }) {
     final name = _destinationName(destination);
     final image = _destinationImage(destination);
@@ -2165,12 +2303,17 @@ class _TripScreenState extends State<TripScreen> {
 
     // Warna teks & kartu dibikin pudar (abu-abu) kalau destinasi ini
     // sudah dilewati -- gaya "off", senada dengan leg abu-abu di
-    // RouteScreen.
-    final Color nameColor = isDone ? AppColors.greyText : AppColors.darkText;
-    final Color cardBorderColor = isDone ? AppColors.doneGrey : AppColors.borderColor;
+    // RouteScreen. Destinasi yang DIBATALKAN dapat gaya sendiri
+    // (merah pudar + dicoret) supaya beda jelas dari "sudah
+    // dikunjungi" -- dibatalkan bukan berarti sudah didatangi.
+    final Color nameColor =
+        isCancelled ? warnText : (isDone ? AppColors.greyText : AppColors.darkText);
+    final Color cardBorderColor = isCancelled
+        ? warnText.withValues(alpha: 0.4)
+        : (isDone ? AppColors.doneGrey : AppColors.borderColor);
 
     return Opacity(
-      opacity: isDone ? 0.6 : 1,
+      opacity: (isDone || isCancelled) ? 0.6 : 1,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2206,49 +2349,143 @@ class _TripScreenState extends State<TripScreen> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(10),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: SmartImage(
-                            imagePathOrUrl: image,
-                            width: 62,
-                            height: 62,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 11),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: nameColor),
+                        Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: SmartImage(
+                                imagePathOrUrl: image,
+                                width: 62,
+                                height: 62,
+                                fit: BoxFit.cover,
                               ),
-                              if (isDone) ...[
-                                const SizedBox(height: 4),
-                                const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.check_circle, size: 12, color: AppColors.doneGrey),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Sudah dikunjungi',
-                                      style: TextStyle(fontSize: 12, color: AppColors.doneGrey, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(width: 11),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: nameColor,
+                                      decoration: isCancelled ? TextDecoration.lineThrough : null,
+                                      decorationColor: warnText,
                                     ),
+                                  ),
+                                  if (isCancelled) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.cancel_rounded, size: 12, color: warnText),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Dibatalkan',
+                                          style: TextStyle(fontSize: 12, color: warnText, fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else if (isDone) ...[
+                                    const SizedBox(height: 4),
+                                    const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.check_circle, size: 12, color: AppColors.doneGrey),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Sudah dikunjungi',
+                                          style: TextStyle(fontSize: 12, color: AppColors.doneGrey, fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else if (duration.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(duration, style: const TextStyle(fontSize: 12, color: AppColors.greyText)),
                                   ],
-                                ),
-                              ] else if (duration.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(duration, style: const TextStyle(fontSize: 12, color: AppColors.greyText)),
-                              ],
-                            ],
-                          ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
+
+                        // ==================================================
+                        // TANDAI SUDAH SAMPAI -- cuma muncul di destinasi
+                        // yang lagi "kena giliran" (isNext), gantiin cara
+                        // lama yang cuma bisa ditandai dari dalam
+                        // RouteScreen. Begitu ditekan & ini destinasi
+                        // terakhir hari ini, harinya otomatis ditandai
+                        // selesai lewat _handleStopIndexUpdate.
+                        // ==================================================
+                        if (isNext && onMarkArrived != null && !isCancelled) ...[
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 38,
+                            child: OutlinedButton.icon(
+                              onPressed: onMarkArrived,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primaryBlue,
+                                side: const BorderSide(color: AppColors.primaryBlue),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(19),
+                                ),
+                              ),
+                              icon: const Icon(Icons.check_circle_outline, size: 16),
+                              label: const Text(
+                                'Tandai Sudah Sampai',
+                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        // ==================================================
+                        // BATALKAN KUNJUNGAN / BATALKAN PEMBATALAN --
+                        // cuma muncul di destinasi yang BELUM "Sudah
+                        // Sampai" (isDone). Destinasi yang sudah
+                        // beneran dikunjungi gak bisa dibatalkan lagi.
+                        // ==================================================
+                        if (!isDone && (onCancel != null || onUncancel != null)) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 34,
+                            child: isCancelled
+                                ? OutlinedButton.icon(
+                                    onPressed: onUncancel,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.greyText,
+                                      side: const BorderSide(color: AppColors.borderColor),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(19),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.replay_rounded, size: 15),
+                                    label: const Text(
+                                      'Batalkan Pembatalan',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                  )
+                                : TextButton.icon(
+                                    onPressed: onCancel,
+                                    style: TextButton.styleFrom(foregroundColor: warnText),
+                                    icon: const Icon(Icons.close_rounded, size: 15),
+                                    label: const Text(
+                                      'Batalkan Kunjungan',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -2265,6 +2502,8 @@ class _TripScreenState extends State<TripScreen> {
     Map<String, dynamic> schedule,
     List<Map<String, dynamic>> destinations,
     int effectiveCompletedIndex,
+    List<Map<String, dynamic>> itinerary,
+    int dayNumber,
   ) {
     if (destinations.isEmpty) {
       return const Padding(
@@ -2276,18 +2515,48 @@ class _TripScreenState extends State<TripScreen> {
       );
     }
 
+    // Destinasi berikutnya yang BENERAN "kena giliran" -- geser dari
+    // effectiveCompletedIndex, lewati destinasi yang sudah dibatalkan
+    // (lihat _nextActiveIndex), supaya tombol "Tandai Sudah Sampai"
+    // gak pernah nongol di baris yang sudah dibatalkan.
+    final int nextIndex = _nextActiveIndex(destinations, effectiveCompletedIndex);
+
     return Column(
       children: List.generate(destinations.length, (index) {
+        final bool isCancelled =
+            SavedItineraryService.instance.isDestinationCancelled(destinations[index]);
+
         return _buildDestinationRow(
           index: index,
           destination: destinations[index],
           isLast: index == destinations.length - 1,
           // Destinasi dengan index < effectiveCompletedIndex berarti
-          // sudah "Ditandai Sudah Sampai" di RouteScreen ATAU harinya
-          // sudah dipersist selesai (lihat effectiveCompletedIndex di
-          // _buildActiveTrip) -- dikasih gaya "off" (abu-abu/tercentang),
-          // lihat _buildTimelineDot & style di bawah.
+          // sudah "Ditandai Sudah Sampai" -- dikasih gaya "off"
+          // (abu-abu/tercentang), lihat _buildTimelineDot & style di
+          // bawah.
           isDone: index < effectiveCompletedIndex,
+          // Destinasi yang PERSIS di posisi nextIndex adalah destinasi
+          // berikutnya yang belum dikunjungi & belum dibatalkan --
+          // cuma baris ini yang dikasih tombol "Tandai Sudah Sampai".
+          // Kalau harinya sudah completed ATAU sisa destinasinya semua
+          // sudah dibatalkan, nextIndex >= destinations.length --
+          // tidak ada index yang cocok, tombol otomatis tidak muncul
+          // di baris mana pun.
+          isNext: index == nextIndex,
+          isCancelled: isCancelled,
+          onMarkArrived: () => _handleStopIndexUpdate(
+            index + 1,
+            itinerary,
+            dayNumber,
+            destinations,
+          ),
+          onCancel: () => _confirmCancelDestination(
+            itinerary,
+            dayNumber,
+            index,
+            _destinationName(destinations[index]),
+          ),
+          onUncancel: () => _uncancelDestination(itinerary, dayNumber, index),
         );
       }),
     );

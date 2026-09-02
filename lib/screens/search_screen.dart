@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../data/destinations_data.dart';
 import '../services/destination_service.dart';
+import '../services/search_history_service.dart';
 import '../widgets/smart_image.dart';
 import 'detail_destination_screen.dart';
 import '../widgets/love_button.dart';
@@ -41,6 +42,10 @@ class _SearchScreenState extends State<SearchScreen> {
     text: widget.keyword,
   );
 
+  // FocusNode search field -- dipakai supaya keyboard bisa auto-fokus
+  // begitu halaman ini dibuka dalam keadaan kosong (dari home).
+  final FocusNode _searchFocusNode = FocusNode();
+
   late String _keyword = widget.keyword;
 
   // ============================================================
@@ -57,13 +62,45 @@ class _SearchScreenState extends State<SearchScreen> {
         if (mounted) setState(() {});
       });
     }
+
+    // STATE KOSONG -- riwayat pencarian & pencarian populer, sumbernya
+    // dari layanan masing-masing (SharedPreferences & backend).
+    SearchHistoryService.instance.loadHistory();
+    if (DestinationService.instance.popularSearches.value.isEmpty) {
+      DestinationService.instance.fetchPopularSearches();
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
 
     super.dispose();
+  }
+
+  // ============================================================
+  // TRIGGER PENCARIAN DARI RIWAYAT / KATEGORI / POPULER
+  // ============================================================
+  //
+  // Dipakai bareng oleh 3 section di state kosong: isi search field
+  // dengan value yang dipilih, lalu langsung tampilkan hasilnya
+  // (state berpindah ke "ada teks" secara alami).
+  // ============================================================
+
+  void _applySearch(String value, {bool saveToHistory = true}) {
+    _searchController.text = value;
+    _searchController.selection = TextSelection.collapsed(offset: value.length);
+
+    setState(() {
+      _keyword = value;
+    });
+
+    _searchFocusNode.unfocus();
+
+    if (saveToHistory) {
+      SearchHistoryService.instance.addSearch(value);
+    }
   }
 
   // ============================================================
@@ -233,7 +270,10 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final results = destinations;
+    // STATE KOSONG (belum ada teks) vs STATE ADA TEKS (nampilin hasil,
+    // perilakunya tetap sama seperti sebelumnya).
+    final bool isEmptyKeyword = _keyword.trim().isEmpty;
+    final results = isEmptyKeyword ? const <Map<String, String>>[] : destinations;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -264,13 +304,18 @@ class _SearchScreenState extends State<SearchScreen> {
                     onTap: () {
                       Navigator.pop(context);
                     },
-                    child: const SizedBox(
-                      width: 35,
-                      height: 35,
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        color: AppColors.darkText,
-                        size: 20,
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.borderColorLight),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF555555),
+                        size: 27,
                       ),
                     ),
                   ),
@@ -313,6 +358,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           Expanded(
                             child: TextField(
                               controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              autofocus: widget.keyword.isEmpty,
                               textInputAction: TextInputAction.search,
                               onChanged: (value) {
                                 // Live filter -- hasil update tiap
@@ -325,6 +372,10 @@ class _SearchScreenState extends State<SearchScreen> {
                                 setState(() {
                                   _keyword = value;
                                 });
+
+                                if (value.trim().isNotEmpty) {
+                                  SearchHistoryService.instance.addSearch(value.trim());
+                                }
 
                                 FocusScope.of(context).unfocus();
                               },
@@ -389,118 +440,426 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
 
-            const SizedBox(height: 25),
+            if (isEmptyKeyword)
+              // ==================================================
+              // STATE KOSONG -- riwayat, kategori, & pencarian populer
+              // ==================================================
+              Expanded(child: _buildDiscoverState(context))
+            else ...[
+              const SizedBox(height: 25),
 
-            // ==================================================
-            // RESULT HEADER
-            // ==================================================
+              // ==================================================
+              // RESULT HEADER
+              // ==================================================
 
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 25,
-              ),
-              child: Row(
-                children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25,
+                ),
+                child: Row(
+                  children: [
 
-                  // JUMLAH HASIL
-                  Expanded(
-                    child: Text(
-                      '${results.length} destinasi ditemukan',
-                      style: const TextStyle(
-                        color: AppColors.darkText,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-
-                  // ==================================================
-                  // SORT BUTTON
-                  // ==================================================
-
-                  GestureDetector(
-                    onTap: _showSortOptions,
-                    child: Container(
-                      height: 32,
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 11,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(18),
-                        border: Border.all(
-                          color: const Color(0xFFE3E3E3),
+                    // JUMLAH HASIL
+                    Expanded(
+                      child: Text(
+                        '${results.length} destinasi ditemukan',
+                        style: const TextStyle(
+                          color: AppColors.darkText,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      child: Row(
-                        children: [
+                    ),
 
-                          const Icon(
-                            Icons.tune,
-                            color: AppColors.primaryBlue,
-                            size: 16,
+                    // ==================================================
+                    // SORT BUTTON
+                    // ==================================================
+
+                    GestureDetector(
+                      onTap: _showSortOptions,
+                      child: Container(
+                        height: 32,
+                        padding:
+                            const EdgeInsets.symmetric(
+                          horizontal: 11,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(18),
+                          border: Border.all(
+                            color: const Color(0xFFE3E3E3),
                           ),
+                        ),
+                        child: Row(
+                          children: [
 
-                          const SizedBox(width: 5),
-
-                          Text(
-                            _sortLabel,
-                            style: const TextStyle(
-                              color: AppColors.darkText,
-                              fontSize: 12,
+                            const Icon(
+                              Icons.tune,
+                              color: AppColors.primaryBlue,
+                              size: 16,
                             ),
-                          ),
-                        ],
+
+                            const SizedBox(width: 5),
+
+                            Text(
+                              _sortLabel,
+                              style: const TextStyle(
+                                color: AppColors.darkText,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // ==================================================
+              // HASIL PENCARIAN
+              // ==================================================
+
+              Expanded(
+                child: results.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.separated(
+                        physics:
+                            const BouncingScrollPhysics(),
+
+                        padding: const EdgeInsets.fromLTRB(
+                          25,
+                          0,
+                          25,
+                          30,
+                        ),
+
+                        itemCount: results.length,
+
+                        separatorBuilder: (
+                          context,
+                          index,
+                        ) {
+                          return const SizedBox(
+                            height: 12,
+                          );
+                        },
+
+                        itemBuilder: (
+                          context,
+                          index,
+                        ) {
+                          return _buildDestinationCard(
+                            context,
+                            results[index],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // STATE KOSONG -- RIWAYAT + KATEGORI + PENCARIAN POPULER
+  // ============================================================
+
+  Widget _buildDiscoverState(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(25, 20, 25, 30),
+      // SizedBox(width: double.infinity) di sini PENTING -- tanpa ini,
+      // pas kontennya cuma dikit (misal cuma "Kategori Pencarian" doang,
+      // riwayat & populer lagi kosong), Column bakal nyusut selebar
+      // konten terlebarnya doang. Karena Column paling luar (di
+      // SafeArea) defaultnya CrossAxisAlignment.center, blok yang
+      // nyusut itu jadi ke-tengah-in ke layar, bukan nempel ke padding
+      // kiri 25 -- makanya kelihatan geser ke kanan waktu section lain
+      // kosong. Maksa full width di sini bikin crossAxisAlignment.start
+      // di bawah selalu efektif, apapun isinya.
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSearchHistorySection(),
+
+          // Gap ini cuma muncul kalau riwayat pencarian ADA isinya --
+          // supaya waktu riwayat kosong, jarak ke "Kategori Pencarian"
+          // tetap sama persis kayak jarak dari header ke section
+          // pertama pada umumnya (gak ada gap 24 yang "nyangkut").
+          ValueListenableBuilder<List<String>>(
+            valueListenable: SearchHistoryService.instance.history,
+            builder: (context, history, _) {
+              return history.isEmpty
+                  ? const SizedBox.shrink()
+                  : const SizedBox(height: 24);
+            },
+          ),
+
+          _buildCategorySection(),
+          const SizedBox(height: 24),
+          _buildPopularSearchSection(),
+        ],
+        ),
+      ),
+    );
+  }
+
+  // ==================================================
+  // RIWAYAT PENCARIAN
+  // ==================================================
+
+  Widget _buildSearchHistorySection() {
+    return ValueListenableBuilder<List<String>>(
+      valueListenable: SearchHistoryService.instance.history,
+      builder: (context, history, _) {
+        if (history.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Riwayat Pencarian',
+                    style: TextStyle(
+                      color: AppColors.darkText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
+                ),
+                GestureDetector(
+                  onTap: () => SearchHistoryService.instance.clearAll(),
+                  child: const Text(
+                    'Hapus Semua',
+                    style: TextStyle(
+                      color: AppColors.primaryBlue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...history.map((keyword) => _buildHistoryTile(keyword)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryTile(String keyword) {
+    return GestureDetector(
+      onTap: () => _applySearch(keyword, saveToHistory: true),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.history, color: Colors.grey, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                keyword,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.darkText,
+                  fontSize: 13,
+                ),
               ),
             ),
+            GestureDetector(
+              onTap: () => SearchHistoryService.instance.removeSearch(keyword),
+              child: const Padding(
+                padding: EdgeInsets.only(left: 10),
+                child: Icon(Icons.close, color: Colors.grey, size: 16),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 14),
+  // ==================================================
+  // KATEGORI PENCARIAN
+  // ==================================================
 
-            // ==================================================
-            // HASIL PENCARIAN
-            // ==================================================
+  Widget _buildCategorySection() {
+    return ValueListenableBuilder<List<String>>(
+      valueListenable: DestinationService.instance.categories,
+      builder: (context, categories, _) {
+        final list = categories.where((c) => c != 'Semua').toList();
+        if (list.isEmpty) return const SizedBox.shrink();
 
-            Expanded(
-              child: results.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.separated(
-                      physics:
-                          const BouncingScrollPhysics(),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Kategori Pencarian',
+              style: TextStyle(
+                color: AppColors.darkText,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: list.map((category) {
+                return _buildCategoryChip(category);
+              }).toList(),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-                      padding: const EdgeInsets.fromLTRB(
-                        25,
-                        0,
-                        25,
-                        30,
+  Widget _buildCategoryChip(String category) {
+    return GestureDetector(
+      // CATATAN - kategori difilter lewat search field yang sudah ada
+      // (getter `destinations` sudah cek kecocokan nama/lokasi/kategori),
+      // jadi tap kategori otomatis pindah ke state "ada teks" dengan
+      // hasil yang sudah terfilter, tanpa perlu jalur filter terpisah.
+      onTap: () => _applySearch(category, saveToHistory: false),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE2F3FF),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_iconForCategory(category), color: AppColors.primaryBlue, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              category,
+              style: const TextStyle(
+                color: AppColors.primaryBlue,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _iconForCategory(String category) {
+    switch (category) {
+      case 'Alam':
+        return Icons.landscape_outlined;
+      case 'Kuliner':
+        return Icons.restaurant_outlined;
+      case 'Budaya':
+        return Icons.temple_buddhist_outlined;
+      case 'Buatan':
+        return Icons.apartment_outlined;
+      default:
+        return Icons.category_outlined;
+    }
+  }
+
+  // ==================================================
+  // PENCARIAN POPULER
+  // ==================================================
+
+  Widget _buildPopularSearchSection() {
+    return ValueListenableBuilder<bool>(
+      valueListenable: DestinationService.instance.isLoadingPopular,
+      builder: (context, isLoading, _) {
+        return ValueListenableBuilder<String?>(
+          valueListenable: DestinationService.instance.errorPopular,
+          builder: (context, popularError, _) {
+            return ValueListenableBuilder<List<String>>(
+              valueListenable: DestinationService.instance.popularSearches,
+              builder: (context, popularSearches, _) {
+                // Kosong/gagal fetch -- sembunyikan section-nya saja,
+                // jangan sampai bikin layar error/crash.
+                if (!isLoading && (popularError != null || popularSearches.isEmpty)) {
+                  return const SizedBox.shrink();
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pencarian Populer',
+                      style: TextStyle(
+                        color: AppColors.darkText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                       ),
-
-                      itemCount: results.length,
-
-                      separatorBuilder: (
-                        context,
-                        index,
-                      ) {
-                        return const SizedBox(
-                          height: 12,
-                        );
-                      },
-
-                      itemBuilder: (
-                        context,
-                        index,
-                      ) {
-                        return _buildDestinationCard(
-                          context,
-                          results[index],
-                        );
-                      },
                     ),
+                    const SizedBox(height: 10),
+                    if (isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primaryBlue,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: popularSearches.map((keyword) {
+                          return _buildPopularChip(keyword);
+                        }).toList(),
+                      ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPopularChip(String keyword) {
+    return GestureDetector(
+      onTap: () => _applySearch(keyword, saveToHistory: true),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE3E3E3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.trending_up, color: AppColors.primaryBlue, size: 15),
+            const SizedBox(width: 6),
+            Text(
+              keyword,
+              style: const TextStyle(
+                color: AppColors.darkText,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),

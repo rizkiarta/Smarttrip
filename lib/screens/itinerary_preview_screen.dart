@@ -4,6 +4,7 @@ import '../widgets/smart_image.dart';
 import '../data/destinations_data.dart';
 import 'itinerary_detail_screen.dart';
 import 'main_navigation_screen.dart';
+import 'detail_destination_screen.dart';
 import '../theme/app_colors.dart';
 
 
@@ -68,6 +69,126 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
       return liveDest['image']!;
     }
     return '';
+  }
+
+  // ============================================================
+  // GET RATING & JUMLAH ULASAN
+  // ============================================================
+
+  String _destinationRating(Map<String, dynamic> destination) {
+    return _value(destination, 'rating', fallback: '0.0');
+  }
+
+  String _destinationReviewsCount(Map<String, dynamic> destination) {
+    return _value(destination, 'reviewsCount', fallback: '0');
+  }
+
+  // ============================================================
+  // PREDIKSI KEPADATAN (DUMMY, DETERMINISTIK PER DESTINASI)
+  // ============================================================
+  //
+  // Disamakan formatnya ('Sepi'/'Sedang'/'Ramai') dan cara hitungnya
+  // (hash id/nama, bukan acak) dengan ManualScheduleScreen /
+  // AIItineraryScreen supaya konsisten -- destinasi yang sama akan
+  // selalu menunjukkan status kepadatan yang sama di layar manapun.
+  //
+  // ============================================================
+
+  static const List<String> _crowdStatusCycle = ['Sepi', 'Sedang', 'Ramai'];
+
+  String _crowdStatusFor(Map<String, dynamic> destination) {
+    final String key = destination['id']?.toString() ??
+        destination['name']?.toString() ??
+        '';
+
+    final int hash = key.hashCode.abs();
+
+    return _crowdStatusCycle[hash % _crowdStatusCycle.length];
+  }
+
+  // ============================================================
+  // BADGE TINGKAT KEPADATAN
+  // ============================================================
+  //
+  // Warnanya disamakan dengan badge status di ManualScheduleScreen /
+  // AIItineraryScreen (Sepi = hijau, Sedang = kuning, Ramai = merah)
+  // supaya artinya konsisten di seluruh aplikasi.
+  //
+  // ============================================================
+
+  Widget _buildCrowdBadge(String status) {
+    Color textColor;
+    Color backgroundColor;
+
+    switch (status) {
+      case 'Sepi':
+        textColor = Colors.green;
+        backgroundColor = AppColors.successBg;
+        break;
+
+      case 'Sedang':
+        textColor = const Color(0xFFE0A900);
+        backgroundColor = const Color(0xFFFFF8DF);
+        break;
+
+      case 'Ramai':
+      default:
+        textColor = Colors.red;
+        backgroundColor = AppColors.errorBg;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, color: textColor, size: 6),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // BUKA DETAIL DESTINASI
+  // ============================================================
+  //
+  // Dipakai kalau kartu destinasi diketuk -- membuka layar detail
+  // yang sama dengan yang dipakai di ManualScheduleScreen /
+  // DestinationSelectionScreen, supaya user bisa lihat info lengkap
+  // destinasi tanpa harus balik ke layar pemilihan destinasi.
+  //
+  // ============================================================
+
+  void _openDestinationDetail(Map<String, dynamic> destination) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return DetailDestinationScreen(
+            name: destination['name']?.toString() ?? 'Destinasi',
+            location: destination['location']?.toString() ?? '',
+            rating: destination['rating']?.toString() ?? '0.0',
+            reviews: destination['reviews']?.toString() ?? '0 ulasan',
+            mainImage: _destinationImage(destination),
+            description: destination['description']?.toString() ?? '',
+          );
+        },
+      ),
+    );
   }
 
   // ============================================================
@@ -182,56 +303,64 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
   // HEADER
   // ============================================================
 
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      height: 64,
-      color: Colors.white,
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
+  // Header ini sekarang mengikuti pola AppBar yang dipakai di
+  // ManualScheduleScreen & layar lain (back button bulat dengan
+  // border AppColors.borderColor, judul center bold 18px), supaya
+  // tampilannya konsisten satu app -- sebelumnya pakai IconButton
+  // polos tanpa border dan warna ikon hardcode 0xFF555555.
 
-          IconButton(
-            onPressed: () {
-              // ------------------------------------------------
-              // POP TANPA HASIL (null)
-              // ------------------------------------------------
-              //
-              // Sengaja TIDAK mengirim `false` atau nilai lain,
-              // karena ManualScheduleScreen (_handlePreview) cuma
-              // mengecek `if (result != null)` untuk memutuskan
-              // apakah harus ikut pop ke atas. Kalau di sini kirim
-              // `false`, itu dianggap "ada hasil" sehingga
-              // ManualScheduleScreen ikut ke-pop juga, dan
-              // berantai lagi ke layar-layar di atasnya -- padahal
-              // maksudnya cuma mau balik SATU langkah ke Manual
-              // Schedule.
-              //
-              // ------------------------------------------------
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leadingWidth: 58,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 20),
+        child: GestureDetector(
+          onTap: () {
+            // ------------------------------------------------
+            // POP TANPA HASIL (null)
+            // ------------------------------------------------
+            //
+            // Sengaja TIDAK mengirim `false` atau nilai lain,
+            // karena ManualScheduleScreen (_handlePreview) cuma
+            // mengecek `if (result != null)` untuk memutuskan
+            // apakah harus ikut pop ke atas. Kalau di sini kirim
+            // `false`, itu dianggap "ada hasil" sehingga
+            // ManualScheduleScreen ikut ke-pop juga, dan
+            // berantai lagi ke layar-layar di atasnya -- padahal
+            // maksudnya cuma mau balik SATU langkah ke Manual
+            // Schedule.
+            //
+            // ------------------------------------------------
 
-              Navigator.pop(context);
-            },
-            icon: const Icon(
+            Navigator.pop(context);
+          },
+          child: Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.borderColor),
+            ),
+            child: const Icon(
               Icons.arrow_back_ios_new,
-              size: 20,
-              color: Color(0xFF555555),
+              size: 17,
+              color: AppColors.greyText,
             ),
           ),
-
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Preview Perjalanan',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.darkText,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 48),
-        ],
+        ),
+      ),
+      centerTitle: true,
+      title: const Text(
+        'Preview Perjalanan',
+        style: TextStyle(
+          color: AppColors.darkText,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -421,7 +550,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.darkBlue,
+                        color: AppColors.primaryBlue,
                       ),
                     ),
                   ],
@@ -447,6 +576,9 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
     final image = _destinationImage(destination);
     final arrival = _arrivalTime(destination);
     final departure = _destinationDepartureTime(destination);
+    final rating = _destinationRating(destination);
+    final reviewsCount = _destinationReviewsCount(destination);
+    final crowdStatus = _crowdStatusFor(destination);
 
     final duration = _calculateDuration(arrival, departure);
 
@@ -461,7 +593,18 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
-              child: Container(
+              // ==================================================
+              // BUKA DETAIL DESTINASI KALAU KARTUNYA DIKETUK
+              // ==================================================
+              //
+              // Sama seperti pola di ManualScheduleScreen -- kartu
+              // destinasi di preview ini juga bisa diketuk untuk
+              // membuka DetailDestinationScreen.
+              //
+              // ==================================================
+              child: GestureDetector(
+                onTap: () => _openDestinationDetail(destination),
+                child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -521,6 +664,39 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                                     color: AppColors.darkText,
                                   ),
                                 ),
+
+                                const SizedBox(height: 6),
+
+                                // ==================================
+                                // RATING + KEPADATAN
+                                // ==================================
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          color: AppColors.starGold,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          '$rating ($reviewsCount)',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.greyText,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    _buildCrowdBadge(crowdStatus),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -576,6 +752,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                       ),
                     ],
                   ),
+                ),
                 ),
               ),
             ),
@@ -914,7 +1091,7 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                 Navigator.pop(context);
               },
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.darkBlue,
+                foregroundColor: AppColors.primaryBlue,
                 side: const BorderSide(color: AppColors.primaryBlue, width: 1.2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25),
@@ -965,17 +1142,16 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
     final schedules = widget.dailySchedules;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      // CHANGED - disamakan dengan layar lain (manual schedule, travel
+      // information, dst) yang semuanya pakai background putih, bukan
+      // abu-abu 0xFFF8F9FA.
+      backgroundColor: Colors.white,
+
+      appBar: _buildAppBar(context),
 
       body: SafeArea(
         child: Column(
           children: [
-            // ====================================================
-            // HEADER
-            // ====================================================
-
-            _buildHeader(context),
-
             // ====================================================
             // CONTENT
             // ====================================================
@@ -985,7 +1161,9 @@ class _ItineraryPreviewScreenState extends State<ItineraryPreviewScreen> {
                   : SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
 
-                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 25),
+                      // CHANGED - padding atas disamakan dengan pola
+                      // layar lain (20, 16, 20, ...)
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 25),
 
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

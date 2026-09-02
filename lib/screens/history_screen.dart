@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
-import 'ai_itinerary_screen.dart';
 import 'itinerary_detail_screen.dart';
 import '../services/saved_itinerary_service.dart';
 import '../widgets/smart_image.dart';
 import '../data/destinations_data.dart';
-import 'manual_schedule_screen.dart';
 import 'travel_information_screen.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
@@ -23,8 +20,11 @@ import '../services/auth_guard.dart';
 // horizontal (thumbnail kecil di kiri, teks di kanan) sesuai desain,
 // bukan kartu vertikal dengan gambar besar di atas seperti PlanScreen.
 //
-// Aksi "Edit"/"Hapus" & navigasi ke detail memakai logika yang sama
-// dengan PlanScreen supaya perilakunya konsisten di seluruh app.
+// Aksi "Hapus" & navigasi ke detail memakai logika yang sama dengan
+// PlanScreen supaya perilakunya konsisten di seluruh app -- BEDANYA,
+// menu titik tiga di sini cuma punya opsi "Hapus" (gak ada "Edit"),
+// karena itinerary yang sudah masuk Riwayat berarti tripnya sudah
+// selesai dijalani.
 // ===================================================================
 
 class HistoryScreen extends StatefulWidget {
@@ -83,6 +83,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   bool _isFinished(List<Map<String, dynamic>> itinerary) {
     if (itinerary.isEmpty) return false;
+
+    // Trip yang SEMUA destinasinya sudah dibatalkan (lihat
+    // TripScreen -- tombol "Batalkan Kunjungan" per destinasi)
+    // diperlakukan sama seperti trip selesai: tetap muncul di
+    // Riwayat, cuma badge-nya beda ("Dibatalkan", lihat
+    // _buildCompletionBadge).
+    if (SavedItineraryService.instance.isTripFullyCancelled(itinerary)) {
+      return true;
+    }
 
     if (SavedItineraryService.instance.hasAnyCompletedDay(itinerary)) {
       return true;
@@ -614,6 +623,124 @@ class _HistoryScreenState extends State<HistoryScreen> {
   // SATU KARTU RIWAYAT (HORIZONTAL)
   // ================================================================
 
+  // ================================================================
+  // BADGE STATUS PENYELESAIAN -- BEDAKAN "SEBAGIAN" VS "SEMUA SELESAI"
+  // ================================================================
+  //
+  // Trip multi-hari yang baru sebagian harinya ditandai selesai (mis.
+  // Hari 1 sudah, Hari 2-3 belum) tetap tampil di Riwayat -- lihat
+  // catatan _isFinished di atas. Supaya beda jelas dengan trip yang
+  // BENAR-BENAR sudah selesai semua harinya, tiap kartu dikasih badge
+  // status, dihitung ulang tiap hari lewat
+  // SavedItineraryService.isDayCompleted (dayNumber 1-based, sama
+  // konvensi dengan TripScreen):
+  // - SEMUA hari selesai -> badge hijau "Trip Selesai".
+  // - SEBAGIAN hari selesai (bukan semua) -> badge oranye "X/Y Hari
+  //   Selesai", biar kelihatan masih ada hari yang belum dijalani.
+  // - BELUM ADA hari yang ditandai selesai sama sekali (itinerary ini
+  //   tampil di sini murni karena tanggalnya sudah lewat, bukan
+  //   karena ditandai manual) -> TIDAK dikasih badge sama sekali,
+  //   supaya tidak membingungkan dengan badge "0/Y".
+  //
+  // ================================================================
+
+  int _completedDaysCount(List<Map<String, dynamic>> itinerary) {
+    int completed = 0;
+
+    for (int day = 1; day <= itinerary.length; day++) {
+      if (SavedItineraryService.instance.isDayCompleted(itinerary, day)) {
+        completed++;
+      }
+    }
+
+    return completed;
+  }
+
+  // Badge merah "Dibatalkan" -- dipakai kalau SEMUA destinasi di
+  // seluruh itinerary ini sudah ditandai dibatalkan (lihat
+  // SavedItineraryService.isTripFullyCancelled). Prioritas di atas
+  // badge selesai/sebagian-selesai biasa, karena begitu semua
+  // destinasinya batal, trip ini gak lagi relevan dibilang "selesai".
+  Widget _buildCancelledBadge() {
+    const Color bgColor = Color(0xFFFDECEC);
+    const Color fgColor = Color(0xFFD7373F);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cancel_rounded, size: 11, color: fgColor),
+          SizedBox(width: 4),
+          Text(
+            'Dibatalkan',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fgColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildCompletionBadge(List<Map<String, dynamic>> itinerary) {
+    if (SavedItineraryService.instance.isTripFullyCancelled(itinerary)) {
+      return _buildCancelledBadge();
+    }
+
+    final int totalDays = itinerary.length;
+    if (totalDays == 0) return null;
+
+    final int completedDays = _completedDaysCount(itinerary);
+    if (completedDays == 0) return null;
+
+    final bool allDone = completedDays == totalDays;
+
+    final Color bgColor = allDone ? const Color(0xFFE6F7EC) : const Color(0xFFFFF4E5);
+    final Color fgColor = allDone ? const Color(0xFF1E8E4F) : const Color(0xFFE65100);
+    final IconData icon = allDone ? Icons.check_circle_rounded : Icons.timelapse_rounded;
+    final String label = allDone ? 'Trip Selesai' : '$completedDays/$totalDays Hari Selesai';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: fgColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: fgColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHistoryCard(
     BuildContext context,
     List<Map<String, dynamic>> savedItinerary,
@@ -640,6 +767,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     final String cityText = _cityOf(itinerary);
+
+    final Widget? completionBadge = _buildCompletionBadge(itinerary);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -688,14 +817,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                 children: [
                   // ======================================================
-                  // THUMBNAIL (GAMBAR DESTINASI)
+                  // THUMBNAIL (GAMBAR DESTINASI) + BADGE STATUS
                   // ======================================================
-                  SmartImage(
-                    imagePathOrUrl: _cardImagePath(itinerary),
+                  //
+                  // Badge diletakkan MENGAMBANG di pojok kiri-atas foto
+                  // (bukan lagi di kolom teks) -- offset top:6/left:6
+                  // disamakan dengan offset menu titik tiga (top:6/right:6
+                  // di Stack terluar) supaya keduanya kelihatan sejajar,
+                  // sama-sama "menempel" di tepi atas kartu dari sisi
+                  // berlawanan.
+                  //
+                  // ======================================================
+
+                  SizedBox(
                     width: 88,
                     height: 88,
-                    fit: BoxFit.cover,
-                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        SmartImage(
+                          imagePathOrUrl: _cardImagePath(itinerary),
+                          width: 88,
+                          height: 88,
+                          fit: BoxFit.cover,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+
+                        if (completionBadge != null)
+                          Positioned(
+                            top: -6,
+                            left: -6,
+                            child: completionBadge,
+                          ),
+                      ],
+                    ),
                   ),
 
                   const SizedBox(width: 14),
@@ -1037,62 +1192,198 @@ class _HistoryScreenState extends State<HistoryScreen> {
       backgroundColor: Colors.transparent,
 
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
+        return SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
 
-          decoration: const BoxDecoration(
-            color: Colors.white,
+            decoration: const BoxDecoration(
+              color: Colors.white,
 
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(25),
+                topRight: Radius.circular(25),
+              ),
             ),
-          ),
 
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
 
-            children: [
-              Container(
-                width: 40,
-                height: 4,
+              children: [
+                // ==================================================
+                // HANDLE
+                // ==================================================
 
-                margin: const EdgeInsets.only(bottom: 18),
+                Container(
+                  width: 40,
+                  height: 4,
 
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD8D8D8),
+                  margin: const EdgeInsets.only(bottom: 18),
 
-                  borderRadius: BorderRadius.circular(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D8D8),
+
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
 
-              ListTile(
-                leading: const Icon(Icons.edit_outlined, color: AppColors.darkBlue),
+                // ==================================================
+                // TITLE
+                // ==================================================
 
-                title: const Text('Edit Itinerary'),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Kelola Itinerary',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ),
 
-                onTap: () {
-                  Navigator.pop(context);
+                const SizedBox(height: 14),
 
-                  _editItinerary(context, savedItinerary);
-                },
-              ),
+                // ==================================================
+                // DELETE -- SATU-SATUNYA AKSI DI SINI. Beda dengan
+                // PlanScreen, itinerary di Riwayat sudah SELESAI
+                // dijalani, jadi opsi "Edit" (Ubah Info Dasar / Ubah
+                // Destinasi & Jadwal) sengaja TIDAK ditampilkan --
+                // gak ada gunanya lagi ubah tanggal/destinasi
+                // perjalanan yang udah kelar.
+                // ==================================================
 
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                _buildMenuAction(
+                  icon: Icons.delete_outline_rounded,
+                  iconColor: Colors.red,
+                  iconBackground: AppColors.errorBg,
+                  label: 'Hapus Itinerary',
+                  subtitle: 'Rencana ini akan dihapus permanen',
+                  labelColor: Colors.red,
+                  onTap: () {
+                    Navigator.pop(context);
 
-                title: const Text('Hapus Itinerary'),
+                    _deleteItinerary(context, _itineraryId(savedItinerary ?? []));
+                  },
+                ),
 
-                onTap: () {
-                  Navigator.pop(context);
+                const SizedBox(height: 10),
 
-                  _deleteItinerary(context, _itineraryId(savedItinerary ?? []));
-                },
-              ),
-            ],
+                // ==================================================
+                // BATAL
+                // ==================================================
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFFF5F6F8),
+                      foregroundColor: AppColors.darkText,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  // ============================================================
+  // BARIS AKSI DI BOTTOM SHEET MENU ITINERARY (SAMA POLANYA DENGAN
+  // PlanScreen._buildMenuAction, biar tampilannya konsisten)
+  // ============================================================
+
+  Widget _buildMenuAction({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBackground,
+    required String label,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color? labelColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderColor),
+          ),
+
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  shape: BoxShape.circle,
+                ),
+
+                child: Icon(icon, color: iconColor, size: 21),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: labelColor ?? AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.greyText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.grey.withOpacity(0.6),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1227,169 +1518,4 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ================================================================
-  // EDIT ITINERARY -- BALIK KE ATUR MANUAL / HASIL GENERATE (SAMA
-  // POLANYA DENGAN PlanScreen._editItinerary)
-  // ================================================================
-
-  TimeOfDay? _parseTime(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
-    final List<String> parts = value.toString().split(':');
-
-    if (parts.length != 2) {
-      return null;
-    }
-
-    final int? hour = int.tryParse(parts[0]);
-    final int? minute = int.tryParse(parts[1]);
-
-    if (hour == null || minute == null) {
-      return null;
-    }
-
-    return TimeOfDay(hour: hour, minute: minute);
-  }
-
-  void _editItinerary(
-    BuildContext context,
-    List<Map<String, dynamic>>? savedItinerary,
-  ) {
-    if (savedItinerary == null || savedItinerary.isEmpty) {
-      return;
-    }
-
-    final Map<String, dynamic> firstDay = savedItinerary.first;
-
-    final String source = firstDay['source']?.toString() ?? 'manual';
-
-    // ------------------------------------------------------------
-    // RAKIT ULANG destinationsByDay + WAKTU DARI DATA TERSIMPAN
-    // (persis sama logikanya dengan PlanScreen._editItinerary, biar
-    // perilaku "Edit Itinerary" konsisten mau dibuka dari tab Rencana
-    // atau tab Riwayat)
-    // ------------------------------------------------------------
-
-    final Map<int, List<Map<String, dynamic>>> destinationsByDay = {};
-
-    final Map<int, TimeOfDay?> departureTimesByDay = {};
-
-    final Map<int, List<TimeOfDay?>> arrivalTimesByDay = {};
-
-    final Map<int, List<TimeOfDay?>> returnTimesByDay = {};
-
-    for (final daySchedule in savedItinerary) {
-      final int day = daySchedule['day'] is int
-          ? daySchedule['day'] as int
-          : (int.tryParse(daySchedule['day']?.toString() ?? '') ?? 1);
-
-      final List<dynamic> rawDestinations =
-          daySchedule['destinations'] is List
-              ? daySchedule['destinations'] as List
-              : const [];
-
-      final List<Map<String, dynamic>> destinations = [];
-
-      final List<TimeOfDay?> arrivals = [];
-
-      final List<TimeOfDay?> returns = [];
-
-      for (final rawDestination in rawDestinations) {
-        final Map<String, dynamic> destination = Map<String, dynamic>.from(
-          rawDestination as Map,
-        );
-
-        arrivals.add(_parseTime(destination['arrivalTime']));
-
-        returns.add(_parseTime(destination['departureTime']));
-
-        // 'arrivalTime'/'departureTime' di sini adalah waktu KUNJUNGAN
-        // yang ditambahkan ManualScheduleScreen/AIItineraryScreen saat
-        // preview dibuat -- BUKAN field asli destinasi. Dibuang lagi
-        // supaya destinasi yang dikirim balik bersih seperti aslinya.
-        destination.remove('arrivalTime');
-        destination.remove('departureTime');
-
-        destinations.add(destination);
-      }
-
-      destinationsByDay[day] = destinations;
-
-      departureTimesByDay[day] = _parseTime(daySchedule['departureTime']);
-
-      arrivalTimesByDay[day] = arrivals;
-
-      returnTimesByDay[day] = returns;
-    }
-
-    // ------------------------------------------------------------
-    // DATA PERJALANAN (tripName, startDate, dst) TANPA FIELD
-    // SPESIFIK-HARI
-    // ------------------------------------------------------------
-
-    final Map<String, dynamic> travelData = Map<String, dynamic>.from(
-      firstDay,
-    )
-      ..remove('day')
-      ..remove('destinations')
-      ..remove('departureTime')
-      ..remove('startLocation')
-      ..remove('startLatitude')
-      ..remove('startLongitude');
-
-    final String startLocation =
-        firstDay['startLocation']?.toString() ?? 'Lokasi awal belum ditentukan';
-
-    final double? startLatitude = double.tryParse(
-      firstDay['startLatitude']?.toString() ?? '',
-    );
-
-    final double? startLongitude = double.tryParse(
-      firstDay['startLongitude']?.toString() ?? '',
-    );
-
-    final LatLng? startCoordinate =
-        (startLatitude != null && startLongitude != null)
-            ? LatLng(startLatitude, startLongitude)
-            : null;
-
-    // ------------------------------------------------------------
-    // BUKA LAYAR YANG SESUAI
-    // ------------------------------------------------------------
-
-    if (source == 'ai') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) {
-            return AIItineraryScreen(
-              travelData: travelData,
-              destinationsByDay: destinationsByDay,
-              startCoordinate: startCoordinate,
-              startLocationName: startLocation,
-            );
-          },
-        ),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) {
-            return ManualScheduleScreen(
-              startLocation: startLocation,
-              startCoordinate: startCoordinate,
-              destinationsByDay: destinationsByDay,
-              travelData: travelData,
-              initialDepartureTimesByDay: departureTimesByDay,
-              initialArrivalTimesByDay: arrivalTimesByDay,
-              initialReturnTimesByDay: returnTimesByDay,
-            );
-          },
-        ),
-      );
-    }
-  }
 }

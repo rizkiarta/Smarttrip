@@ -124,6 +124,12 @@ class DestinationService {
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
   final ValueNotifier<String?> error = ValueNotifier<String?>(null);
 
+  // Pencarian populer (dipakai di SearchScreen state kosong)
+  final ValueNotifier<List<String>> popularSearches =
+      ValueNotifier<List<String>>([]);
+  final ValueNotifier<bool> isLoadingPopular = ValueNotifier<bool>(false);
+  final ValueNotifier<String?> errorPopular = ValueNotifier<String?>(null);
+
   /// Load complete dashboard data from server
   Future<void> fetchDashboardData({String? selectedCategory, String? searchQuery}) async {
     isLoading.value = true;
@@ -217,6 +223,39 @@ class DestinationService {
 
     } catch (e) {
       debugPrint('❌ [SEARCH ERROR] $e');
+    }
+  }
+
+  /// Ambil daftar kata kunci pencarian populer dari backend.
+  /// NOTE: nama endpoint 'search/popular' masih tebakan sementara --
+  /// gampang diganti kalau ternyata beda pas backend-nya jadi.
+  Future<void> fetchPopularSearches() async {
+    isLoadingPopular.value = true;
+    errorPopular.value = null;
+
+    try {
+      dynamic res = await ApiService.instance.get('search/popular');
+      if (res is String) {
+        res = jsonDecode(res);
+      }
+
+      List<String> list = [];
+      if (res is Map && res['data'] is List) {
+        list = (res['data'] as List)
+            .map((e) => e.toString())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      } else if (res is List) {
+        list = res.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+      }
+
+      popularSearches.value = list;
+      debugPrint('✅ [DESTINATION SERVICE] Loaded ${list.length} popular searches from server');
+    } catch (e) {
+      debugPrint('❌ [POPULAR SEARCH ERROR] $e');
+      errorPopular.value = e is ApiException ? e.message : e.toString();
+    } finally {
+      isLoadingPopular.value = false;
     }
   }
 }

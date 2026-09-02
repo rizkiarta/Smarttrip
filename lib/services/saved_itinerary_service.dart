@@ -322,6 +322,51 @@ class SavedItineraryService {
     }
   }
 
+  /// Update trip-level info (nama & tanggal mulai) SAJA, tanpa
+  /// menyentuh destinasi/jadwal per hari sama sekali. Dipakai untuk
+  /// "Ubah Info Dasar" di PlanScreen supaya ganti nama/tanggal gak
+  /// perlu buka ulang ManualScheduleScreen/AIItineraryScreen.
+  ///
+  /// Tanggal akhir (endDate) dihitung ulang otomatis dari jumlah hari
+  /// yang sudah ada (startDate + (jumlahHari - 1)), destinasi & jam
+  /// kunjungan per hari TIDAK diubah. Sync ke server pakai `save()`
+  /// yang sudah ada supaya logic PUT/POST-nya konsisten, gak
+  /// duplikasi.
+  Future<void> updateBasicInfo(
+    String itineraryId, {
+    String? tripName,
+    DateTime? startDate,
+  }) async {
+    final List<List<Map<String, dynamic>>> current = itineraries.value;
+
+    final int index = current.indexWhere((saved) => _idOf(saved) == itineraryId);
+    if (index == -1) return;
+
+    final List<Map<String, dynamic>> updated = current[index]
+        .map((day) => Map<String, dynamic>.from(day))
+        .toList();
+
+    if (updated.isEmpty) return;
+
+    DateTime? newEndDate;
+    if (startDate != null) {
+      final int dayCount = updated.length;
+      newEndDate = startDate.add(Duration(days: dayCount - 1));
+    }
+
+    for (final day in updated) {
+      if (tripName != null && tripName.trim().isNotEmpty) {
+        day['tripName'] = tripName.trim();
+      }
+      if (startDate != null) {
+        day['startDate'] = startDate;
+        day['endDate'] = newEndDate;
+      }
+    }
+
+    await save(updated);
+  }
+
   /// Mark a day as completed locally & sync to server
   Future<void> markDayCompleted(String itineraryId, int dayNumber) async {
     final List<List<Map<String, dynamic>>> current =
@@ -372,6 +417,97 @@ class SavedItineraryService {
 
   bool hasAnyCompletedDay(List<Map<String, dynamic>> itinerary) {
     return itinerary.any((schedule) => schedule['dayCompleted'] == true);
+  }
+
+  /// Trip (SELURUH itinerary, bukan cuma satu hari) sudah selesai --
+  /// artinya SEMUA hari di dalamnya sudah 'dayCompleted'. Dipakai
+  /// PlanScreen untuk menyembunyikan itinerary yang sudah kelar dari
+  /// daftar Rencana (yang aktif/berjalan dulu), karena begitu semua
+  /// harinya selesai, itinerary ini semestinya cuma relevan di
+  /// Riwayat, bukan lagi Rencana.
+  bool isTripCompleted(List<Map<String, dynamic>> itinerary) {
+    if (itinerary.isEmpty) return false;
+    return itinerary.every((schedule) => schedule['dayCompleted'] == true);
+  }
+
+  /// Tandai (atau batalkan tanda) SATU destinasi di hari tertentu
+  /// sebagai "dibatalkan". Destinasi ini SENGAJA TIDAK dihapus dari
+  /// `destinations` -- cuma dikasih flag `cancelled: true/false` --
+  /// supaya urutan & jadwal (jam kunjungan) hari itu tetap utuh persis
+  /// seperti sebelumnya, cuma divisualisasikan beda (dicoret/redup)
+  /// di TripScreen.
+  ///
+  /// Hanya LOKAL untuk sekarang (belum ada endpoint Laravel khusus
+  /// buat field ini) -- disimpan lewat _saveToLocalCache seperti field
+  /// lain yang belum sepenuhnya sinkron ke server.
+  Future<void> setDestinationCancelled(
+    String itineraryId,
+    int dayNumber,
+    int destinationIndex,
+    bool cancelled,
+  ) async {
+    final List<List<Map<String, dynamic>>> current =
+        List<List<Map<String, dynamic>>>.from(itineraries.value);
+
+    final int index = current.indexWhere((saved) => _idOf(saved) == itineraryId);
+    if (index == -1) return;
+
+    final List<Map<String, dynamic>> updated = current[index]
+        .map((day) => Map<String, dynamic>.from(day))
+        .toList();
+
+    for (final day in updated) {
+      if (!_isDayNumber(day, dayNumber)) continue;
+
+      final List<dynamic> rawDestinations =
+          day['destinations'] is List ? List<dynamic>.from(day['destinations']) : [];
+
+      if (destinationIndex < 0 || destinationIndex >= rawDestinations.length) break;
+
+      final Map<String, dynamic> destination =
+          Map<String, dynamic>.from(rawDestinations[destinationIndex] as Map);
+      destination['cancelled'] = cancelled;
+      rawDestinations[destinationIndex] = destination;
+      day['destinations'] = rawDestinations;
+      break;
+    }
+
+    current[index] = updated;
+    itineraries.value = current;
+    await _saveToLocalCache();
+  }
+
+  bool isDestinationCancelled(Map<String, dynamic> destination) {
+    return destination['cancelled'] == true;
+  }
+
+  /// SEMUA destinasi di SEMUA hari itinerary ini sudah dibatalkan?
+  /// (itinerary tanpa destinasi sama sekali dianggap BUKAN "fully
+  /// cancelled", supaya gak keliru kesembunyikan itinerary kosong.)
+  ///
+  /// Dipakai PlanScreen (sembunyikan dari Rencana, gaya sama seperti
+  /// isTripCompleted) & HistoryScreen (kasih badge "Dibatalkan").
+  bool isTripFullyCancelled(List<Map<String, dynamic>> itinerary) {
+    if (itinerary.isEmpty) return false;
+
+    int totalDestinations = 0;
+    int cancelledDestinations = 0;
+
+    for (final schedule in itinerary) {
+      final dynamic raw = schedule['destinations'];
+      if (raw is! List) continue;
+
+      for (final dest in raw) {
+        if (dest is! Map) continue;
+        totalDestinations++;
+        if (dest['cancelled'] == true) {
+          cancelledDestinations++;
+        }
+      }
+    }
+
+    if (totalDestinations == 0) return false;
+    return cancelledDestinations == totalDestinations;
   }
 
   /// Remove an itinerary locally & sync to server

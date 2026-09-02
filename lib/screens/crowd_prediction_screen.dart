@@ -203,7 +203,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
               day,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.bold,
                 color: active ? Colors.white70 : AppColors.greyText,
               ),
             ),
@@ -211,8 +211,8 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
             Text(
               date,
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
                 color: active ? Colors.white : AppColors.darkText,
               ),
             ),
@@ -368,7 +368,7 @@ class _CrowdPredictionScreenState extends State<CrowdPredictionScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: AppColors.darkBlue, size: 15),
+                      const Icon(Icons.star, color: AppColors.starGold, size: 15),
                       const SizedBox(width: 4),
                       Text(
                         '$ratingText ($reviewsText)',

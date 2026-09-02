@@ -1002,12 +1002,12 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ==================================================
-            // DESTINASI
+            // DESTINASI (tag lokasi)
             // ==================================================
 
             Row(
               children: [
-                const Icon(Icons.location_on, color: AppColors.primaryBlue, size: 15), // CHANGED - sedikit lebih besar mengikuti font
+                const Icon(Icons.location_on, color: AppColors.primaryBlue, size: 15),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -1015,7 +1015,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 14, // CHANGED - nama destinasi jadi 14
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primaryBlue,
                     ),
@@ -1024,15 +1024,16 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
             // ==================================================
             // USER + RATING
             // ==================================================
 
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                buildAvatarImage(review.avatar, size: 38),
+                buildAvatarImage(review.avatar, size: 42),
 
                 const SizedBox(width: 12),
 
@@ -1056,12 +1057,12 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
 
                 Text(
                   review.time,
-                  style: const TextStyle(fontSize: 12, color: AppColors.greyText), // CHANGED - font terkecil jadi 12
+                  style: const TextStyle(fontSize: 12, color: AppColors.greyText),
                 ),
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
             // ==================================================
             // TEXT
@@ -1077,32 +1078,63 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
             ),
 
             // ==================================================
-            // PHOTOS (opsional)
+            // PHOTOS (opsional) — thumbnail scroll horizontal,
+            // disamakan dengan review_screen.dart
             // ==================================================
 
             if (review.photos.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Row(
-                children: List.generate(review.photos.length, (index) {
-                  return Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: index == review.photos.length - 1 ? 0 : 8,
-                      ),
+              SizedBox(
+                height: 64,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  shrinkWrap: true,
+                  itemCount: review.photos.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        _openPhotoPreview(context, review.photos, index);
+                      },
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: AspectRatio(
-                          aspectRatio: 1.3,
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          width: 64,
+                          height: 64,
                           child: _buildReviewPhoto(review.photos[index]),
                         ),
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  },
+                ),
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // PREVIEW FOTO ULASAN (fullscreen, bisa zoom & geser antar foto)
+  // ============================================================
+
+  void _openPhotoPreview(BuildContext context, List<String> photos, int initialIndex) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: true,
+        barrierColor: Colors.black,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return FadeTransition(
+            opacity: animation,
+            child: _ReviewPhotoPreviewScreen(
+              photos: photos,
+              initialIndex: initialIndex,
+            ),
+          );
+        },
       ),
     );
   }
@@ -1155,7 +1187,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         icon = Icons.star_border;
       }
 
-      return Icon(icon, color: AppColors.darkBlue, size: 14);
+      return Icon(icon, color: AppColors.starGold, size: 15);
     });
   }
 
@@ -1201,6 +1233,155 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
             style: TextStyle(color: AppColors.greyText, fontSize: 12),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ================================================================
+// REVIEW PHOTO PREVIEW SCREEN
+// ================================================================
+//
+// Fullscreen viewer untuk foto-foto di kartu ulasan. Dibuka lewat
+// tap thumbnail foto di _buildReviewCard (MyReviewsScreen) --
+// GestureDetector-nya terpisah dari GestureDetector kartu supaya
+// tap foto tidak ikut memicu navigasi ke DetailDestinationScreen.
+//
+// Support swipe antar foto (kalau ulasan punya >1 foto) + pinch to
+// zoom per foto (InteractiveViewer). Render fotonya pakai logika
+// sumber gambar yang sama dengan _buildReviewPhoto (asset mock, URL
+// network, atau file lokal), cuma fit-nya BoxFit.contain (bukan
+// cover) supaya foto utuh kelihatan.
+// ================================================================
+
+class _ReviewPhotoPreviewScreen extends StatefulWidget {
+  const _ReviewPhotoPreviewScreen({
+    required this.photos,
+    required this.initialIndex,
+  });
+
+  final List<String> photos;
+  final int initialIndex;
+
+  @override
+  State<_ReviewPhotoPreviewScreen> createState() => _ReviewPhotoPreviewScreenState();
+}
+
+class _ReviewPhotoPreviewScreenState extends State<_ReviewPhotoPreviewScreen> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildFullPhoto(String path) {
+    final Widget fallback = Center(
+      child: Icon(Icons.image_outlined, color: Colors.white.withOpacity(0.6), size: 48),
+    );
+
+    if (path.startsWith('assets/')) {
+      return Image.asset(
+        path,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => fallback,
+      );
+    }
+
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => fallback,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+          );
+        },
+      );
+    }
+
+    return Image.file(
+      File(path),
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => fallback,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasMultiplePhotos = widget.photos.length > 1;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            PageView.builder(
+              controller: _pageController,
+              itemCount: widget.photos.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: _buildFullPhoto(widget.photos[index]),
+                );
+              },
+            ),
+
+            // Tombol tutup
+            Positioned(
+              top: 8,
+              left: 12,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 22),
+                ),
+              ),
+            ),
+
+            // Indikator posisi foto (mis. "2 / 4"), cuma muncul kalau
+            // ulasan punya lebih dari satu foto
+            if (hasMultiplePhotos)
+              Positioned(
+                top: 14,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_currentIndex + 1} / ${widget.photos.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

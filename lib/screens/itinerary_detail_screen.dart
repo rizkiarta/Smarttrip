@@ -563,7 +563,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: AppColors.darkBlue,
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   padding: EdgeInsets.zero,
                   shape:
@@ -1060,11 +1060,11 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                   Navigator.pop(context);
                 },
                 child: const SizedBox(
-                  width: 52,
-                  height: 52,
+                  width: 38,
+                  height: 38,
                   child: Icon(
                     Icons.arrow_back_ios_new,
-                    size: 21,
+                    size: 17,
                     color: Color(0xFF555555),
                   ),
                 ),
@@ -1082,6 +1082,10 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
           // bagian bawahnya kepotong/mepet banget sama batas atas card
           // putih. Extra 16px ini kasih jarak aman supaya tombol tetap
           // kelihatan penuh di atas peta, bukan ketutupan card putih.
+          //
+          // CHANGED - ukuran disamakan dengan tombol back (38x38,
+          // ikon 17) supaya kedua tombol bulat di halaman ini konsisten,
+          // sebelumnya tombol ini jauh lebih besar (52x52, ikon 21).
           Positioned(
             right: 18,
             bottom: 34,
@@ -1096,13 +1100,13 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                   _showFullMap();
                 },
                 child: const SizedBox(
-                  width: 52,
-                  height: 52,
+                  width: 38,
+                  height: 38,
                   child: Icon(
                     Icons
                         .open_in_full_rounded,
                     color: Color(0xFF555555),
-                    size: 21,
+                    size: 17,
                   ),
                 ),
               ),
@@ -1831,19 +1835,22 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
     DateTime startDate,
     DateTime endDate,
   ) {
+    // CHANGED - nama bulan disingkat (mis. "Jul" bukan "Juli") supaya
+    // rentang tanggal tidak makan tempat terlalu banyak di baris info
+    // perjalanan (satu baris dengan info peserta & transportasi).
     const months = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
       'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
 
     final String start =
@@ -1904,6 +1911,31 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
       'dateRange',
       fallback: '',
     );
+  }
+
+  // ============================================================
+  // ICON TRANSPORTASI
+  // ============================================================
+  //
+  // Sama persis dengan _vehicleIconFor di travel_information_screen.dart,
+  // supaya ikon yang tampil di sini konsisten dengan pilihan kendaraan
+  // yang diisi user di sana (Mobil/Motor/Bus).
+  // ============================================================
+
+  IconData _vehicleIconFor(String vehicle) {
+    switch (vehicle) {
+      case 'Mobil':
+        return Icons.directions_car_outlined;
+
+      case 'Motor':
+        return Icons.two_wheeler_outlined;
+
+      case 'Bus':
+        return Icons.directions_bus_outlined;
+
+      default:
+        return Icons.directions_car_outlined;
+    }
   }
 
   Widget _buildTripInformation() {
@@ -1969,6 +2001,11 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
             ),
           ),
         );
+
+    // CHANGED - ikonnya sekarang menyesuaikan transportasi yang
+    // dipilih (Mobil/Motor/Bus), bukan selalu mobil. Lihat
+    // _vehicleIconFor di bawah.
+    final transportIcon = _vehicleIconFor(transport);
 
     return Padding(
       // Padding top dikecilin dari 20 ke 12 (dibarengi SizedBox spacer
@@ -2058,8 +2095,8 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                 width: 16,
               ),
 
-              const Icon(
-                Icons.directions_car_outlined,
+              Icon(
+                transportIcon,
                 size: 19,
                 color: AppColors.greyText,
               ),
@@ -2102,7 +2139,13 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                 10,
               ),
             ),
-            child: Row(
+            // CHANGED - judul & titik lokasi awal disusun vertikal
+            // (judul di atas, lokasi + ikon di bawah), sebelumnya
+            // sejajar horizontal jadi teks lokasi gampang kepotong
+            // kalau namanya panjang.
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Lokasi Awal',
@@ -2114,34 +2157,40 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                   ),
                 ),
 
-                const Spacer(),
-
-                const Icon(
-                  Icons.location_on_outlined,
-                  color: AppColors.darkBlue,
-                  size: 20,
-                ),
-
                 const SizedBox(
-                  width: 5,
+                  height: 6,
                 ),
 
-                Flexible(
-                  child: Text(
-                    _getStartLocation(
-                      schedule,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      color: AppColors.primaryBlue,
+                      size: 20,
                     ),
-                    maxLines: 1,
-                    overflow:
-                        TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(
-                      fontSize: 12,
-                      fontWeight:
-                          FontWeight.w600,
-                      color: AppColors.darkBlue,
+
+                    const SizedBox(
+                      width: 5,
                     ),
-                  ),
+
+                    Flexible(
+                      child: Text(
+                        _getStartLocation(
+                          schedule,
+                        ),
+                        maxLines: 2,
+                        overflow:
+                            TextOverflow.ellipsis,
+                        style:
+                            const TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              FontWeight.w600,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

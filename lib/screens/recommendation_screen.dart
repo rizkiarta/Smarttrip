@@ -516,7 +516,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                       const SizedBox(width: 8),
                       Row(
                         children: [
-                          const Icon(Icons.star, color: Color(0xFF164B9B), size: 16),
+                          const Icon(Icons.star, color: AppColors.starGold, size: 16),
                           const SizedBox(width: 4),
                           Text(
                             '${destination.rating.toStringAsFixed(1)} (${destination.reviewsCount})',

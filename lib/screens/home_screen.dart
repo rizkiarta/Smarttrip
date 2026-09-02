@@ -23,10 +23,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Controller buat search bar -- dibutuhkan supaya tombol "X" (clear)
-  // bisa tau kapan ada teks atau tidak, sama seperti di SearchScreen.
-  final TextEditingController _searchController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -40,9 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
+
 
 
   Future<void> _onRefresh() async {
@@ -226,83 +222,44 @@ class _HomeScreenState extends State<HomeScreen> {
   // ============================================================
 
   Widget _buildSearchBar(BuildContext context) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFEFEFEF)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SearchScreen(keyword: ''),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.search_rounded,
-            color: AppColors.greyText,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (value) {
-                final keyword = value.trim();
-                if (keyword.isEmpty) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SearchScreen(keyword: keyword),
-                  ),
-                );
-              },
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isCollapsed: true,
-                hintText: 'Cari destinasi wisata...',
-                hintStyle: TextStyle(color: Colors.black45, fontSize: 14),
-              ),
-              style: const TextStyle(color: AppColors.darkText, fontSize: 14),
+        );
+      },
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFEFEFEF)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
-          ),
-
-          // ==================================================
-          // CANCEL / CLEAR -- muncul kalau ada teksnya, dan
-          // selain menghapus teks juga membatalkan pencarian
-          // (menutup keyboard / keluar dari mode mengetik).
-          // ==================================================
-
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _searchController,
-            builder: (context, value, _) {
-              if (value.text.isEmpty) {
-                return const SizedBox();
-              }
-
-              return GestureDetector(
-                onTap: () {
-                  _searchController.clear();
-                  FocusScope.of(context).unfocus();
-                },
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 6),
-                  child: Icon(
-                    Icons.close,
-                    color: AppColors.greyText,
-                    size: 18,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.search_rounded,
+              color: AppColors.greyText,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Cari destinasi wisata...',
+              style: TextStyle(color: Colors.black45, fontSize: 14),
+            ),
+          ],
+        ),
       ),
     );
   }
